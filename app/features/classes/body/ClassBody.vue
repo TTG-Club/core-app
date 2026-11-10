@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { RenderNode } from '~ui/markup';
+
   import type { ClassDetailResponse } from '../model';
 
   import { UiCollapse } from '~ui/collapse';
@@ -6,6 +8,7 @@
   import { UiGallery } from '~ui/gallery';
   import { MarkupRender } from '~ui/markup';
 
+  import { getClassEquipmentNode } from '../model';
   import {
     ClassEquipment,
     ClassPageNavigation,
@@ -45,16 +48,42 @@
      */
     (event: 'navigate', classUrl: string): void;
   }>();
+
+  /** Снаряжение: варианты «А или Б» либо прежний свободный текст. */
+  const equipmentNode = computed<RenderNode>(() =>
+    getClassEquipmentNode(detail),
+  );
+
+  /** Есть ли что показать: прежний текст приходит и пустым списком. */
+  const hasEquipment = computed<boolean>(() =>
+    Array.isArray(equipmentNode.value)
+      ? equipmentNode.value.length > 0
+      : Boolean(equipmentNode.value),
+  );
+
+  // Столбиком таблица класса получает всю ширину записи
+  const isStacked = useSectionDetailStacked();
+
+  // Картинка рядом со свойствами на всей ширине, а не только до 3xl
+  const asideRowClass = computed(() =>
+    isStacked.value ? '@min-md:flex-row' : '@min-md:@max-3xl:flex-row',
+  );
+
+  const galleryWidthClass = computed(() =>
+    isStacked.value
+      ? '@min-md:@max-xl:w-36 @min-xl:w-50'
+      : '@min-md:@max-xl:w-36 @min-xl:@max-3xl:w-50',
+  );
 </script>
 
 <template>
-  <UiDetailLayout>
+  <UiDetailLayout :stacked="isStacked">
     <template #aside>
       <!-- Растянута на высоту колонки, чтобы навигации было где липнуть -->
-      <div class="flex grow flex-col gap-4 @min-md:@max-3xl:flex-row">
+      <div :class="['flex grow flex-col gap-4', asideRowClass]">
         <UiGallery
           v-if="!hideGallery && detail.image"
-          class="min-w-25 shrink-0 @min-md:@max-xl:w-36 @min-xl:@max-3xl:w-50"
+          :class="['min-w-25 shrink-0', galleryWidthClass]"
           :preview="detail.image"
           :images="detail.gallery"
         />
@@ -67,10 +96,10 @@
 
         <!-- Липнет к верху колонки, картинка и характеристики уезжают -->
         <ClassPageNavigation
-          v-if="!navigateInPlace"
+          v-if="!navigateInPlace && !isStacked"
           class="max-lg:hidden @max-3xl:hidden"
           :features="detail.features"
-          :has-equipment="!!detail.equipment"
+          :has-equipment="hasEquipment"
           :has-description="!!detail.description"
         />
       </div>
@@ -114,9 +143,10 @@
       />
 
       <ClassEquipment
+        v-if="hasEquipment"
         :id="CLASS_SECTION_ANCHOR.equipment"
         :heading-id="getSectionHeadingId(CLASS_SECTION_ANCHOR.equipment)"
-        :equipment="detail.equipment"
+        :equipment="equipmentNode"
       />
 
       <FeatureCollapse

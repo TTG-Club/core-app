@@ -1,3 +1,5 @@
+import type { RenderNode } from '~ui/markup';
+
 import type { BackgroundDetailResponse } from './detail';
 
 import {
@@ -8,6 +10,7 @@ import {
 } from '~ui/markup';
 
 import {
+  getBackgroundEquipmentNode,
   getBackgroundFeatNode,
   getBackgroundSkillNode,
   getBackgroundToolNodes,
@@ -41,15 +44,15 @@ export function getBackgroundMarkdown(
     ],
     source: background.source,
     description: background.description,
-    extra: [getEquipment(background.equipment)],
+    extra: [getEquipment(getBackgroundEquipmentNode(background))],
   });
 }
 
 /**
- * Снаряжение: заголовок и блоки как есть — среди них список вариантов
- * «А или Б».
+ * Снаряжение: заголовок и строка вариантов «А или Б» либо прежние блоки
+ * свободного текста как есть.
  */
-function getEquipment(equipment: string[] | undefined): string | undefined {
+function getEquipment(equipment: RenderNode): string | undefined {
   const content = toMarkdown(equipment);
 
   return content ? `##### Снаряжение\n\n${content}` : undefined;

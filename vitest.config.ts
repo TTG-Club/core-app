@@ -49,6 +49,9 @@ export default defineConfig({
         new URL('./app/features/classes', import.meta.url),
       ),
       '~feats': fileURLToPath(new URL('./app/features/feats', import.meta.url)),
+      '~backgrounds': fileURLToPath(
+        new URL('./app/features/backgrounds', import.meta.url),
+      ),
       '~bastion-game': fileURLToPath(
         new URL('./app/features/bastion-game', import.meta.url),
       ),

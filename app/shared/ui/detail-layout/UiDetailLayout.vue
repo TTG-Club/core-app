@@ -11,6 +11,24 @@
    * Раскладка отвечает только за колонки; внутреннее устройство каждой
    * колонки (отступы, ряды на средней ширине) задаёт сама карточка.
    */
+  const { stacked = false } = defineProps<{
+    /**
+     * Колонки всегда столбиком, как в узком контейнере: свойства сверху,
+     * текст под ними во всю ширину.
+     */
+    stacked?: boolean;
+  }>();
+
+  const rowClass = computed(() => [
+    'flex flex-col gap-4',
+    { '@min-3xl:flex-row @min-3xl:gap-7': !stacked },
+  ]);
+
+  const asideClass = computed(() => [
+    'flex w-full flex-col',
+    { '@min-3xl:w-80 @min-3xl:shrink-0': !stacked },
+  ]);
+
   defineSlots<{
     /** Колонка свойств слева; без слота текст занимает всю ширину */
     aside?: () => unknown;
@@ -21,10 +39,10 @@
 
 <template>
   <div class="@container w-full min-w-0">
-    <div class="flex flex-col gap-4 @min-3xl:flex-row @min-3xl:gap-7">
+    <div :class="rowClass">
       <div
         v-if="$slots.aside"
-        class="flex w-full flex-col @min-3xl:w-80 @min-3xl:shrink-0"
+        :class="asideClass"
       >
         <slot name="aside" />
       </div>

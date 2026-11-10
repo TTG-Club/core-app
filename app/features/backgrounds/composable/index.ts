@@ -1,1 +1,1 @@
-export * from './useBackgroundToolCategories';
+export * from './useBackgroundToolCatalog';

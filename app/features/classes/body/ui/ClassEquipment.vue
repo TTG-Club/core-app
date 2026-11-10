@@ -10,10 +10,7 @@
 </script>
 
 <template>
-  <UiCollapse
-    v-if="equipment"
-    default-open
-  >
+  <UiCollapse default-open>
     <template #default>Снаряжение</template>
 
     <template #content>
@@ -22,7 +19,11 @@
         полученному за вашу предысторию:
       </span>
 
-      <MarkupRender :render-node="equipment" />
+      <!-- Строка вариантов рисуется без обёртки: без div она встала бы в одну
+        строку с вводной фразой -->
+      <div>
+        <MarkupRender :render-node="equipment" />
+      </div>
     </template>
   </UiCollapse>
 </template>

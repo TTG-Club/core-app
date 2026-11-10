@@ -1,16 +1,20 @@
 import type { NameResponse, SourceResponse } from '~/shared/types';
+import type { RenderNode } from '~ui/markup';
+import type { StartingEquipmentOptionResponse } from '~ui/starting-equipment';
 
-import type { BackgroundToolCategory } from './tool-category';
+import type { BackgroundToolCatalog } from './tool-category';
 
 import { kebabCase } from 'es-toolkit';
 
 import { EFFECT_SKILL_OPTIONS } from '~active-effects/model';
+import { getStartingEquipmentNode } from '~ui/starting-equipment';
 
 import {
   BACKGROUND_DETAIL_LABELS,
   SKILL_GLOSSARY_URL_SUFFIX,
 } from './constants';
 import {
+  createEmptyBackgroundToolCatalog,
   findBackgroundToolCategory,
   toBackgroundToolCategoryMarker,
 } from './tool-category';
@@ -46,26 +50,35 @@ export interface BackgroundDetailResponse {
   feat: string; // черта
   featChoices?: Array<BackgroundEntityRef> | null; // черты на выбор игрока
   skillProficiencies: string; // навыки
-  toolProficiency: string[]; // владение инструментов текстом (легаси)
+  toolProficiency?: string[] | null; // владение инструментов текстом (легаси)
   toolProficiencies?: Array<BackgroundEntityRef> | null; // владение ссылками
   toolChoice?: BackgroundToolChoiceResponse | null; // владение на выбор игрока
-  equipment: string[]; // снаряжение
+  equipment?: string[] | null; // снаряжение текстом (легаси)
+  startingEquipment?: Array<StartingEquipmentOptionResponse> | null; // снаряжение вариантами
   source: SourceResponse;
   description: Array<string>;
   updatedAt: string;
 }
 
 /**
- * Маркер ссылки на запись раздела: подпись плюс адрес страницы. Ссылка без
- * подписи показывается адресом — так видно, что запись переименовали или
- * удалили, а не что владения нет.
+ * Маркер ссылки на запись раздела: подпись плюс адрес страницы. Подпись —
+ * снимок названия в записи, а без него — название из каталога раздела. Ссылка,
+ * которую не назвать ни так, ни так, показывается адресом — так видно, что
+ * запись переименовали или удалили, а не что владения нет.
  *
  * @param reference ссылка со снимком названия.
  * @param section раздел разметки (`item`, `feat`).
+ * @param names названия карточек раздела по адресу.
  * @returns маркер разметки сайта.
  */
-function toMarker(reference: BackgroundEntityRef, section: string): string {
-  return `{@${section} ${reference.name || reference.url}|url:${reference.url}}`;
+function toMarker(
+  reference: BackgroundEntityRef,
+  section: string,
+  names: Record<string, string> = {},
+): string {
+  const label = reference.name || names[reference.url] || reference.url;
+
+  return `{@${section} ${label}|url:${reference.url}}`;
 }
 
 /**
@@ -74,13 +87,13 @@ function toMarker(reference: BackgroundEntityRef, section: string): string {
  *
  * @param count сколько инструментов выбирает игрок.
  * @param pool инструменты, из которых он выбирает; пусто — любой инструмент.
- * @param toolCategories категории инструментов раздела «Предметы».
+ * @param toolCatalog инструменты раздела «Предметы».
  * @returns разметка строки выбора.
  */
 function getToolChoiceNode(
   count: number,
   pool: Array<BackgroundEntityRef>,
-  toolCategories: Array<BackgroundToolCategory>,
+  toolCatalog: BackgroundToolCatalog,
 ): string {
   const prefix = `${BACKGROUND_DETAIL_LABELS.toolChoicePrefix} ${count}`;
 
@@ -88,14 +101,14 @@ function getToolChoiceNode(
     return `${prefix}: ${BACKGROUND_DETAIL_LABELS.anyTool}`;
   }
 
-  const category = findBackgroundToolCategory(pool, toolCategories);
+  const category = findBackgroundToolCategory(pool, toolCatalog.categories);
 
   if (category) {
     return `${prefix} ${BACKGROUND_DETAIL_LABELS.toolCategoryJoiner} ${toBackgroundToolCategoryMarker(category)}`;
   }
 
   return `${prefix}: ${pool
-    .map((reference) => toMarker(reference, 'item'))
+    .map((reference) => toMarker(reference, 'item', toolCatalog.names))
     .join(BACKGROUND_DETAIL_LABELS.choiceSeparator)}`;
 }
 
@@ -107,14 +120,15 @@ function getToolChoiceNode(
  * отдельной строкой — он не владение, а обещание его назвать.
  *
  * @param background деталь предыстории.
- * @param toolCategories категории инструментов раздела «Предметы»: по ним
- *   выбор из всей категории называется категорией. Без них выбор всегда
- *   перечисляется поимённо.
+ * @param toolCatalog инструменты раздела «Предметы»: по категориям выбор из
+ *   всей категории называется категорией, по названиям подписываются ссылки
+ *   без снимка названия. Без каталога выбор перечисляется поимённо, а такие
+ *   ссылки показываются адресом.
  * @returns строки разметки для блока владения инструментами.
  */
 export function getBackgroundToolNodes(
   background: BackgroundDetailResponse,
-  toolCategories: Array<BackgroundToolCategory> = [],
+  toolCatalog: BackgroundToolCatalog = createEmptyBackgroundToolCatalog(),
 ): Array<string> {
   const fixed = background.toolProficiencies ?? [];
 
@@ -123,7 +137,7 @@ export function getBackgroundToolNodes(
   const choiceCount = choice?.count ?? 0;
 
   if (!fixed.length && choiceCount < 1) {
-    return background.toolProficiency;
+    return background.toolProficiency ?? [];
   }
 
   const nodes: Array<string> = [];
@@ -131,15 +145,13 @@ export function getBackgroundToolNodes(
   if (fixed.length) {
     nodes.push(
       fixed
-        .map((reference) => toMarker(reference, 'item'))
+        .map((reference) => toMarker(reference, 'item', toolCatalog.names))
         .join(BACKGROUND_DETAIL_LABELS.listSeparator),
     );
   }
 
   if (choiceCount >= 1) {
-    nodes.push(
-      getToolChoiceNode(choiceCount, choice?.from ?? [], toolCategories),
-    );
+    nodes.push(getToolChoiceNode(choiceCount, choice?.from ?? [], toolCatalog));
   }
 
   return nodes;
@@ -192,4 +204,20 @@ export function getBackgroundFeatNode(
   return choices
     .map((reference) => toMarker(reference, 'feat'))
     .join(BACKGROUND_DETAIL_LABELS.choiceSeparator);
+}
+
+/**
+ * Снаряжение предыстории для страницы. Варианты «А или Б» главнее прежнего
+ * свободного текста: текст — легаси, у переведённых записей он пуст, а где
+ * остался — повторил бы варианты.
+ *
+ * @param background деталь предыстории.
+ * @returns разметка снаряжения; пусто — снаряжения нет.
+ */
+export function getBackgroundEquipmentNode(
+  background: BackgroundDetailResponse,
+): RenderNode {
+  const options = getStartingEquipmentNode(background.startingEquipment);
+
+  return options || background.equipment || [];
 }
