@@ -76,7 +76,6 @@
       active: true,
       accessibleByLink: false,
       publishDateTime: null,
-      preview: '',
       content: '',
     };
   }
@@ -92,7 +91,6 @@
       normalizeLoaded: (raw) => ({
         ...raw,
         authorName: raw.authorName ?? '',
-        preview: raw.preview ?? '',
         content: raw.content ?? '',
       }),
       transformBeforeSubmit: (formState) => {
@@ -231,9 +229,7 @@
     active: z.boolean(),
     accessibleByLink: z.boolean(),
     publishDateTime: z.string().nullable(),
-    // Новость сообщества часто — пара фраз: обязателен анонс, текст по желанию.
-    preview: z.string().trim().nonempty(),
-    content: z.string().trim(),
+    content: z.string().trim().nonempty(),
     previewImageUrl: z.string().nullable(),
     videoUrl: z
       .string()
@@ -498,33 +494,14 @@
     <UCard variant="subtle">
       <template #header>
         <h2 class="truncate text-base text-highlighted">
-          {{ COMMUNITY_NEWS_EDITOR_TEXT.previewSection }}
+          {{ COMMUNITY_NEWS_EDITOR_TEXT.contentSection }}
         </h2>
       </template>
 
       <UFormField
-        name="preview"
-        :help="COMMUNITY_NEWS_EDITOR_TEXT.previewHelp"
+        name="content"
         required
       >
-        <MarkupEditor
-          v-model="state.preview"
-          :placeholder="COMMUNITY_NEWS_EDITOR_TEXT.previewPlaceholder"
-        />
-      </UFormField>
-    </UCard>
-
-    <UCard variant="subtle">
-      <template #header>
-        <h2 class="truncate text-base text-highlighted">
-          {{ COMMUNITY_NEWS_EDITOR_TEXT.contentSection }}
-          <span class="text-sm font-normal text-muted">
-            {{ COMMUNITY_NEWS_EDITOR_TEXT.optionalMark }}
-          </span>
-        </h2>
-      </template>
-
-      <UFormField name="content">
         <MarkupEditor
           v-model="state.content"
           :placeholder="COMMUNITY_NEWS_EDITOR_TEXT.contentPlaceholder"

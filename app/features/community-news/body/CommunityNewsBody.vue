@@ -21,15 +21,9 @@
     news: CommunityNewsDetailedResponse;
   }>();
 
-  const previewNodes = computed(() => toArticleMarkup(news.preview));
-
   const contentNodes = computed(() => toArticleMarkup(news.content));
 
   // Пустые блоки не рендерим: иначе остаётся призрачный отступ.
-  const hasPreview = computed(
-    () => getNodeText(previewNodes.value).trim().length > 0,
-  );
-
   const hasContent = computed(
     () => getNodeText(contentNodes.value).trim().length > 0,
   );
@@ -96,13 +90,6 @@
 
       <!-- Строка не шире 65 знаков: длинный текст во всю ширину читать тяжело -->
       <div class="flex max-w-prose flex-col">
-        <div
-          v-if="hasPreview"
-          class="text-lg text-toned"
-        >
-          <MarkupRender :render-node="previewNodes" />
-        </div>
-
         <MarkupRender
           v-if="hasContent"
           :render-node="contentNodes"

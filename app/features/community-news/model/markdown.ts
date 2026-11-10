@@ -5,7 +5,7 @@ import { buildMarkdownEntity, toMarkdown } from '~ui/markup';
 
 /**
  * Собирает новость сообщества в Markdown формата Homebrewery: автор —
- * подзаголовком, анонс — вступлением, текст — следом.
+ * подзаголовком, текст — следом.
  *
  * @param news - Новость с бэкенда
  * @returns Markdown-текст новости
@@ -16,7 +16,6 @@ export function getCommunityNewsMarkdown(
   return buildMarkdownEntity({
     name: news.title,
     subtitle: news.authorName ?? undefined,
-    description: toArticleMarkup(news.preview),
     extra: [toMarkdown(toArticleMarkup(news.content))],
   });
 }

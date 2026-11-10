@@ -43,16 +43,16 @@
     });
   }
 
-  /** Описание для поисковиков: анонс простым текстом, без него — заголовок. */
+  /** Описание для поисковиков: начало текста простым текстом, без него — заголовок. */
   function getSeoDescription(): string {
     if (!news.value) {
       return '';
     }
 
-    const previewText = getArticlePreviewText(news.value.preview).trim();
+    const contentText = getArticlePreviewText(news.value.content).trim();
 
     return getSlicedString(
-      previewText || news.value.title,
+      contentText || news.value.title,
       COMMUNITY_NEWS_SEO_DESCRIPTION_LENGTH,
     );
   }
