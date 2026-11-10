@@ -24,18 +24,6 @@
 
   const greeting = shallowRef<HomeGreeting | null>(null);
 
-  /** Ответ API уже пришёл (или запрос упал) — ждать больше нечего. */
-  const isSettled = ref(false);
-
-  /**
-   * Место под персонажа держим, пока ждём ответ, и когда приветствие есть.
-   * Пришло пустым или запрос упал — место схлопывается, а не висит дырой
-   * между заголовком и поиском.
-   */
-  const isSpaceReserved = computed<boolean>(
-    () => !isSettled.value || greeting.value !== null,
-  );
-
   const isGuest = computed(() => !isLoggedIn.value && !userTokenCookie.value);
 
   const guestHeaders = computed<Record<string, string> | undefined>(() => {
@@ -60,8 +48,6 @@
       greeting.value = parseHomeGreeting(response);
     } catch {
       greeting.value = null;
-    } finally {
-      isSettled.value = true;
     }
   }
 
@@ -117,15 +103,15 @@
   <!-- Уже 400px персонаж не помещается рядом с репликой: текст сжимается
     в столбик по слову-два в строке, поэтому блок показываем только
     с 400px -->
-  <!-- Оболочка держит место до ответа API; если приветствия нет, плавно
-    схлопывается по высоте -->
+  <!-- Место заранее не держим: персонажа часто нет, и пустая дыра между
+    заголовком и поиском хуже, чем поиск, сдвинутый вниз пришедшим
+    приветствием. Блок занимает высоту, только когда приветствие есть -->
   <div
+    v-if="greeting"
     :style="{ '--home-greeting-height': HOME_GREETING_HEIGHT }"
-    :class="isSpaceReserved ? 'min-h-(--home-greeting-height)' : 'min-h-0'"
-    class="relative flex w-full items-end justify-center transition-[min-height] duration-300 ease-out motion-reduce:transition-none max-xs:hidden"
+    class="relative flex min-h-(--home-greeting-height) w-full items-end justify-center max-xs:hidden"
   >
     <div
-      v-if="greeting"
       :class="[
         $style.root,
         'mx-auto flex w-fit max-w-full items-end justify-center gap-2 px-2 sm:max-w-3xl sm:gap-3',
