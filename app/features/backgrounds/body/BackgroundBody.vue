@@ -1,10 +1,13 @@
 <script setup lang="ts">
+  import type { RenderNode } from '~ui/markup';
+
   import type { BackgroundDetailResponse } from '../model';
 
   import { UiDetailLayout } from '~ui/detail-layout';
 
-  import { useBackgroundToolCategories } from '../composable';
+  import { useBackgroundToolCatalog } from '../composable';
   import {
+    getBackgroundEquipmentNode,
     getBackgroundFeatNode,
     getBackgroundSkillNode,
     getBackgroundToolNodes,
@@ -21,13 +24,21 @@
   /** Навыки: ссылки на статьи глоссария. */
   const skillNode = computed<string>(() => getBackgroundSkillNode(background));
 
-  /** Категории инструментов: выбор из всей категории называется ею. */
-  const { toolCategories, isPending: isToolCategoriesPending } =
-    useBackgroundToolCategories(() => background);
+  /**
+   * Каталог инструментов: выбор из всей категории называется ею, ссылки без
+   * снимка названия — названием карточки.
+   */
+  const { toolCatalog, isPending: isToolCatalogPending } =
+    useBackgroundToolCatalog(() => background);
 
   /** Владение инструментами: ссылки мастерской либо прежний свободный текст. */
   const toolNodes = computed<Array<string>>(() =>
-    getBackgroundToolNodes(background, toolCategories.value),
+    getBackgroundToolNodes(background, toolCatalog.value),
+  );
+
+  /** Снаряжение: варианты «А или Б» либо прежний свободный текст. */
+  const equipmentNode = computed<RenderNode>(() =>
+    getBackgroundEquipmentNode(background),
   );
 </script>
 
@@ -40,8 +51,8 @@
           :feat="featNode"
           :skill-proficiencies="skillNode"
           :tool-proficiency="toolNodes"
-          :is-tool-proficiency-pending="isToolCategoriesPending"
-          :equipment="background.equipment"
+          :is-tool-proficiency-pending="isToolCatalogPending"
+          :equipment="equipmentNode"
         />
       </div>
     </template>

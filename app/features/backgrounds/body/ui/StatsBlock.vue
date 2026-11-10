@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { RenderNode } from '~ui/markup';
+
   import { MarkupRender } from '~ui/markup';
   import { InfoTooltip } from '~ui/tooltip';
 
@@ -11,7 +13,7 @@
     toolProficiency: string[];
     /** Владение ещё собирается: выбор ждёт категорий инструментов. */
     isToolProficiencyPending?: boolean;
-    equipment: string[];
+    equipment: RenderNode;
   }>();
 </script>
 
@@ -78,7 +80,11 @@
     <div :class="[$style.item, $style.block]">
       <span :class="$style.name">Снаряжение:</span>
 
-      <MarkupRender :render-node="equipment" />
+      <!-- Строка вариантов рисуется без обёртки, как у черты; div, а не span:
+        прежний текст снаряжения приходит блоками -->
+      <div>
+        <MarkupRender :render-node="equipment" />
+      </div>
     </div>
   </div>
 </template>

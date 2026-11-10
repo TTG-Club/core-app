@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { RenderNode } from '~ui/markup';
+
   import type { ClassDetailResponse } from '../model';
 
   import { UiCollapse } from '~ui/collapse';
@@ -6,6 +8,7 @@
   import { UiGallery } from '~ui/gallery';
   import { MarkupRender } from '~ui/markup';
 
+  import { getClassEquipmentNode } from '../model';
   import {
     ClassEquipment,
     ClassPageNavigation,
@@ -46,6 +49,18 @@
     (event: 'navigate', classUrl: string): void;
   }>();
 
+  /** Снаряжение: варианты «А или Б» либо прежний свободный текст. */
+  const equipmentNode = computed<RenderNode>(() =>
+    getClassEquipmentNode(detail),
+  );
+
+  /** Есть ли что показать: прежний текст приходит и пустым списком. */
+  const hasEquipment = computed<boolean>(() =>
+    Array.isArray(equipmentNode.value)
+      ? equipmentNode.value.length > 0
+      : Boolean(equipmentNode.value),
+  );
+
   // Столбиком таблица класса получает всю ширину записи
   const isStacked = useSectionDetailStacked();
 
@@ -84,7 +99,7 @@
           v-if="!navigateInPlace && !isStacked"
           class="max-lg:hidden @max-3xl:hidden"
           :features="detail.features"
-          :has-equipment="!!detail.equipment"
+          :has-equipment="hasEquipment"
           :has-description="!!detail.description"
         />
       </div>
@@ -128,9 +143,10 @@
       />
 
       <ClassEquipment
+        v-if="hasEquipment"
         :id="CLASS_SECTION_ANCHOR.equipment"
         :heading-id="getSectionHeadingId(CLASS_SECTION_ANCHOR.equipment)"
-        :equipment="detail.equipment"
+        :equipment="equipmentNode"
       />
 
       <FeatureCollapse

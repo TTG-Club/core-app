@@ -25,7 +25,7 @@ import {
 } from '~ui/markup';
 
 import { MULTICLASS_ABILITY_REQUIREMENT } from './constants';
-import { CasterType } from './detail';
+import { CasterType, getClassEquipmentNode } from './detail';
 import { getClassProficiencyBonus } from './mechanics';
 import {
   FULL_CASTER_SPELL_SLOTS,
@@ -121,7 +121,7 @@ export function getClassMarkdown(detail: ClassDetailResponse): string {
     extra: [
       getProgressionTable(detail),
       getProficiencyBlock(detail),
-      getEquipmentBlock(detail.equipment),
+      getEquipmentBlock(getClassEquipmentNode(detail)),
       ...detail.features.map(toFeatureBlock),
       getDescriptionBlock(detail.description),
     ],
