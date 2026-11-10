@@ -62,19 +62,33 @@
       ? description.length > 0
       : Boolean(description);
   }
+
+  // Столбиком текст вида получает всю ширину записи
+  const isStacked = useSectionDetailStacked();
+
+  // Картинка рядом со свойствами на всей ширине, а не только до 3xl
+  const asideRowClass = computed(() =>
+    isStacked.value ? '@min-md:flex-row' : '@min-md:@max-3xl:flex-row',
+  );
+
+  const galleryWidthClass = computed(() =>
+    isStacked.value
+      ? '@min-md:@max-xl:w-36 @min-xl:w-50'
+      : '@min-md:@max-xl:w-36 @min-xl:@max-3xl:w-50',
+  );
 </script>
 
 <template>
-  <UiDetailLayout>
+  <UiDetailLayout :stacked="isStacked">
     <template
       v-if="!hideLeftBlock"
       #aside
     >
       <div class="flex flex-col gap-4">
-        <div class="flex flex-col gap-4 @min-md:@max-3xl:flex-row">
+        <div :class="['flex flex-col gap-4', asideRowClass]">
           <UiGallery
             v-if="!hideGallery"
-            class="min-w-25 shrink-0 @min-md:@max-xl:w-36 @min-xl:@max-3xl:w-50"
+            :class="['min-w-25 shrink-0', galleryWidthClass]"
             :preview="species.image"
             :images="species.gallery"
           />
