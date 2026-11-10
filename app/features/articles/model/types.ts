@@ -87,7 +87,9 @@ export type ArticleTelegramFormat = 'INSTANT_VIEW' | 'FULL_TEXT';
  *   текст, как у `telegramSummary`; пустой — в посте останутся заголовок и ссылка на сайт;
  * - `publishToVk` — при сохранении продублировать новость в сообщество ВКонтакте;
  * - `tags` — произвольные теги статьи (лор, механика, местность…); бэк хранит их
- *   без лишних пробелов, в нижнем регистре и без повторов.
+ *   без лишних пробелов, в нижнем регистре и без повторов;
+ * - `videoUrl` — ролик YouTube / ВК Видео вместо обложки (нормализованная ссылка,
+ *   см. `parseVideoUrl`); обложка `previewImageUrl` остаётся его заставкой.
  */
 export interface ArticleRequest {
   url: string;
@@ -107,6 +109,7 @@ export interface ArticleRequest {
   tags: string[];
   title: string;
   previewImageUrl: string | null;
+  videoUrl: string | null;
   publishDateTime: string | null;
   preview: string;
   content: string;
@@ -126,6 +129,7 @@ export interface ArticleShortResponse {
   title: string;
   publishDateTime: string | null;
   previewImageUrl: string | null;
+  videoUrl: string | null;
   preview: RenderNode;
   tags: string[];
   /** Рейтинг записи; заполнен только в публичном листинге (`/search`). */
@@ -148,6 +152,7 @@ export interface ArticleDetailedResponse {
   accessibleByLink: boolean;
   title: string;
   previewImageUrl: string | null;
+  videoUrl: string | null;
   publishDateTime: string | null;
   preview: RenderNode;
   content: RenderNode;

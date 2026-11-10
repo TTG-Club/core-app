@@ -3,6 +3,11 @@ import type { MenuSection } from './types';
 import { Role } from '~/shared/types';
 import { RECENT_COMMENTS_ROUTE, RECENT_COMMENTS_TITLE } from '~comments/model';
 import {
+  COMMUNITY_NEWS_ICON,
+  COMMUNITY_NEWS_ROUTE,
+  COMMUNITY_NEWS_TITLE,
+} from '~community-news/model/constants';
+import {
   FIND_GAME_PROFILE_NAVIGATION_LABEL,
   FIND_GAME_PROFILE_ROUTE,
   GAMES_CATALOG_NAVIGATION_LABEL,
@@ -228,6 +233,11 @@ export const MENU_SECTIONS: Array<MenuSection> = [
         href: '/articles',
         label: 'Статьи',
         icon: 'tabler:article',
+      },
+      {
+        href: COMMUNITY_NEWS_ROUTE,
+        label: COMMUNITY_NEWS_TITLE,
+        icon: COMMUNITY_NEWS_ICON,
       },
       {
         href: RECENT_COMMENTS_ROUTE,

@@ -3,6 +3,7 @@
   import { HomeArticles } from '~home/articles';
   import { VttgPromoCard } from '~home/banners';
   import { HomeCommunity } from '~home/community';
+  import { HomeCommunityNews } from '~home/community-news';
   import { HomeHero } from '~home/hero';
   import { HomeLatestGame } from '~home/latest-game';
   import { HomeNews } from '~home/news';
@@ -35,11 +36,13 @@
         Ниже xl все обёртки схлопываются в display:contents: блоки становятся
         прямыми флекс-элементами внешней колонки и выстраиваются одним потоком
         в порядке order-*: VTTG → Соцсети → Новости → Новая игра → Статьи →
-        Жизнь сайта → Сообщество.
+        Новости сообщества → Жизнь сайта → Сообщество.
 
         С xl лента делится на две половины, растянутые друг под друга
-        (`items-stretch`). Слева столбец новостей и статей. Справа два ряда из
-        двух узких столбцов:
+        (`items-stretch`). Слева новости сайта (обложка + один ряд свежих), под
+        ними два узких столбца: статьи и новости сообщества — та же сетка
+        четвертей, что у правой половины. Справа два ряда из двух узких
+        столбцов:
 
         - верхний — новая игра и VTTG с соцсетями. Ряд `items-stretch`, поэтому
           низ игры совпадает с низом соцсетей: высоту задают VTTG и соцсети, а
@@ -59,7 +62,16 @@
         <div class="contents xl:flex xl:w-1/2 xl:flex-col xl:gap-3">
           <HomeNews class="order-2 xl:order-0" />
 
-          <HomeArticles class="order-4 xl:order-0" />
+          <!-- flex-1 у обоих: если новости сообщества не пришли (блок
+            спрятан), статьи забирают весь ряд; items-stretch выравнивает
+            низ панелей, когда в одной из них строк меньше -->
+          <div class="contents xl:flex xl:flex-row xl:items-stretch xl:gap-3">
+            <HomeArticles class="order-4 xl:order-0 xl:min-w-0 xl:flex-1" />
+
+            <HomeCommunityNews
+              class="order-5 xl:order-0 xl:min-w-0 xl:flex-1"
+            />
+          </div>
         </div>
 
         <div class="contents xl:flex xl:w-1/2 xl:flex-col xl:gap-3">
@@ -80,10 +92,10 @@
               обычного (скажем, новости не загрузились): без неё ленте
               досталась бы только шапка с подвалом -->
             <HomeActivity
-              class="order-5 xl:order-0 xl:min-h-80 xl:w-1/2 xl:self-stretch"
+              class="order-6 xl:order-0 xl:min-h-80 xl:w-1/2 xl:self-stretch"
             />
 
-            <HomeCommunity class="order-6 xl:order-0 xl:w-1/2" />
+            <HomeCommunity class="order-7 xl:order-0 xl:w-1/2" />
           </div>
         </div>
       </div>

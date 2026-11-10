@@ -2,6 +2,7 @@
   import type { ArticleShortResponse } from '../model';
 
   import { CardLink } from '~ui/link';
+  import { getVideoPoster } from '~ui/video';
 
   import { ArticleDrawer } from '../drawer';
   import {
@@ -37,6 +38,12 @@
 
   const to = computed(() => getArticleRoute(article.url));
 
+  // У записи с роликом картинка карточки — его заставка.
+  const image = computed(
+    () =>
+      getVideoPoster(article.videoUrl, article.previewImageUrl) ?? undefined,
+  );
+
   // CardLink рассчитан на сущности с рус/англ названием; у записи одно название,
   // в подзаголовок кладём дату публикации и рейтинг (если запись уже оценивали).
   const name = computed(() => ({
@@ -56,7 +63,7 @@
   <CardLink
     :to="to"
     :name="name"
-    :image="article.previewImageUrl ?? undefined"
+    :image
     :is-opened="isOpened"
     @open-drawer="handleOpen"
   >

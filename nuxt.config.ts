@@ -150,6 +150,11 @@ export default defineNuxtConfig({
         'img-src': ["'self'", 'https:', 'data:', 'blob:'],
         'media-src': ["'self'", 'https:', 'data:', 'blob:'],
       },
+      // По умолчанию nuxt-security ставит `credentialless`, и браузер не
+      // пускает чужие iframe без собственного COEP — а у плееров YouTube и
+      // ВК Видео его нет. Изоляция страницы (SharedArrayBuffer) сайту не
+      // нужна, поэтому заголовок выключен.
+      crossOriginEmbedderPolicy: 'unsafe-none',
       strictTransportSecurity: {
         preload: true,
         maxAge: 31536000,
@@ -162,7 +167,14 @@ export default defineNuxtConfig({
         geolocation: [],
         microphone: [],
         camera: [],
-        fullscreen: ['self'],
+        // Полноэкранный режим — сайту и встроенным плеерам роликов
+        // (новости с видео, `~ui/video`).
+        fullscreen: [
+          'self',
+          '"https://www.youtube-nocookie.com"',
+          '"https://vk.com"',
+          '"https://vkvideo.ru"',
+        ],
       },
     },
     rateLimiter: false,

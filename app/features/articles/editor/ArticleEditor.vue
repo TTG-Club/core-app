@@ -12,6 +12,14 @@
 
   import { MarkupEditor } from '~ui/markup-editor';
   import { UploadImage } from '~ui/upload';
+  import {
+    parseVideoUrl,
+    UiVideoPlayer,
+    UiVideoUrlField,
+    VIDEO_UNSUPPORTED_TEXT,
+    VIDEO_URL_FIELD_HINT,
+    VIDEO_URL_FIELD_LABEL,
+  } from '~ui/video';
   import { useWorkshopForm } from '~workshop/composable';
 
   import {
@@ -89,6 +97,7 @@
       tags: [],
       title: '',
       previewImageUrl: null,
+      videoUrl: null,
       publishDateTime: null,
       preview: '',
       content: '',
@@ -123,6 +132,8 @@
         telegramSummaryEnabled: raw.telegramSummaryEnabled ?? false,
         telegramSummary: raw.telegramSummary ?? '',
         tags: raw.tags ?? [],
+        // До миграции бэка поля видео в ответе нет вовсе (undefined).
+        videoUrl: raw.videoUrl ?? null,
       }),
       transformBeforeSubmit: (formState) => {
         const isActivePublish = !formState.draft && formState.active;
@@ -321,6 +332,9 @@
 
   // Мост null ↔ undefined: DTO хранит previewImageUrl как string | null,
   // а UploadImage работает со string | undefined.
+  // Распознанный ролик — для превью плеера под полем ссылки.
+  const videoSource = computed(() => parseVideoUrl(state.value.videoUrl));
+
   const coverModel = computed<string | undefined>({
     get: () => state.value.previewImageUrl ?? undefined,
     set: (value) => {
@@ -493,6 +507,13 @@
     preview: z.string().trim(),
     content: z.string().trim().nonempty(),
     publishDateTime: z.string().nullable(),
+    // Видео необязательно, но ссылка должна быть с поддерживаемой площадки.
+    videoUrl: z
+      .string()
+      .nullable()
+      .refine((value) => !value || !!parseVideoUrl(value), {
+        message: VIDEO_UNSUPPORTED_TEXT,
+      }),
   });
 
   function submitMain(): void {
@@ -929,8 +950,29 @@
 
     <UCard variant="subtle">
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Обложка</h2>
+        <h2 class="truncate text-base text-highlighted">Обложка и видео</h2>
       </template>
+
+      <div
+        class="mb-4 grid grid-cols-1 gap-4 border-b border-default pb-4 sm:grid-cols-2 sm:items-start"
+      >
+        <UFormField
+          :label="VIDEO_URL_FIELD_LABEL"
+          :help="VIDEO_URL_FIELD_HINT"
+          name="videoUrl"
+        >
+          <UiVideoUrlField v-model="state.videoUrl" />
+        </UFormField>
+
+        <!-- Плеер с текущей обложкой-заставкой: видно, что увидит читатель до
+          нажатия «Смотреть» -->
+        <UiVideoPlayer
+          v-if="videoSource"
+          :url="videoSource.url"
+          :title="state.title"
+          :poster="coverModel"
+        />
+      </div>
 
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-start">
         <div

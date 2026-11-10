@@ -43,6 +43,12 @@ import {
   ARTICLES_ADMIN_CREATE_ROUTE,
   ARTICLES_ADMIN_ROUTE,
 } from '~articles/model';
+import {
+  COMMUNITY_NEWS_ADMIN_CREATE_ROUTE,
+  COMMUNITY_NEWS_ADMIN_ROUTE,
+  COMMUNITY_NEWS_ADMIN_TITLE,
+  COMMUNITY_NEWS_ICON,
+} from '~community-news/model';
 
 /** Маршрут главной страницы админ-панели (дашборд со статистикой) */
 export const ADMIN_DASHBOARD_ROUTE = '/admin';
@@ -96,6 +102,13 @@ const ADMIN_ARTICLES_ITEM: NavigationItem = {
   createRoute: ARTICLES_ADMIN_CREATE_ROUTE,
 };
 
+const ADMIN_COMMUNITY_NEWS_ITEM: NavigationItem = {
+  label: COMMUNITY_NEWS_ADMIN_TITLE,
+  icon: COMMUNITY_NEWS_ICON,
+  to: COMMUNITY_NEWS_ADMIN_ROUTE,
+  createRoute: COMMUNITY_NEWS_ADMIN_CREATE_ROUTE,
+};
+
 const ADMIN_HOME_HERO_ITEM: NavigationItem = {
   label: HOME_HERO_ADMIN_PAGE_TITLE,
   icon: HOME_HERO_ADMIN_NAVIGATION_ICON,
@@ -132,6 +145,7 @@ export const ADMIN_NAVIGATION_ITEMS: NavigationItem[] = [
   ADMIN_CODES_ITEM,
   ADMIN_SUBSCRIPTION_STATS_ITEM,
   ADMIN_ARTICLES_ITEM,
+  ADMIN_COMMUNITY_NEWS_ITEM,
   ADMIN_HOME_HERO_ITEM,
   ADMIN_MAINTENANCE_ITEM,
   ADMIN_MAILING_ITEM,
@@ -155,6 +169,7 @@ export const ADMIN_CONTENT_SECTION_GROUP: NavigationGroup = {
   icon: 'tabler:layout-dashboard',
   items: [
     ADMIN_ARTICLES_ITEM,
+    ADMIN_COMMUNITY_NEWS_ITEM,
     ADMIN_HOME_HERO_ITEM,
     ADMIN_MAINTENANCE_ITEM,
     ADMIN_PERSONAS_ITEM,

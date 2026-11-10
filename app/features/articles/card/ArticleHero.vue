@@ -2,6 +2,13 @@
   import type { ArticleShortResponse } from '../model';
 
   import {
+    getVideoPoster,
+    UiVideoModal,
+    VIDEO_PLAY_ICON,
+    VIDEO_PLAY_LABEL,
+  } from '~ui/video';
+
+  import {
     ARTICLE_ADMIN_NEWS_LIST_LABEL,
     ARTICLE_CREATE_NEWS_LABEL,
     ARTICLE_DATE_FORMAT,
@@ -30,9 +37,25 @@
   const heroActionClass =
     'bg-black/40 text-white ring-1 ring-white/20 backdrop-blur-sm hover:bg-black/60 hover:text-white';
 
+  // У записи с роликом обложка — его заставка (своя или превью площадки).
   const coverImage = computed(
-    () => article.previewImageUrl || ARTICLE_FALLBACK_IMAGE,
+    () =>
+      getVideoPoster(article.videoUrl, article.previewImageUrl)
+      ?? ARTICLE_FALLBACK_IMAGE,
   );
+
+  // Ролик смотрят прямо с главной, в окне поверх страницы: кнопка «Смотреть»
+  // по центру обложки. Клик мимо неё по-прежнему открывает саму запись.
+  const overlay = useOverlay();
+
+  const videoModal = overlay.create(UiVideoModal, { destroyOnClose: true });
+
+  /** Открывает ролик новости в окне поверх страницы. */
+  function playVideo(): void {
+    if (article.videoUrl) {
+      videoModal.open({ url: article.videoUrl, title: article.title });
+    }
+  }
 
   const articleRoute = computed(() => getArticleRoute(article.url));
 
@@ -117,6 +140,19 @@
         </div>
       </a>
     </NuxtLink>
+
+    <button
+      v-if="article.videoUrl"
+      type="button"
+      class="absolute top-1/2 left-1/2 z-20 flex size-16 -translate-x-1/2 -translate-y-[75%] cursor-pointer items-center justify-center rounded-full bg-black/60 text-white ring-1 ring-white/30 backdrop-blur-sm transition-transform hover:scale-110 sm:size-20"
+      :aria-label="`${VIDEO_PLAY_LABEL}: ${article.title}`"
+      @click.left.exact.prevent="playVideo"
+    >
+      <UIcon
+        :name="VIDEO_PLAY_ICON"
+        class="size-7 sm:size-9"
+      />
+    </button>
 
     <div class="absolute top-2 right-2 z-20 flex items-center gap-1">
       <UButton
