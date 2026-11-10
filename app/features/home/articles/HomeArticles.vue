@@ -86,11 +86,11 @@
     :icon="HOME_ARTICLES_ICON"
     :to="ARTICLES_ROUTE"
     :link-label="HOME_ARTICLES_ALL_LABEL"
-    body-class="p-2"
+    body-class="@container p-2"
   >
     <div
       v-if="isLoading"
-      class="grid grid-cols-1 gap-1 sm:grid-cols-2"
+      class="grid grid-cols-1 gap-1 @lg:grid-cols-2"
     >
       <div
         v-for="index in HOME_ARTICLES_COUNT"
@@ -114,9 +114,12 @@
       {{ HOME_ARTICLES_EMPTY_TEXT }}
     </p>
 
+    <!-- Столбец или две колонки — по ширине самой панели: на xl статьи стоят
+      в четверти ленты рядом с новостями сообщества, а без соседа — на
+      половине -->
     <div
       v-else
-      class="grid grid-cols-1 gap-1 sm:grid-cols-2"
+      class="grid grid-cols-1 gap-1 @lg:grid-cols-2"
     >
       <ArticleTile
         v-for="article in data"

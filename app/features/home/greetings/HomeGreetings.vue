@@ -23,6 +23,7 @@
   });
 
   const greeting = shallowRef<HomeGreeting | null>(null);
+
   const isGuest = computed(() => !isLoggedIn.value && !userTokenCookie.value);
 
   const guestHeaders = computed<Record<string, string> | undefined>(() => {
@@ -39,11 +40,15 @@
    * Загружает приветствие и валидирует ответ API перед отрисовкой.
    */
   async function fetchHomeGreeting(): Promise<void> {
-    const response = await $fetch<unknown>(HOME_GREETING_API_URL, {
-      headers: guestHeaders.value,
-    });
+    try {
+      const response = await $fetch<unknown>(HOME_GREETING_API_URL, {
+        headers: guestHeaders.value,
+      });
 
-    greeting.value = parseHomeGreeting(response);
+      greeting.value = parseHomeGreeting(response);
+    } catch {
+      greeting.value = null;
+    }
   }
 
   onMounted(() => {
@@ -98,13 +103,15 @@
   <!-- Уже 400px персонаж не помещается рядом с репликой: текст сжимается
     в столбик по слову-два в строке, поэтому блок показываем только
     с 400px -->
+  <!-- Место заранее не держим: персонажа часто нет, и пустая дыра между
+    заголовком и поиском хуже, чем поиск, сдвинутый вниз пришедшим
+    приветствием. Блок занимает высоту, только когда приветствие есть -->
   <div
+    v-if="greeting"
     :style="{ '--home-greeting-height': HOME_GREETING_HEIGHT }"
     class="relative flex min-h-(--home-greeting-height) w-full items-end justify-center max-xs:hidden"
   >
-    <!-- Оболочка сохраняет место до ответа API и при отсутствии приветствия. -->
     <div
-      v-if="greeting"
       :class="[
         $style.root,
         'mx-auto flex w-fit max-w-full items-end justify-center gap-2 px-2 sm:max-w-3xl sm:gap-3',

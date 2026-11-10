@@ -58,8 +58,11 @@ export const SECTION_LAYOUT_UNAVAILABLE_HINT = 'колонки — на экра
 /**
  * Раскладки разделов: две узкие — запись поверх списка или рядом с ним в
  * колонке по центру, как на старом сайте 5e14, — и шесть широких, где
- * колонки фильтров, списка и записи стоят в разном порядке. Каждая —
- * сочетание ширины сайта, места фильтров, стороны записи и узкой колонки.
+ * колонки фильтров, списка и записи стоят в разном порядке. Широкие идут
+ * парами по месту фильтров — слева, сверху, справа; в паре сперва запись
+ * справа от списка, потом слева. Каждая — сочетание ширины сайта, места
+ * фильтров, стороны записи и узкой колонки. Значения уходят в статистику
+ * онлайна — переименование обнулит её историю.
  */
 export const SECTION_LAYOUT_OPTIONS = [
   {
@@ -103,6 +106,14 @@ export const SECTION_LAYOUT_OPTIONS = [
     centered: false,
   },
   {
+    value: 'top-left',
+    label: 'Запись · фильтры над списком',
+    width: LayoutWidthName.Wide,
+    filters: 'top',
+    detail: 'left',
+    centered: false,
+  },
+  {
     value: 'right-right',
     label: 'Список · запись · фильтры',
     width: LayoutWidthName.Wide,
@@ -115,14 +126,6 @@ export const SECTION_LAYOUT_OPTIONS = [
     label: 'Запись · список · фильтры',
     width: LayoutWidthName.Wide,
     filters: 'right',
-    detail: 'left',
-    centered: false,
-  },
-  {
-    value: 'top-left',
-    label: 'Запись · фильтры над списком',
-    width: LayoutWidthName.Wide,
-    filters: 'top',
     detail: 'left',
     centered: false,
   },

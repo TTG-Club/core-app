@@ -18,6 +18,7 @@ import {
   createCustomThemePalette,
   CUSTOM_THEME_CLASS,
   CUSTOM_THEME_DEFAULT_SETTINGS,
+  getCustomThemeBase,
   parseCustomThemeSettings,
   renderCustomThemeCss,
 } from '~infrastructure/custom-theme/model';
@@ -68,13 +69,16 @@ export function useTheme() {
     default: () => 'dark' as const,
   });
 
-  // Значение из куки приходит извне — проверяется схемой при каждом чтении
   const customSettingsCookie = useCookie<unknown>(CUSTOM_THEME_STORE_KEY, {
     maxAge: ONE_DAY_IN_SECONDS * 365,
     default: () => CUSTOM_THEME_DEFAULT_SETTINGS,
   });
 
-  const customSettings = computed(() =>
+  // Настройки читаются из общего состояния, а кука только сохраняет их.
+  // Браузер сообщает об изменении куки с опозданием: пока тянут ползунок,
+  // приходят уже устаревшие значения, и чтение из куки отбрасывало бегунок
+  // назад. Значение из куки приходит извне — проверяется схемой
+  const customSettings = useState(CUSTOM_THEME_STORE_KEY, () =>
     parseCustomThemeSettings(customSettingsCookie.value),
   );
 
@@ -87,7 +91,7 @@ export function useTheme() {
   /** Готовая тема, файл цветов которой лежит в основе: у своей — тёмная или светлая. */
   const baseName = computed<PresetColorMode>(() =>
     themeName.value === ThemeName.Custom
-      ? customSettings.value.base
+      ? getCustomThemeBase(customSettings.value.background)
       : themeName.value,
   );
 
@@ -133,11 +137,13 @@ export function useTheme() {
    * @param patch Изменённые настройки.
    */
   function changeCustomSettings(patch: Partial<CustomThemeSettings>) {
-    customSettingsCookie.value = { ...customSettings.value, ...patch };
+    customSettings.value = { ...customSettings.value, ...patch };
+    customSettingsCookie.value = customSettings.value;
   }
 
   /** Возвращает своей теме настройки по умолчанию. */
   function resetCustomSettings() {
+    customSettings.value = CUSTOM_THEME_DEFAULT_SETTINGS;
     customSettingsCookie.value = CUSTOM_THEME_DEFAULT_SETTINGS;
   }
 

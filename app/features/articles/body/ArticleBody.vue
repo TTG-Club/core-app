@@ -5,6 +5,7 @@
   import { UiGallery } from '~ui/gallery';
   import { getNodeText, MarkupRender, withHeadingAnchors } from '~ui/markup';
   import { RatingWidget } from '~ui/rating';
+  import { UiVideoPlayer } from '~ui/video';
 
   import {
     ARTICLE_FALLBACK_IMAGE,
@@ -29,6 +30,12 @@
   // toArticleMarkup разворачивает возможную сырую JSON-строку описания в узлы (см.
   // хелпер).
   const previewNodes = computed(() => toArticleMarkup(article.preview));
+
+  // Над роликом плашку рейтинга не кладём: внизу плеера подпись площадки, а
+  // клик по плашке не должен задевать запуск видео — рейтинг уходит под плеер.
+  const ratingClass = computed(() =>
+    article.videoUrl ? 'mt-2' : 'absolute bottom-2 left-2',
+  );
 
   // Заголовки текста получают якоря и складываются в содержание под рейтингом.
   const anchoredContent = computed(() =>
@@ -84,8 +91,16 @@
         <div :class="[$style.cover, 'flex grow flex-col gap-4']">
           <!-- Рейтинг — компактной плашкой поверх нижнего края обложки -->
           <div class="relative">
+            <!-- Видео заменяет обложку; обложка становится его заставкой -->
+            <UiVideoPlayer
+              v-if="article.videoUrl"
+              :url="article.videoUrl"
+              :title="article.title"
+              :poster="article.previewImageUrl ?? undefined"
+            />
+
             <UiGallery
-              v-if="article.previewImageUrl"
+              v-else-if="article.previewImageUrl"
               :preview="article.previewImageUrl"
               :alt="article.title"
               disable-square
@@ -100,7 +115,7 @@
 
             <RatingWidget
               v-if="isRatingShown"
-              class="absolute bottom-2 left-2"
+              :class="ratingClass"
               size="compact"
               :section="ARTICLE_RATING_SECTION"
               :url="article.url"

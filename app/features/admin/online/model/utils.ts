@@ -162,5 +162,6 @@ export function createPreferenceSummary(
     rows: optionRows,
     title: section.title,
     total: counts ? String(total) : ADMIN_ONLINE_STATS_EMPTY_VALUE,
+    wide: section.wide ?? false,
   };
 }

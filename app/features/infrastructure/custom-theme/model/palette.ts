@@ -8,10 +8,13 @@ import type {
 import Color from 'colorjs.io';
 
 import {
+  CUSTOM_THEME_ACCENT_LIGHTNESS_LIMIT,
   CUSTOM_THEME_ACCENT_TARGET,
   CUSTOM_THEME_ANCHOR_STEP,
+  CUSTOM_THEME_BASE_THRESHOLD,
   CUSTOM_THEME_CLASS,
-  CUSTOM_THEME_MAX_TINT_CHROMA,
+  CUSTOM_THEME_MAX_BACKGROUND_CHROMA,
+  CUSTOM_THEME_MAX_TEXT_CHROMA,
   CUSTOM_THEME_SCALE_STEPS,
   CUSTOM_THEME_SOLID_TEXT_TARGET,
   CUSTOM_THEME_STATUS_COLORS,
@@ -42,6 +45,13 @@ const SEARCH_ITERATIONS = 24;
 
 /** Различие светлоты, после которого акцент считается подправленным. */
 const ADJUSTMENT_EPSILON = 0.005;
+
+/** Светлота чёрного и белого в OKLCH — края любого поиска светлоты. */
+const BLACK_LIGHTNESS = 0;
+const WHITE_LIGHTNESS = 1;
+
+/** Отрезок светлоты короче этого считается точкой — положения на нём нет. */
+const MIN_RANGE_WIDTH = 0.001;
 
 /** Белый — надпись на сплошных кнопках светлой основы. */
 const WHITE = '#ffffff';
@@ -135,7 +145,7 @@ function searchLightness(
  * @returns Крайняя светлота.
  */
 function getContrastEnd(base: CustomThemeBase): number {
-  return base === 'dark' ? 1 : 0;
+  return base === 'dark' ? WHITE_LIGHTNESS : BLACK_LIGHTNESS;
 }
 
 /**
@@ -180,22 +190,77 @@ function fitColorToTheme(
   source: OklchColor,
   page: string,
 ): string {
-  const solidText = base === 'dark' ? page : WHITE;
-
   const lightness = searchLightness(
     source.lightness,
     getContrastEnd(base),
-    (candidate) => {
-      const color = fromOklch({ ...source, lightness: candidate });
-
-      return (
-        getApcaContrast(color, page) >= CUSTOM_THEME_ACCENT_TARGET
-        && getApcaContrast(solidText, color) >= CUSTOM_THEME_SOLID_TEXT_TARGET
-      );
-    },
+    (candidate) => isColorReadable(base, source, page, candidate),
   );
 
   return fromOklch({ ...source, lightness });
+}
+
+/**
+ * Читается ли цветной оттенок с этой светлотой: сам на странице и надпись на
+ * сплошной кнопке этого цвета.
+ *
+ * @param base Основа темы.
+ * @param source Цвет — берутся тон и насыщенность.
+ * @param page Цвет фона страницы.
+ * @param lightness Проверяемая светлота.
+ * @returns `true`, если оба порога контраста пройдены.
+ */
+function isColorReadable(
+  base: CustomThemeBase,
+  source: OklchColor,
+  page: string,
+  lightness: number,
+): boolean {
+  const solidText = base === 'dark' ? page : WHITE;
+  const color = fromOklch({ ...source, lightness });
+
+  return (
+    getApcaContrast(color, page) >= CUSTOM_THEME_ACCENT_TARGET
+    && getApcaContrast(solidText, color) >= CUSTOM_THEME_SOLID_TEXT_TARGET
+  );
+}
+
+/**
+ * Положение светлоты на отрезке в процентах.
+ *
+ * @param lightness Светлота.
+ * @param range Отрезок: самая тёмная и самая светлая.
+ * @returns Целое от 0 до 100.
+ */
+function toPercent(
+  lightness: number,
+  range: readonly [number, number],
+): number {
+  const [darkest, lightest] = range;
+
+  if (lightest - darkest < MIN_RANGE_WIDTH) {
+    return 0;
+  }
+
+  const share = (lightness - darkest) / (lightest - darkest);
+
+  return Math.round(Math.min(1, Math.max(0, share)) * 100);
+}
+
+/**
+ * Светлота по положению на отрезке в процентах.
+ *
+ * @param percent Положение, 0–100.
+ * @param range Отрезок: самая тёмная и самая светлая.
+ * @returns Светлота.
+ */
+function fromPercent(
+  percent: number,
+  range: readonly [number, number],
+): number {
+  const [darkest, lightest] = range;
+  const share = Math.min(100, Math.max(0, percent)) / 100;
+
+  return darkest + (lightest - darkest) * share;
 }
 
 /**
@@ -290,36 +355,185 @@ interface NeutralColors {
 }
 
 /**
- * Серые тона темы: страница — по ползунку яркости фона, остальные
- * поверхности — сдвигом от неё, уровни текста — по порогам контраста. Все
- * с оттенком фона.
+ * Основа темы по цвету фона: тёмный фон — тёмная основа, светлый — светлая.
  *
- * @param settings Настройки темы.
+ * @param background Цвет фона.
+ * @returns Основа.
+ */
+export function getCustomThemeBase(background: string): CustomThemeBase {
+  return toOklch(background).lightness < CUSTOM_THEME_BASE_THRESHOLD
+    ? 'dark'
+    : 'light';
+}
+
+/**
+ * Фон страницы, пригодный для чтения: светлота подтягивается в пределы
+ * основы, слишком сочный цвет приглушается. Оттенок остаётся как выбран.
+ *
+ * @param background Выбранный цвет фона.
+ * @returns Основа и фон страницы в OKLCH.
+ */
+function resolvePage(background: string): {
+  base: CustomThemeBase;
+  page: OklchColor;
+} {
+  const base = getCustomThemeBase(background);
+  const source = toOklch(background);
+  const [darkest, lightest] = CUSTOM_THEME_SURFACES[base].pageRange;
+
+  return {
+    base,
+    page: {
+      lightness: Math.min(lightest, Math.max(darkest, source.lightness)),
+      chroma: Math.min(CUSTOM_THEME_MAX_BACKGROUND_CHROMA, source.chroma),
+      hue: source.hue,
+    },
+  };
+}
+
+/**
+ * Яркость фона внутри его основы: 0 — самый тёмный допустимый, 100 — самый
+ * светлый.
+ *
+ * @param background Цвет фона.
+ * @returns Целое от 0 до 100.
+ */
+export function getCustomThemeBackgroundLightness(background: string): number {
+  const { base, page } = resolvePage(background);
+
+  return toPercent(page.lightness, CUSTOM_THEME_SURFACES[base].pageRange);
+}
+
+/**
+ * Тот же фон, но с другой основой и яркостью: оттенок и насыщенность
+ * сохраняются, меняется только светлота.
+ *
+ * @param background Цвет фона.
+ * @param base Нужная основа.
+ * @param lightness Яркость внутри основы, 0–100.
+ * @returns Новый цвет фона в формате `#rrggbb`.
+ */
+export function changeCustomThemeBackgroundLightness(
+  background: string,
+  base: CustomThemeBase,
+  lightness: number,
+): string {
+  const { page } = resolvePage(background);
+
+  return fromOklch({
+    ...page,
+    lightness: fromPercent(lightness, CUSTOM_THEME_SURFACES[base].pageRange),
+  });
+}
+
+/**
+ * Пределы светлоты акцента на этом фоне. Одна граница — где акцент
+ * перестаёт читаться (её находит подбор по контрасту), другая — где он
+ * становится слишком бледным на тёмной основе или слишком тёмным на светлой.
+ *
+ * @param background Цвет фона.
+ * @param accent Цвет акцента — берутся тон и насыщенность.
+ * @returns Самая тёмная и самая светлая допустимая светлота.
+ */
+function getAccentLightnessRange(
+  background: string,
+  accent: string,
+): readonly [number, number] {
+  const { base, page } = resolvePage(background);
+  const pageColor = fromOklch(page);
+  const source = toOklch(accent);
+  const limit = CUSTOM_THEME_ACCENT_LIGHTNESS_LIMIT[base];
+
+  if (base === 'dark') {
+    const darkest = searchLightness(
+      BLACK_LIGHTNESS,
+      WHITE_LIGHTNESS,
+      (candidate) => isColorReadable(base, source, pageColor, candidate),
+    );
+
+    return [darkest, Math.max(darkest, limit)];
+  }
+
+  const lightest = searchLightness(
+    WHITE_LIGHTNESS,
+    BLACK_LIGHTNESS,
+    (candidate) => isColorReadable(base, source, pageColor, candidate),
+  );
+
+  return [Math.min(lightest, limit), lightest];
+}
+
+/**
+ * Яркость акцента в пределах, где он читается на этом фоне: 0 — самый
+ * тёмный допустимый, 100 — самый светлый. Учитывается акцент после подгонки
+ * под контраст — тот, что виден на сайте.
+ *
+ * @param background Цвет фона.
+ * @param accent Цвет акцента.
+ * @returns Целое от 0 до 100.
+ */
+export function getCustomThemeAccentLightness(
+  background: string,
+  accent: string,
+): number {
+  const { base, page } = resolvePage(background);
+  const fitted = fitColorToTheme(base, toOklch(accent), fromOklch(page));
+
+  return toPercent(
+    toOklch(fitted).lightness,
+    getAccentLightnessRange(background, accent),
+  );
+}
+
+/**
+ * Тот же акцент с другой яркостью: тон и насыщенность сохраняются, светлота
+ * ставится внутри пределов, где акцент читается на этом фоне.
+ *
+ * @param background Цвет фона.
+ * @param accent Цвет акцента.
+ * @param lightness Яркость, 0–100.
+ * @returns Новый цвет акцента в формате `#rrggbb`.
+ */
+export function changeCustomThemeAccentLightness(
+  background: string,
+  accent: string,
+  lightness: number,
+): string {
+  return fromOklch({
+    ...toOklch(accent),
+    lightness: fromPercent(
+      lightness,
+      getAccentLightnessRange(background, accent),
+    ),
+  });
+}
+
+/**
+ * Серые тона темы: страница — выбранный фон, остальные поверхности — сдвигом
+ * от неё, уровни текста — по порогам контраста. Все с оттенком фона.
+ *
+ * @param base Основа темы.
+ * @param page Фон страницы.
  * @returns Цвета поверхностей и текста.
  */
-function buildNeutralColors(settings: CustomThemeSettings): NeutralColors {
-  const levels = CUSTOM_THEME_SURFACES[settings.base];
-  const targets = CUSTOM_THEME_TEXT_TARGETS[settings.base];
-  const [darkest, lightest] = levels.pageRange;
-
-  const pageLightness =
-    darkest
-    + ((lightest - darkest) * Math.min(100, settings.backgroundLightness))
-      / 100;
-
-  const chroma =
-    (CUSTOM_THEME_MAX_TINT_CHROMA * Math.min(100, settings.backgroundTint))
-    / 100;
-
-  const surfaceTint = { chroma, hue: settings.backgroundHue };
+function buildNeutralColors(
+  base: CustomThemeBase,
+  page: OklchColor,
+): NeutralColors {
+  const levels = CUSTOM_THEME_SURFACES[base];
+  const targets = CUSTOM_THEME_TEXT_TARGETS[base];
+  const surfaceTint = { chroma: page.chroma, hue: page.hue };
 
   const textTint = {
-    chroma: chroma * CUSTOM_THEME_TEXT_TINT_SHARE,
-    hue: settings.backgroundHue,
+    chroma: Math.min(
+      CUSTOM_THEME_MAX_TEXT_CHROMA,
+      page.chroma * CUSTOM_THEME_TEXT_TINT_SHARE,
+    ),
+    hue: page.hue,
   };
 
   const surface = (offset: number) =>
-    fromOklch({ ...surfaceTint, lightness: pageLightness + offset });
+    fromOklch({ ...surfaceTint, lightness: page.lightness + offset });
 
   const surfaces = {
     page: surface(0),
@@ -333,7 +547,7 @@ function buildNeutralColors(settings: CustomThemeSettings): NeutralColors {
   };
 
   const solve = (target: number) =>
-    solveTextColor(settings.base, surfaces.page, target, textTint);
+    solveTextColor(base, surfaces.page, target, textTint);
 
   return {
     surfaces,
@@ -459,9 +673,9 @@ const UI_COLOR_SCALES = {
 } as const;
 
 /**
- * Собирает всю палитру своей темы из настроек: основы, яркости, оттенка и
- * насыщенности фона и акцента. Поверхности считаются сдвигом от страницы,
- * уровни текста и цвета — подбираются по порогам контраста APCA.
+ * Собирает всю палитру своей темы из настроек: цвета фона и акцента.
+ * Поверхности считаются сдвигом от страницы, уровни текста и цвета —
+ * подбираются по порогам контраста APCA.
  *
  * @param settings Настройки темы.
  * @returns Переменные темы и сведения о подгонке акцента.
@@ -469,9 +683,9 @@ const UI_COLOR_SCALES = {
 export function createCustomThemePalette(
   settings: CustomThemeSettings,
 ): CustomThemePalette {
-  const { base } = settings;
+  const { base, page } = resolvePage(settings.background);
   const anchorStep = CUSTOM_THEME_ANCHOR_STEP[base];
-  const neutral = buildNeutralColors(settings);
+  const neutral = buildNeutralColors(base, page);
   const { surfaces, text } = neutral;
 
   const accentSource = toOklch(settings.accent);
@@ -551,6 +765,7 @@ export function createCustomThemePalette(
   ];
 
   return {
+    base,
     variables: Object.fromEntries(variables),
     pageColor: surfaces.page,
     accentColor: accent,

@@ -101,7 +101,7 @@
 
       <div class="grid grid-cols-1 gap-2 p-2 sm:grid-cols-2">
         <div
-          v-for="index in 4"
+          v-for="index in HOME_NEWS_COUNT - 1"
           :key="index"
           class="flex items-center gap-3 p-2"
         >

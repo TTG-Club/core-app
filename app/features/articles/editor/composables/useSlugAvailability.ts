@@ -24,7 +24,8 @@ function isNotFoundError(error: unknown): boolean {
 }
 
 /**
- * Проверяет доступность slug через `HEAD /articles/{url}`:
+ * Проверяет доступность slug через `HEAD {apiPath}/{url}` (по умолчанию —
+ * `/articles`; тот же контракт у новостей сообщества):
  * 200 — занят (в т.ч. черновиком, отложенной или удалённой записью),
  * 404 — свободен. При редактировании собственный url записи занятым не считается.
  *
@@ -38,12 +39,13 @@ function isNotFoundError(error: unknown): boolean {
 export function useSlugAvailability(
   slug: Ref<string>,
   currentUrl: Ref<string | undefined>,
+  apiPath: string = ARTICLES_API_PATH,
 ): { availability: Ref<SlugAvailability> } {
   const availability = ref<SlugAvailability>('idle');
 
   async function check(value: string): Promise<void> {
     try {
-      await $fetch(`${ARTICLES_API_PATH}/${value}`, { method: 'HEAD' });
+      await $fetch(`${apiPath}/${value}`, { method: 'HEAD' });
 
       // Пока ждали ответ, slug мог смениться — применяем только актуальный.
       if (value === slug.value) {

@@ -29,7 +29,7 @@ export type OnlineDisplayPreferences = Record<string, string>;
 export interface OnlineHeartbeatBody {
   key: string;
   /**
-   * Настройки отображения посетителя (тема, ширина сайта) для статистики в админке.
+   * Настройки отображения посетителя (тема, ширина сайта, раскладка разделов) для статистики в админке.
    * Без заданных настроек поле не отправляется.
    */
   preferences?: OnlineDisplayPreferences;

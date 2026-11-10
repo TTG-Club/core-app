@@ -66,6 +66,7 @@ export interface AdminOnlinePreferenceSummary {
   rows: Array<AdminOnlinePreferenceRow>;
   title: string;
   total: string;
+  wide: boolean;
 }
 
 /** Вариант настройки отображения, который панель знает в лицо. */
@@ -79,4 +80,6 @@ export interface AdminOnlinePreferenceSection {
   name: string;
   options: ReadonlyArray<AdminOnlinePreferenceOption>;
   title: string;
+  /** Вариантов много и подписи длинные — сводка идёт строкой во всю ширину панели */
+  wide?: boolean;
 }
