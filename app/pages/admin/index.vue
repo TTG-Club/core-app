@@ -211,49 +211,54 @@
           </UButton>
         </div>
 
+        <!-- Короткие панели стопкой слева, высокая панель настроек — справа:
+             иначе соседи по ряду тянутся до её высоты и пустеют -->
         <div class="grid gap-3 lg:grid-cols-2">
-          <AdminOnlineSitesPanel
-            :stats="resolvedOnlineStats"
-            :is-pending="isOnlineStatsPending"
-            :has-error="hasOnlineStatsError"
-          />
+          <div class="flex flex-col gap-3">
+            <AdminOnlineSitesPanel
+              :stats="resolvedOnlineStats"
+              :is-pending="isOnlineStatsPending"
+              :has-error="hasOnlineStatsError"
+            />
 
-          <AdminDashboardPanel :title="ADMIN_DASHBOARD_TOTALS_TITLE">
-            <div class="grid h-full grid-cols-3 divide-x divide-default">
-              <ClientOnly>
-                <AdminCharacterSheetStatsTile
-                  :stats="resolvedSheetStats"
-                  :is-loading="isSheetStatsLoading"
-                  :has-error="hasSheetStatsError"
+            <AdminDashboardPanel :title="ADMIN_DASHBOARD_TOTALS_TITLE">
+              <div class="grid h-full grid-cols-3 divide-x divide-default">
+                <ClientOnly>
+                  <AdminCharacterSheetStatsTile
+                    :stats="resolvedSheetStats"
+                    :is-loading="isSheetStatsLoading"
+                    :has-error="hasSheetStatsError"
+                  />
+
+                  <template #fallback>
+                    <AdminCharacterSheetStatsTile
+                      :stats="null"
+                      is-loading
+                      :has-error="false"
+                    />
+                  </template>
+                </ClientOnly>
+
+                <AdminGameStatisticsTile
+                  :statistics="resolvedGameStatistics"
+                  :is-loading="isGameStatisticsLoading"
+                  :has-error="hasGameStatisticsError"
                 />
 
-                <template #fallback>
-                  <AdminCharacterSheetStatsTile
-                    :stats="null"
-                    is-loading
-                    :has-error="false"
-                  />
-                </template>
-              </ClientOnly>
+                <AdminSubscribersTile
+                  :subscriptions="subscriptions"
+                  :is-pending="isSubscriptionsPending"
+                  :has-error="hasSubscriptionsError"
+                />
+              </div>
+            </AdminDashboardPanel>
 
-              <AdminGameStatisticsTile
-                :statistics="resolvedGameStatistics"
-                :is-loading="isGameStatisticsLoading"
-                :has-error="hasGameStatisticsError"
-              />
-
-              <AdminSubscribersTile
-                :subscriptions="subscriptions"
-                :is-pending="isSubscriptionsPending"
-                :has-error="hasSubscriptionsError"
-              />
-            </div>
-          </AdminDashboardPanel>
-
-          <AdminOnlineVttgPanel
-            :stats="resolvedOnlineStats"
-            :is-pending="isOnlineStatsPending"
-          />
+            <AdminOnlineVttgPanel
+              :stats="resolvedOnlineStats"
+              :is-pending="isOnlineStatsPending"
+              class="flex-1"
+            />
+          </div>
 
           <AdminOnlinePreferencesPanel
             :stats="resolvedOnlineStats"
