@@ -62,9 +62,8 @@
         <div class="contents xl:flex xl:w-1/2 xl:flex-col xl:gap-3">
           <HomeNews class="order-2 xl:order-0" />
 
-          <!-- flex-1 у обоих: если новости сообщества не пришли (блок
-            спрятан), статьи забирают весь ряд; items-stretch выравнивает
-            низ панелей, когда в одной из них строк меньше -->
+          <!-- Две равные колонки (flex-1); items-stretch выравнивает низ
+            панелей, когда в одной из них строк меньше -->
           <div class="contents xl:flex xl:flex-row xl:items-stretch xl:gap-3">
             <HomeArticles class="order-4 xl:order-0 xl:min-w-0 xl:flex-1" />
 

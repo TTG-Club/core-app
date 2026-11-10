@@ -23,6 +23,19 @@
   });
 
   const greeting = shallowRef<HomeGreeting | null>(null);
+
+  /** Ответ API уже пришёл (или запрос упал) — ждать больше нечего. */
+  const isSettled = ref(false);
+
+  /**
+   * Место под персонажа держим, пока ждём ответ, и когда приветствие есть.
+   * Пришло пустым или запрос упал — место схлопывается, а не висит дырой
+   * между заголовком и поиском.
+   */
+  const isSpaceReserved = computed<boolean>(
+    () => !isSettled.value || greeting.value !== null,
+  );
+
   const isGuest = computed(() => !isLoggedIn.value && !userTokenCookie.value);
 
   const guestHeaders = computed<Record<string, string> | undefined>(() => {
@@ -39,11 +52,17 @@
    * Загружает приветствие и валидирует ответ API перед отрисовкой.
    */
   async function fetchHomeGreeting(): Promise<void> {
-    const response = await $fetch<unknown>(HOME_GREETING_API_URL, {
-      headers: guestHeaders.value,
-    });
+    try {
+      const response = await $fetch<unknown>(HOME_GREETING_API_URL, {
+        headers: guestHeaders.value,
+      });
 
-    greeting.value = parseHomeGreeting(response);
+      greeting.value = parseHomeGreeting(response);
+    } catch {
+      greeting.value = null;
+    } finally {
+      isSettled.value = true;
+    }
   }
 
   onMounted(() => {
@@ -98,11 +117,13 @@
   <!-- Уже 400px персонаж не помещается рядом с репликой: текст сжимается
     в столбик по слову-два в строке, поэтому блок показываем только
     с 400px -->
+  <!-- Оболочка держит место до ответа API; если приветствия нет, плавно
+    схлопывается по высоте -->
   <div
     :style="{ '--home-greeting-height': HOME_GREETING_HEIGHT }"
-    class="relative flex min-h-(--home-greeting-height) w-full items-end justify-center max-xs:hidden"
+    :class="isSpaceReserved ? 'min-h-(--home-greeting-height)' : 'min-h-0'"
+    class="relative flex w-full items-end justify-center transition-[min-height] duration-300 ease-out motion-reduce:transition-none max-xs:hidden"
   >
-    <!-- Оболочка сохраняет место до ответа API и при отсутствии приветствия. -->
     <div
       v-if="greeting"
       :class="[

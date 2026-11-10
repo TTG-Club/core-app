@@ -51,10 +51,6 @@
       (status.value === 'pending' || status.value === 'idle') && !hasNews.value,
   );
 
-  // Бэкенд ещё не умеет новости сообщества (или лежит) — прячем блок целиком,
-  // а не пугаем гостей ошибкой. Соседние «Статьи» тогда занимают весь ряд.
-  const isError = computed(() => status.value === 'error' && !hasNews.value);
-
   const overlay = useOverlay();
 
   const newsDrawer = overlay.create(CommunityNewsDrawer, {
@@ -72,8 +68,10 @@
 </script>
 
 <template>
+  <!-- Блок виден всегда: если новостей нет или бэкенд их ещё не отдаёт,
+    стоит та же заглушка «пока нет», что у новостей и статей — раскладка ленты
+    не прыгает -->
   <HomePanel
-    v-if="!isError"
     :label="COMMUNITY_NEWS_TITLE"
     :icon="COMMUNITY_NEWS_ICON"
     :to="COMMUNITY_NEWS_ROUTE"
