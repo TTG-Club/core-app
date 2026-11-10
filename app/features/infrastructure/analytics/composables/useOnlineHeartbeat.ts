@@ -11,6 +11,7 @@ import {
   ONLINE_COUNTER_DATA_KEY,
   parseOnlineUsersTotal,
 } from '~home/counters/model';
+import { useSectionLayout } from '~infrastructure/sidebar/display-settings';
 
 import {
   HEARTBEAT_COOLDOWN_MS,
@@ -57,6 +58,7 @@ export function useOnlineHeartbeat(): void {
   const visitorId = computed(() => parseOnlineVisitorId(storedVisitorId.value));
   const themeCookie = useCookie<unknown>(THEME_STORE_KEY);
   const layoutWidthCookie = useCookie<unknown>(LAYOUT_WIDTH_STORE_KEY);
+  const sectionLayout = useSectionLayout();
   const userTokenCookie = useCookie<string | null>(USER_TOKEN_COOKIE);
   const { fetch: fetchUser, isLoggedIn, user } = useUser();
   const visibility = useDocumentVisibility();
@@ -73,6 +75,7 @@ export function useOnlineHeartbeat(): void {
     const preferences = createDisplayPreferences({
       theme: themeCookie.value,
       width: layoutWidthCookie.value,
+      layout: sectionLayout.value,
     });
 
     const preferencesField = Object.keys(preferences).length

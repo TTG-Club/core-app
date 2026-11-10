@@ -6,6 +6,7 @@
   import { LIST_VIEW_OPTIONS } from '~infrastructure/list-presentation/model';
 
   import { DisplaySettingsChoice } from './choice';
+  import { useSectionLayout } from './composables';
   import {
     APPEARANCE_GROUP_TITLE,
     DISPLAY_SETTINGS_ARIA,
@@ -21,19 +22,7 @@
   import { DisplaySettingsLayoutPreview } from './layout-preview';
   import { DisplaySettingsListPreview } from './list-preview';
 
-  type SectionLayout = (typeof SECTION_LAYOUT_OPTIONS)[number]['value'];
-
   const { name: themeName, change: changeTheme } = useTheme();
-  const { width: layoutWidth, change: changeLayoutWidth } = useLayoutWidth();
-
-  const { isCollapsed: isFiltersCollapsed, setCollapsed: setFiltersCollapsed } =
-    useSectionFiltersCollapsed();
-
-  const { filtersSide, detailSide, setFiltersSide, setDetailSide } =
-    useSectionColumnSides();
-
-  const { isCentered, setCentered } = useSectionCentered();
-
   const { view: listView, setView: setListView } = useListView();
 
   const { greaterOrEqual, isLgOrGreater } = useBreakpoints();
@@ -67,64 +56,7 @@
 
   const isCustomTheme = computed(() => themeName.value === ThemeName.Custom);
 
-  // Раскладка складывается из настроек: ширины сайта, узкой колонки, места
-  // фильтров (над списком — это свёрнутая колонка) и стороны записи
-  const layout = computed({
-    get: (): SectionLayout => {
-      if (layoutWidth.value !== LayoutWidthName.Wide) {
-        return 'default';
-      }
-
-      if (isCentered.value) {
-        return 'centered';
-      }
-
-      const filters = isFiltersCollapsed.value ? 'top' : filtersSide.value;
-
-      return (
-        SECTION_LAYOUT_OPTIONS.find(
-          (option) =>
-            option.width === LayoutWidthName.Wide
-            && option.filters === filters
-            && !option.centered
-            && option.detail === detailSide.value,
-        )?.value ?? 'default'
-      );
-    },
-    set: (value: SectionLayout) => {
-      const option = SECTION_LAYOUT_OPTIONS.find(
-        (entry) => entry.value === value,
-      );
-
-      if (!option) {
-        return;
-      }
-
-      changeLayoutWidth(option.width);
-
-      // Обычной ширине место колонок не важно — оставляем прежние
-      if (option.width !== LayoutWidthName.Wide) {
-        return;
-      }
-
-      setCentered(option.centered);
-
-      // Узкой раскладке колонки фильтров не нужно — прежний выбор сохраняем
-      if (option.centered) {
-        setDetailSide(option.detail);
-
-        return;
-      }
-
-      setFiltersCollapsed(option.filters === 'top');
-
-      if (option.filters !== 'top') {
-        setFiltersSide(option.filters);
-      }
-
-      setDetailSide(option.detail);
-    },
-  });
+  const layout = useSectionLayout();
 
   const view = computed({
     get: () => listView.value,

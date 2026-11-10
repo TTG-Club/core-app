@@ -17,6 +17,12 @@ import { useCookieNotice } from '~infrastructure/cookie-consent/composables';
 const noticeCookie = ref<unknown>(null);
 const themeCookie = ref<unknown>(null);
 const layoutWidthCookie = ref<unknown>(null);
+const sectionLayout = ref<string>('');
+
+// Раскладка собирается из нескольких кук — в тесте подставляем готовое значение
+vi.mock('~infrastructure/sidebar/display-settings', () => ({
+  useSectionLayout: () => sectionLayout,
+}));
 
 const scopes: Array<EffectScope> = [];
 const visitor = ref<unknown>(null);
@@ -51,6 +57,7 @@ beforeEach(() => {
   noticeCookie.value = null;
   themeCookie.value = null;
   layoutWidthCookie.value = null;
+  sectionLayout.value = '';
   visitor.value = null;
   user.value = null;
   userToken.value = null;
@@ -191,6 +198,24 @@ describe('автоматический учёт посетителей онла�
         body: {
           key: visitor.value,
           preferences: { theme: 'light' },
+          type: 'GUEST',
+        },
+      }),
+    );
+  });
+
+  it('передаёт раскладку разделов вместе с шириной сайта', async () => {
+    layoutWidthCookie.value = 'wide';
+    sectionLayout.value = 'top-left';
+    mountHeartbeat();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(heartbeat).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        body: {
+          key: visitor.value,
+          preferences: { layout: 'top-left', width: 'wide' },
           type: 'GUEST',
         },
       }),

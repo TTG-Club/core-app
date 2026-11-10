@@ -4,6 +4,8 @@ import { ADMIN_DASHBOARD_EMPTY_VALUE } from '~admin/dashboard/model';
 import {
   LAYOUT_WIDTH_OPTIONS,
   LAYOUT_WIDTH_SECTION_TITLE,
+  SECTION_LAYOUT_OPTIONS,
+  SECTION_LAYOUT_SETTING_TITLE,
   THEME_OPTIONS,
   THEME_SECTION_TITLE,
 } from '~infrastructure/sidebar/display-settings';
@@ -146,5 +148,11 @@ export const ADMIN_ONLINE_PREFERENCE_SECTIONS: ReadonlyArray<AdminOnlinePreferen
       name: 'width',
       options: LAYOUT_WIDTH_OPTIONS,
       title: LAYOUT_WIDTH_SECTION_TITLE,
+    },
+    {
+      name: 'layout',
+      options: SECTION_LAYOUT_OPTIONS,
+      title: SECTION_LAYOUT_SETTING_TITLE,
+      wide: true,
     },
   ];
