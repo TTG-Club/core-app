@@ -10,6 +10,7 @@ import {
   SUBSCRIPTION_EXTENSION_DAYS_MAX,
   SUBSCRIPTION_EXTENSION_DAYS_MIN,
 } from '#shared/consts';
+import { ADMIN_DASHBOARD_NUMBER_FORMAT } from '~admin/dashboard/model';
 
 export const SUBSCRIPTION_STATS_ROUTE = '/admin/subscription-stats';
 
@@ -30,7 +31,7 @@ export const SUBSCRIPTION_STATS_SUBSCRIPTIONS_DATA_KEY =
 export const SUBSCRIPTION_STATS_PAYMENTS_DATA_KEY =
   'admin-subscription-stats-payments';
 
-export const SUBSCRIPTION_STATS_NUMBER_FORMAT = new Intl.NumberFormat('ru-RU');
+export const SUBSCRIPTION_STATS_NUMBER_FORMAT = ADMIN_DASHBOARD_NUMBER_FORMAT;
 
 /** Суммы с разрядами: выручка за всё время бывает пятизначной. */
 export const SUBSCRIPTION_STATS_MONEY_FORMAT = new Intl.NumberFormat('ru-RU', {

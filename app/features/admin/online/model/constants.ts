@@ -1,9 +1,11 @@
 import type { AdminOnlinePreferenceSection } from './types';
 
 import { ADMIN_DASHBOARD_EMPTY_VALUE } from '~admin/dashboard/model';
+import { LIST_VIEW_OPTIONS } from '~infrastructure/list-presentation/model';
 import {
   LAYOUT_WIDTH_OPTIONS,
   LAYOUT_WIDTH_SECTION_TITLE,
+  LIST_VIEW_SETTING_TITLE,
   SECTION_LAYOUT_OPTIONS,
   SECTION_LAYOUT_SETTING_TITLE,
   THEME_OPTIONS,
@@ -134,6 +136,19 @@ export const ADMIN_ONLINE_PREFERENCES_SHARE_MAX = 100;
 export const ADMIN_ONLINE_PREFERENCES_SHARE_SEPARATOR = ' · ';
 
 /**
+ * Ширина сайта отдельно не выбирается: её ставит раскладка. Поэтому «Ширина» —
+ * это та же раскладка, сложенная в две группы, и подсказки говорят, какая куда.
+ */
+export const ADMIN_ONLINE_PREFERENCES_WIDTH_HINT =
+  'Ширину ставит выбранная раскладка. Обычная — «Узкая · запись поверх списка». Широкая — все остальные семь, в том числе «Узкая · список и запись рядом»: там узкая только колонка по центру.';
+
+export const ADMIN_ONLINE_PREFERENCES_LAYOUT_HINT =
+  'Раскладка разделов справочника. «Узкая · запись поверх списка» даёт обычную ширину сайта, остальные — широкую.';
+
+export const ADMIN_ONLINE_PREFERENCES_LIST_HINT =
+  'Вид списков разделов: карточками до двух, трёх или четырёх колонок либо строками. Кто вид не менял, учтён в «До трёх колонок».';
+
+/**
  * Какие настройки показываем. Имена совпадают с теми, под которыми браузер
  * передаёт их в heartbeat, а варианты — те же, что в панели настроек отображения.
  */
@@ -145,14 +160,23 @@ export const ADMIN_ONLINE_PREFERENCE_SECTIONS: ReadonlyArray<AdminOnlinePreferen
       title: THEME_SECTION_TITLE,
     },
     {
+      hint: ADMIN_ONLINE_PREFERENCES_WIDTH_HINT,
       name: 'width',
       options: LAYOUT_WIDTH_OPTIONS,
       title: LAYOUT_WIDTH_SECTION_TITLE,
     },
     {
+      hint: ADMIN_ONLINE_PREFERENCES_LAYOUT_HINT,
       name: 'layout',
       options: SECTION_LAYOUT_OPTIONS,
       title: SECTION_LAYOUT_SETTING_TITLE,
+      wide: true,
+    },
+    {
+      hint: ADMIN_ONLINE_PREFERENCES_LIST_HINT,
+      name: 'list',
+      options: LIST_VIEW_OPTIONS,
+      title: LIST_VIEW_SETTING_TITLE,
       wide: true,
     },
   ];

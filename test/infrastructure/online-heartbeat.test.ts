@@ -13,6 +13,16 @@ import {
 
 import { useOnlineHeartbeat } from '~infrastructure/analytics/composables';
 import { useCookieNotice } from '~infrastructure/cookie-consent/composables';
+import {
+  LIST_VIEW_DEFAULT,
+  LIST_VIEW_STORAGE_KEY,
+} from '~infrastructure/list-presentation/model';
+
+/** Вид списков, выбранный в тесте вместо вида по умолчанию */
+const STORED_LIST_VIEW = 'rows';
+
+/** Значение из хранилища, которого нет среди видов списков */
+const UNKNOWN_LIST_VIEW = 'grid';
 
 const noticeCookie = ref<unknown>(null);
 const themeCookie = ref<unknown>(null);
@@ -134,7 +144,11 @@ describe('автоматический учёт посетителей онла�
       expect(heartbeat).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          body: { key: visitor.value, type: 'GUEST' },
+          body: {
+            key: visitor.value,
+            preferences: { list: LIST_VIEW_DEFAULT },
+            type: 'GUEST',
+          },
         }),
       );
     },
@@ -154,7 +168,13 @@ describe('автоматический учёт посетителей онла�
 
     expect(heartbeat).toHaveBeenCalledWith(
       '/api/v2/online/heartbeat',
-      expect.objectContaining({ body: { key: visitor.value, type: 'GUEST' } }),
+      expect.objectContaining({
+        body: {
+          key: visitor.value,
+          preferences: { list: LIST_VIEW_DEFAULT },
+          type: 'GUEST',
+        },
+      }),
     );
 
     expect(counter.value).toBe(12);
@@ -197,7 +217,7 @@ describe('автоматический учёт посетителей онла�
       expect.objectContaining({
         body: {
           key: visitor.value,
-          preferences: { theme: 'light' },
+          preferences: { list: LIST_VIEW_DEFAULT, theme: 'light' },
           type: 'GUEST',
         },
       }),
@@ -215,9 +235,50 @@ describe('автоматический учёт посетителей онла�
       expect.objectContaining({
         body: {
           key: visitor.value,
-          preferences: { layout: 'top-left', width: 'wide' },
+          preferences: {
+            layout: 'top-left',
+            list: LIST_VIEW_DEFAULT,
+            width: 'wide',
+          },
           type: 'GUEST',
         },
+      }),
+    );
+  });
+
+  it('передаёт вид списков из хранилища, а неизвестный заменяет видом по умолчанию', async () => {
+    const storedViews = [STORED_LIST_VIEW, UNKNOWN_LIST_VIEW];
+
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) =>
+        key === LIST_VIEW_STORAGE_KEY ? (storedViews.shift() ?? null) : null,
+    });
+
+    mountHeartbeat();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(heartbeat).toHaveBeenLastCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        body: expect.objectContaining({
+          preferences: { list: STORED_LIST_VIEW },
+        }),
+      }),
+    );
+
+    visibility.value = 'hidden';
+    await nextTick();
+    await vi.advanceTimersByTimeAsync(60_000);
+    visibility.value = 'visible';
+    await nextTick();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(heartbeat).toHaveBeenLastCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        body: expect.objectContaining({
+          preferences: { list: LIST_VIEW_DEFAULT },
+        }),
       }),
     );
   });
@@ -284,6 +345,7 @@ describe('автоматический учёт посетителей онла�
       expect.objectContaining({
         body: {
           key: 'tester',
+          preferences: { list: LIST_VIEW_DEFAULT },
           previousGuestKey: visitor.value,
           type: 'REGISTERED',
         },

@@ -18,7 +18,7 @@ import { z } from 'zod';
 /** Разделы справочника, на которые ссылается условие. */
 const REF_SECTIONS = ['feats', 'classes', 'species', 'backgrounds'] as const;
 
-type FeatRefSection = (typeof REF_SECTIONS)[number];
+export type FeatRefSection = (typeof REF_SECTIONS)[number];
 
 /** Ручки карточек по разделам: из них берётся название записи. */
 const REF_SECTION_PATHS: Record<FeatRefSection, string> = {
@@ -31,14 +31,14 @@ const REF_SECTION_PATHS: Record<FeatRefSection, string> = {
 /** Ключ загрузки: к нему дописываются ссылки, которые надо перевести. */
 const REF_NAMES_KEY_PREFIX = 'feat-prerequisite-ref-names';
 
-/** Ссылка требования, название которой надо догрузить. */
-interface FeatRefTarget {
+/** Ссылка на запись справочника, название которой надо догрузить. */
+export interface FeatRefTarget {
   section: FeatRefSection;
   url: string;
 }
 
 /** Название записи справочника под её ссылкой. */
-interface FeatRefName {
+export interface FeatRefName {
   url: string;
   name: string;
 }
@@ -108,12 +108,14 @@ async function loadRefName(
 }
 
 /**
- * Названия всех записей, на которые ссылается условие.
+ * Названия записей справочника с их карточек: по одной на ссылку. Нужны везде,
+ * где ссылка сохранена без снимка названия, — в условиях черты, в чертах на
+ * выбор у предыстории.
  *
- * @param targets ссылки требований без снимка названия.
+ * @param targets ссылки без снимка названия.
  * @returns названия найденных записей.
  */
-async function loadRefNames(
+export async function loadRefNames(
   targets: Array<FeatRefTarget>,
 ): Promise<Array<FeatRefName>> {
   const loaded = await Promise.all(targets.map(loadRefName));

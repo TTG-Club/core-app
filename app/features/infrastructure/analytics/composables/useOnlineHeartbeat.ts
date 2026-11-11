@@ -11,6 +11,7 @@ import {
   ONLINE_COUNTER_DATA_KEY,
   parseOnlineUsersTotal,
 } from '~home/counters/model';
+import { readStoredListView } from '~infrastructure/list-presentation/composable';
 import { useSectionLayout } from '~infrastructure/sidebar/display-settings';
 
 import {
@@ -76,6 +77,9 @@ export function useOnlineHeartbeat(): void {
       theme: themeCookie.value,
       width: layoutWidthCookie.value,
       layout: sectionLayout.value,
+      // Вид списка живёт в localStorage и читается композаблом только после
+      // монтирования, а первый heartbeat уходит раньше — читаем напрямую.
+      list: readStoredListView(),
     });
 
     const preferencesField = Object.keys(preferences).length

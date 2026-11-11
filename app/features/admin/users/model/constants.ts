@@ -278,3 +278,23 @@ export const ADMIN_ROLES_API_PATH = '/api/auth/roles';
 /** Ключи `useAsyncData` дровера профиля; справочник ролей общий со страницей «Пользователи». */
 export const ADMIN_USERS_DRAWER_DATA_KEY_PREFIX = 'admin-user-drawer';
 export const ADMIN_ROLES_DATA_KEY = 'admin-roles';
+
+/** Плитка «Пользователи» на главной админки: сколько всего аккаунтов. */
+export const ADMIN_USERS_DASHBOARD_TILE_TITLE = ADMIN_USERS_PAGE_TITLE;
+
+export const ADMIN_USERS_DASHBOARD_TILE_HINT =
+  'Сколько аккаунтов зарегистрировано на сайте за всё время.';
+
+export const ADMIN_USERS_DASHBOARD_ERROR_TEXT =
+  'Не удалось получить число пользователей. Нажмите «Обновить».';
+
+/** Ключ кеша числа пользователей на дашборде. */
+export const ADMIN_USERS_DASHBOARD_DATA_KEY = 'admin-users-total';
+
+/**
+ * Число пользователей берём из итога первой страницы списка: сами записи не
+ * нужны, поэтому страница из одной записи. Страницы auth-service нумерует с нуля.
+ */
+export const ADMIN_USERS_DASHBOARD_PAGE_INDEX = 0;
+
+export const ADMIN_USERS_DASHBOARD_PAGE_SIZE = 1;

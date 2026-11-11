@@ -5,5 +5,6 @@ export { default as AdminUserDrawer } from './AdminUserDrawer.vue';
 export { default as AdminUserNameMatches } from './AdminUserNameMatches.vue';
 export { default as AdminUserRedeemedCodes } from './AdminUserRedeemedCodes.vue';
 export { default as AdminUserRow } from './AdminUserRow.vue';
+export { default as AdminUsersTotalTile } from './AdminUsersTotalTile.vue';
 export { default as AdminUserSubscription } from './AdminUserSubscription.vue';
 export { default as AdminUserSubscriptionHistory } from './AdminUserSubscriptionHistory.vue';

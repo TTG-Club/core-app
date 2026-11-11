@@ -41,6 +41,21 @@ function findListViewOption(value: unknown): ListViewOption {
 }
 
 /**
+ * Читает выбранный вид списка прямо из хранилища браузера — для тех, кому
+ * нужен ответ сразу, а не после монтирования (учёт онлайна).
+ *
+ * @returns Вид; без хранилища или без выбора — вид по умолчанию.
+ */
+export function readStoredListView(): ListView {
+  try {
+    return findListViewOption(localStorage.getItem(LIST_VIEW_STORAGE_KEY))
+      .value;
+  } catch {
+    return findListViewOption(null).value;
+  }
+}
+
+/**
  * Вид списков разделов: карточками — не больше выбранного числа колонок и не
  * больше, чем помещается по ширине, — или строками, где длинные названия не
  * обрезаются. Один на все разделы, выбирается в шестерёнке рядом с темой и

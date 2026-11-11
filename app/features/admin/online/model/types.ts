@@ -62,6 +62,8 @@ export interface AdminOnlinePreferenceRow {
 
 /** Сводка одной настройки за период: варианты и итог. */
 export interface AdminOnlinePreferenceSummary {
+  /** Пояснение к настройке: прячется за значком у заголовка */
+  hint?: string;
   name: string;
   rows: Array<AdminOnlinePreferenceRow>;
   title: string;
@@ -77,6 +79,8 @@ export interface AdminOnlinePreferenceOption {
 
 /** Настройка отображения и её известные варианты. */
 export interface AdminOnlinePreferenceSection {
+  /** Пояснение к настройке: прячется за значком у заголовка */
+  hint?: string;
   name: string;
   options: ReadonlyArray<AdminOnlinePreferenceOption>;
   title: string;
