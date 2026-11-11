@@ -15,7 +15,7 @@
 
   const { data: detail, status } = await useAsyncData(
     computed(() => `items-${url}`),
-    () => $fetch<ItemDetailResponse>(`/api/v2/item/${url}`),
+    () => $fetch<ItemDetailResponse>(`/api/v2/items/${url}`),
     {
       server: false,
       immediate: true,

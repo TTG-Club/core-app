@@ -7,13 +7,12 @@
     fetchGames,
     GAMES_ROUTE,
   } from '~find-game/model';
-  import { HomePanel } from '~home/ui-kit';
+  import { HomeLoadError, HomePanel, useHomeLoadRetry } from '~home/ui-kit';
 
   import {
     HOME_LATEST_GAME_ALL_LABEL,
     HOME_LATEST_GAME_DATA_KEY,
     HOME_LATEST_GAME_EMPTY_TEXT,
-    HOME_LATEST_GAME_ERROR_TEXT,
     HOME_LATEST_GAME_ICON,
     HOME_LATEST_GAME_LABEL,
     HOME_LATEST_GAME_LOOKUP_PAGE,
@@ -23,7 +22,11 @@
 
   // Клиентская загрузка, как у новостей: блок ниже сгиба и не должен держать
   // ответ главной в ожидании сервиса игр.
-  const { data: gamesPage, status } = await useAsyncData(
+  const {
+    data: gamesPage,
+    status,
+    refresh,
+  } = await useAsyncData(
     HOME_LATEST_GAME_DATA_KEY,
     () =>
       fetchGames(
@@ -54,13 +57,11 @@
       && !latestGame.value,
   );
 
-  // Ошибка и пустой каталог показываются одной заглушкой, но разным текстом:
-  // прятать панель, как новости, нельзя — без неё в ряду со статьями дыра.
-  const placeholderText = computed(() =>
-    status.value === 'error'
-      ? HOME_LATEST_GAME_ERROR_TEXT
-      : HOME_LATEST_GAME_EMPTY_TEXT,
-  );
+  // Заглушка ошибки — только если игра так и не загрузилась. Панель не прячем,
+  // как и при пустом каталоге: без неё в ряду со статьями дыра.
+  const isError = computed(() => status.value === 'error' && !latestGame.value);
+
+  const { retryNow } = useHomeLoadRetry(status, refresh);
 
   const { watchParticipantNames } = useParticipantNames();
 
@@ -110,11 +111,18 @@
       :game="latestGame"
     />
 
+    <HomeLoadError
+      v-else-if="isError"
+      class="m-3 flex-1"
+      :retrying="status === 'pending'"
+      @retry="retryNow"
+    />
+
     <p
       v-else
       class="m-3 flex flex-1 items-center justify-center rounded-xl border border-dashed border-default px-3 py-8 text-center text-sm text-muted"
     >
-      {{ placeholderText }}
+      {{ HOME_LATEST_GAME_EMPTY_TEXT }}
     </p>
   </HomePanel>
 </template>

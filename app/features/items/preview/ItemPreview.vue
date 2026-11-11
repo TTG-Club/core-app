@@ -18,7 +18,7 @@
     clear,
   } = useAsyncData(
     () =>
-      $fetch<ItemDetailResponse>(`/api/v2/item/preview`, {
+      $fetch<ItemDetailResponse>(`/api/v2/items/preview`, {
         method: 'post',
         body: state,
       }),

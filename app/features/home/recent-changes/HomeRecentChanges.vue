@@ -3,10 +3,10 @@
 
   import type { NameResponse, SourceResponse } from '~/shared/types';
 
+  import { HomeLoadError, useHomeLoadRetry } from '~home/ui-kit';
+
   import {
     RECENT_CHANGES_DEFAULT_LIMIT,
-    RECENT_CHANGES_ERROR_DESCRIPTION,
-    RECENT_CHANGES_ERROR_TITLE,
     RECENT_CHANGES_LIMIT_LABEL,
     RECENT_CHANGES_LIMIT_STORAGE_KEY,
     RECENT_CHANGES_LIMIT_VALUES,
@@ -107,6 +107,14 @@
     })),
   );
 
+  // Заглушка ошибки — только если лента так и не загрузилась; упавшее фоновое
+  // обновление оставляет показанное.
+  const isError = computed(
+    () => status.value === 'error' && !timelineItems.value.length,
+  );
+
+  const { retryNow } = useHomeLoadRetry(status, refresh);
+
   const showSkeleton = computed(
     () =>
       (status.value === 'idle' || pending.value) && !timelineItems.value.length,
@@ -148,13 +156,11 @@
       />
     </div>
 
-    <UAlert
-      v-if="status === 'error'"
-      :title="RECENT_CHANGES_ERROR_TITLE"
-      :description="RECENT_CHANGES_ERROR_DESCRIPTION"
-      class="rounded-none"
-      variant="soft"
-      color="error"
+    <HomeLoadError
+      v-if="isError"
+      class="m-3"
+      :retrying="pending"
+      @retry="retryNow"
     />
 
     <UScrollArea
