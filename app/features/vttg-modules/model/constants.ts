@@ -268,7 +268,7 @@ export const MODERATION_DETAIL_EMPTY_ICON = 'tabler:puzzle';
 export const MODERATION_DETAIL_EMPTY_TITLE = 'Заявка не выбрана';
 
 export const MODERATION_DETAIL_EMPTY_TEXT =
-  'Выберите заявку из списка слева, чтобы посмотреть манифест и принять решение';
+  'Выберите заявку из списка, чтобы посмотреть манифест и принять решение';
 
 export const VTTG_MODULES_DASHBOARD_TITLE = 'Модули VTTG';
 

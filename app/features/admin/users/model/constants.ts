@@ -61,7 +61,7 @@ export const ADMIN_USERS_NO_ROLES_LABEL = 'Без ролей';
 export const ADMIN_USERS_DETAIL_EMPTY_ICON = 'tabler:user-search';
 export const ADMIN_USERS_DETAIL_EMPTY_TITLE = 'Пользователь не выбран';
 export const ADMIN_USERS_DETAIL_EMPTY_TEXT =
-  'Выберите пользователя из списка слева, чтобы просмотреть профиль и управлять ролями и подпиской.';
+  'Выберите пользователя из списка, чтобы просмотреть профиль и управлять ролями и подпиской.';
 
 /** Вкладки детальной панели пользователя. */
 export const ADMIN_USERS_DETAIL_TABS: Array<{
