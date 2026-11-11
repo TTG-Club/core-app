@@ -24,14 +24,14 @@
   import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
   import {
-    SelectClass,
+    SelectClassCatalog,
     SelectDamageType,
     SelectFeat,
-    SelectLineage,
+    SelectLineageCatalog,
     SelectMagicSchool,
     SelectSpecies,
     SelectSpellLevel,
-    SelectSubclass,
+    SelectSubclassCatalog,
   } from '~ui/select';
   import { useWorkshopForm } from '~workshop/composable';
   import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
@@ -268,7 +268,7 @@
                 :label="SPELL_AFFILIATION_LABELS.classes"
                 name="affiliations.classes"
               >
-                <SelectClass
+                <SelectClassCatalog
                   v-model="state.affiliations.classes"
                   multiple
                 />
@@ -279,7 +279,7 @@
                 :label="SPELL_AFFILIATION_LABELS.subclasses"
                 name="affiliations.subclasses"
               >
-                <SelectSubclass
+                <SelectSubclassCatalog
                   v-model="state.affiliations.subclasses"
                   multiple
                 />
@@ -301,7 +301,7 @@
                 :label="SPELL_AFFILIATION_LABELS.lineages"
                 name="affiliations.lineages"
               >
-                <SelectLineage
+                <SelectLineageCatalog
                   v-model="state.affiliations.lineages"
                   multiple
                 />
