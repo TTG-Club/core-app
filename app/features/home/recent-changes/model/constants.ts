@@ -18,9 +18,3 @@ export const RECENT_CHANGES_LIMIT_LABEL = 'Сколько записей пок�
 
 /** Подпись кнопки перезапроса списка */
 export const RECENT_CHANGES_REFRESH_LABEL = 'Обновить список';
-
-/** Заголовок сообщения об ошибке загрузки */
-export const RECENT_CHANGES_ERROR_TITLE = 'Не удалось загрузить обновления';
-
-/** Пояснение к сообщению об ошибке загрузки */
-export const RECENT_CHANGES_ERROR_DESCRIPTION = 'Попробуйте обновить еще раз';

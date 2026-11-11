@@ -31,7 +31,7 @@
     filterQuery,
     isPending: isFilterPending,
     defaults: filterDefaults,
-  } = await useFilter('items', '/api/v2/item/filters');
+  } = await useFilter('items', '/api/v2/items/filters');
 
   // Подписи групп живут в фильтрах раздела, поэтому иерархия строится по уже
   // провалидированному состоянию фильтра, а не отдельным запросом.
@@ -62,7 +62,7 @@
     'items',
     async () =>
       parseItemLinks(
-        await $fetch<unknown>('/api/v2/item/search', {
+        await $fetch<unknown>('/api/v2/items/search', {
           method: 'GET',
           query: {
             search: search.value,
@@ -88,7 +88,7 @@
     openDetail,
   } = useSectionDetail<ItemDetailResponse>({
     sectionPath: '/items',
-    apiBasePath: '/api/v2/item',
+    apiBasePath: '/api/v2/items',
     items,
   });
 

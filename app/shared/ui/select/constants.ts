@@ -2,13 +2,13 @@ import { MAGIC_ITEM_FILTER_RANGE_ORDERS } from '~magic-items/model';
 
 export const SELECT_DROPDOWN_DEBOUNCE_MS = 250;
 
-export const ITEMS_SEARCH_ENDPOINT = '/api/v2/item/search';
+export const ITEMS_SEARCH_ENDPOINT = '/api/v2/items/search';
 
 /**
  * База пути детали предмета: по ней догружается уже выбранный предмет, если
  * его нет в текущей выдаче поиска.
  */
-export const ITEM_DETAIL_ENDPOINT_PREFIX = '/api/v2/item';
+export const ITEM_DETAIL_ENDPOINT_PREFIX = '/api/v2/items';
 
 /** Ключ справочника типов урона: общий на все формы, список грузится однажды. */
 export const DAMAGE_TYPES_DATA_KEY = 'dictionaries-damage-types';
@@ -96,10 +96,10 @@ export const CATALOG_PICKER_SCROLL_THRESHOLD_PX = 200;
  */
 export const CATALOG_PICKER_SECTIONS = {
   items: {
-    searchPath: '/api/v2/item/search',
-    filtersPath: '/api/v2/item/filters',
+    searchPath: '/api/v2/items/search',
+    filtersPath: '/api/v2/items/filters',
     filtersKey: 'catalog-picker:item-filters',
-    detailPath: '/api/v2/item',
+    detailPath: '/api/v2/items',
     previewSection: 'items',
   },
   spells: {

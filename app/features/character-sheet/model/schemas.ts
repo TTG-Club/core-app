@@ -1905,7 +1905,7 @@ const itemSearchResponseSchema = z
   .catch([]);
 
 /**
- * Валидация ответа `GET /api/v2/item/search` и приведение к списку каталога.
+ * Валидация ответа `GET /api/v2/items/search` и приведение к списку каталога.
  * Битый ответ даёт пустой список, а не исключение.
  *
  * @param input сырой ответ поиска предметов.
@@ -2162,7 +2162,7 @@ const itemDetailSchema = z.object({
 });
 
 /**
- * Валидация детального ответа `GET /api/v2/item/{url}`.
+ * Валидация детального ответа `GET /api/v2/items/{url}`.
  *
  * @param input сырой детальный ответ предмета.
  * @returns деталь предмета или null при неожиданном ответе.
@@ -2200,7 +2200,7 @@ const ARMOR_DEXTERITY_MOD_MAP: Record<ArmorRawDexterityMod, ArmorDexterityMod> =
   };
 
 /**
- * Схема «сырого» ответа предмета `GET /api/v2/item/{url}/raw` в части доспеха.
+ * Схема «сырого» ответа предмета `GET /api/v2/items/{url}/raw` в части доспеха.
  * Форма — как у формы редактора предметов (`ArmorCreate`): объект `armor` с
  * числовым КД, правилом Ловкости и пометкой помехи Скрытности; у не-доспехов
  * приходит null.
@@ -2235,7 +2235,7 @@ function isShieldArmor(category: string, item: ItemSummary): boolean {
 /**
  * Разбор параметров доспеха из «сырого» ответа предмета для подсчёта КД.
  *
- * @param input сырой ответ `GET /api/v2/item/{url}/raw`.
+ * @param input сырой ответ `GET /api/v2/items/{url}/raw`.
  * @param item уже разобранная деталь предмета (имя, типы — для признака щита).
  * @returns параметры доспеха или null (не доспех либо нет данных).
  */
@@ -2462,7 +2462,7 @@ function parseWeaponDamageParts(
  * Урон берётся из частей-формул, а без них — из прежней связки «кости + тип»,
  * как у записей, сохранённых до перехода на формулы.
  *
- * @param input сырой ответ `GET /api/v2/item/{url}/raw`.
+ * @param input сырой ответ `GET /api/v2/items/{url}/raw`.
  * @returns параметры оружия или null (не оружие либо нет данных).
  */
 export function parseItemWeapon(input: unknown): InventoryWeapon | null {

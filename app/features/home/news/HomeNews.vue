@@ -9,7 +9,7 @@
     HOME_NEWS_COUNT,
     NEWS_ROUTE,
   } from '~articles/model';
-  import { HomePanel } from '~home/ui-kit';
+  import { HomeLoadError, HomePanel, useHomeLoadRetry } from '~home/ui-kit';
 
   import {
     HOME_NEWS_ALL_LABEL,
@@ -55,10 +55,11 @@
       (status.value === 'pending' || status.value === 'idle') && !hasNews.value,
   );
 
-  // Блок прячем целиком, только если новости ТАК И НЕ загрузились (бэкенд ещё не
-  // включён и т.п.) — аккуратнее показать пустую главную, чем ошибку гостям. Если же
-  // данные есть, а фоновое обновление упало — оставляем показанное, не роняем блок.
+  // Заглушку ошибки показываем, только если новости ТАК И НЕ загрузились. Если
+  // же данные есть, а фоновое обновление упало — оставляем показанное.
   const isError = computed(() => status.value === 'error' && !hasNews.value);
+
+  const { retryNow } = useHomeLoadRetry(status, refresh);
 
   const heroArticle = computed(() => data.value?.[0] ?? null);
 
@@ -84,7 +85,6 @@
 
 <template>
   <HomePanel
-    v-if="!isError"
     :label="HOME_NEWS_LABEL"
     :icon="HOME_NEWS_ICON"
     :to="NEWS_ROUTE"
@@ -115,6 +115,13 @@
         </div>
       </div>
     </div>
+
+    <HomeLoadError
+      v-else-if="isError"
+      class="m-3"
+      :retrying="status === 'pending'"
+      @retry="retryNow"
+    />
 
     <p
       v-else-if="!hasNews"

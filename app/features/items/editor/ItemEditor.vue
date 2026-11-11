@@ -37,7 +37,7 @@
 
   const { state, submitState, onError, onSubmit, revisionControl } =
     useWorkshopForm<ItemCreate>({
-      actionUrl: '/api/v2/item',
+      actionUrl: '/api/v2/items',
       getInitialState: createEmptyItem,
       normalizeLoaded: normalizeLoadedItem,
       transformBeforeSubmit: normalizeItemBeforeSubmit,

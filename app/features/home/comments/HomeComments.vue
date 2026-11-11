@@ -12,6 +12,7 @@
     HOME_COMMENTS_EMPTY_TEXT,
     readWithoutStaleToken,
   } from '~comments/model';
+  import { HomeLoadError, useHomeLoadRetry } from '~home/ui-kit';
 
   import { HomeCommentRow } from './ui';
 
@@ -53,11 +54,13 @@
       && !hasComments.value,
   );
 
-  // Блок прячем целиком, только если лента ТАК И НЕ загрузилась (сервис ещё не
-  // задеплоен и т.п.) — аккуратнее показать главную без блока, чем ошибку.
+  // Заглушка ошибки — только если лента ТАК И НЕ загрузилась; упавшее фоновое
+  // обновление оставляет показанное.
   const isError = computed(
     () => status.value === 'error' && !hasComments.value,
   );
+
+  const { retryNow } = useHomeLoadRetry(status, refresh);
 </script>
 
 <template>
@@ -74,8 +77,15 @@
     />
   </div>
 
+  <HomeLoadError
+    v-else-if="isError"
+    class="m-3"
+    :retrying="status === 'pending'"
+    @retry="retryNow"
+  />
+
   <p
-    v-else-if="isError || !hasComments"
+    v-else-if="!hasComments"
     class="m-3 rounded-xl border border-dashed border-default px-3 py-8 text-center text-sm text-muted"
   >
     {{ HOME_COMMENTS_EMPTY_TEXT }}

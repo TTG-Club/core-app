@@ -66,15 +66,11 @@
     props.isUnread ? UPDATED_CARD_CLASS : CARD_CLASS,
   );
 
-  const { sectionLabel, linkToComment } = useCommentLocation(
-    () => props.comment,
-  );
-
-  /**
-   * Метка раздела ведёт на страницу обсуждения. Комментарий без адреса
-   * (старые сборки сервиса его не присылали) остаётся просто меткой.
-   */
-  const sectionLink = computed(() => props.comment.url ?? undefined);
+  const {
+    sectionLabel,
+    pageLink: sectionLink,
+    linkToComment,
+  } = useCommentLocation(() => props.comment);
 
   const sectionBadgeTag = computed(() =>
     sectionLink.value ? NuxtLink : 'span',
@@ -307,7 +303,7 @@
           />
 
           <UButton
-            v-if="comment.url"
+            v-if="sectionLink"
             :to="linkToComment(reply.id)"
             icon="tabler:arrow-right"
             :aria-label="MY_COMMENTS_OPEN_LABEL"
