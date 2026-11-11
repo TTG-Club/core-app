@@ -1,6 +1,6 @@
 import { StatusCodes } from 'http-status-codes';
 
-import { S3Service } from '#server/domain/s3';
+import { isPrivateS3Key, S3Service } from '#server/domain/s3';
 
 export default defineEventHandler(async (event) => {
   const rawPath = getRouterParam(event, 'slug');
@@ -13,6 +13,11 @@ export default defineEventHandler(async (event) => {
 
   if (!path) {
     throw createError(getErrorResponse(StatusCodes.BAD_REQUEST));
+  }
+
+  // Служебные файлы сервера (ключи внешних сервисов) наружу не отдаём.
+  if (isPrivateS3Key(path)) {
+    throw createError(getErrorResponse(StatusCodes.NOT_FOUND));
   }
 
   // Пробрасываем Range-запрос в S3, чтобы браузер мог перематывать видео/аудио

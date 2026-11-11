@@ -1,5 +1,6 @@
 import type { NavigationGroup, NavigationItem } from './types';
 
+import { VK_VIDEO_ADMIN_ROUTE } from '#shared/consts';
 import {
   PUBLICATION_ICON,
   PUBLICATION_ROUTE,
@@ -34,6 +35,10 @@ import {
   ADMIN_USERS_NAVIGATION_ICON,
   ADMIN_USERS_NAVIGATION_LABEL,
 } from '~admin/users/model';
+import {
+  VK_VIDEO_ADMIN_NAVIGATION_ICON,
+  VK_VIDEO_ADMIN_PAGE_TITLE,
+} from '~admin/vk-video/model';
 import {
   VTTG_COMPENDIUM_ADMIN_ROUTE,
   VTTG_COMPENDIUM_NAVIGATION_ICON,
@@ -121,6 +126,12 @@ const ADMIN_MAINTENANCE_ITEM: NavigationItem = {
   to: MAINTENANCE_ADMIN_ROUTE,
 };
 
+const ADMIN_VK_VIDEO_ITEM: NavigationItem = {
+  label: VK_VIDEO_ADMIN_PAGE_TITLE,
+  icon: VK_VIDEO_ADMIN_NAVIGATION_ICON,
+  to: VK_VIDEO_ADMIN_ROUTE,
+};
+
 const ADMIN_MAILING_ITEM: NavigationItem = {
   label: MAILING_PAGE_TITLE,
   icon: MAILING_NAVIGATION_ICON,
@@ -148,6 +159,7 @@ export const ADMIN_NAVIGATION_ITEMS: NavigationItem[] = [
   ADMIN_COMMUNITY_NEWS_ITEM,
   ADMIN_HOME_HERO_ITEM,
   ADMIN_MAINTENANCE_ITEM,
+  ADMIN_VK_VIDEO_ITEM,
   ADMIN_MAILING_ITEM,
   ADMIN_VTTG_COMPENDIUM_ITEM,
 ];
@@ -172,6 +184,7 @@ export const ADMIN_CONTENT_SECTION_GROUP: NavigationGroup = {
     ADMIN_COMMUNITY_NEWS_ITEM,
     ADMIN_HOME_HERO_ITEM,
     ADMIN_MAINTENANCE_ITEM,
+    ADMIN_VK_VIDEO_ITEM,
     ADMIN_PERSONAS_ITEM,
   ],
 };

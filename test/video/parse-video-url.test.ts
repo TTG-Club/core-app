@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 // Прямо из модуля: баррел `~ui/video` тянет SFC — окружение тестов их не грузит.
-import { getVideoPoster, parseVideoUrl } from '~ui/video/utils';
+import { getVideoPoster, getVkVideoId, parseVideoUrl } from '~ui/video/utils';
 
 const YOUTUBE_ID = 'dQw4w9WgXcQ';
 const YOUTUBE_WATCH = `https://www.youtube.com/watch?v=${YOUTUBE_ID}`;
@@ -97,5 +97,26 @@ describe('getVideoPoster', () => {
     expect(getVideoPoster(YOUTUBE_WATCH, null)).toContain(YOUTUBE_ID);
     expect(getVideoPoster('https://vk.com/video-1_2', null)).toBeNull();
     expect(getVideoPoster(null, null)).toBeNull();
+  });
+});
+
+describe('getVkVideoId', () => {
+  it('достаёт ролик ВК из ссылки и кода для вставки', () => {
+    expect(getVkVideoId('https://vk.com/video-48935688_456242589')).toEqual({
+      ownerId: '-48935688',
+      videoId: '456242589',
+      hash: null,
+    });
+
+    expect(
+      getVkVideoId(
+        '<iframe src="https://vk.com/video_ext.php?oid=-1&amp;id=2&amp;hash=ab12"></iframe>',
+      ),
+    ).toEqual({ ownerId: '-1', videoId: '2', hash: 'ab12' });
+  });
+
+  it('не ВК — null', () => {
+    expect(getVkVideoId('https://youtu.be/dQw4w9WgXcQ')).toBeNull();
+    expect(getVkVideoId(null)).toBeNull();
   });
 });

@@ -10,6 +10,7 @@
 
   import { uniq } from 'es-toolkit';
 
+  import { VkVideoCoverAction } from '~admin/vk-video/ui';
   import { MarkupEditor } from '~ui/markup-editor';
   import { UploadImage } from '~ui/upload';
   import {
@@ -956,13 +957,25 @@
       <div
         class="mb-4 grid grid-cols-1 gap-4 border-b border-default pb-4 sm:grid-cols-2 sm:items-start"
       >
-        <UFormField
-          :label="VIDEO_URL_FIELD_LABEL"
-          :help="VIDEO_URL_FIELD_HINT"
-          name="videoUrl"
-        >
-          <UiVideoUrlField v-model="state.videoUrl" />
-        </UFormField>
+        <div class="flex flex-col gap-3">
+          <UFormField
+            :label="VIDEO_URL_FIELD_LABEL"
+            :help="VIDEO_URL_FIELD_HINT"
+            name="videoUrl"
+          >
+            <UiVideoUrlField v-model="state.videoUrl" />
+          </UFormField>
+
+          <!-- Ролик ВК: обложка из кадра через ВК редактора -->
+          <VkVideoCoverAction
+            v-model:cover="coverModel"
+            v-model:uploading="isCoverUploading"
+            :video-url="state.videoUrl"
+            :saved-video-url="previousState.videoUrl"
+            :section="ARTICLE_IMAGE_SECTION"
+            :max-size="ARTICLE_IMAGE_MAX_SIZE"
+          />
+        </div>
 
         <!-- Плеер с текущей обложкой-заставкой: видно, что увидит читатель до
           нажатия «Смотреть» -->

@@ -5,6 +5,25 @@ import type { S3UploadFile } from '#server/domain/s3';
 import { StatusCodes } from 'http-status-codes';
 
 /**
+ * Папка служебных файлов сервера (ключи внешних сервисов и т. п.). Её не
+ * отдаёт, не копирует и не удаляет публичный роут `/s3/**`, и загрузки
+ * пользователей туда не попадают.
+ */
+export const S3_PRIVATE_KEY_PREFIX = 'private/';
+
+/**
+ * Лежит ли файл в служебной папке, закрытой от публичного роута `/s3/**`.
+ *
+ * @param key Ключ файла в хранилище (без `/s3/`).
+ */
+export function isPrivateS3Key(key: string): boolean {
+  return key
+    .replace(/^\/+/, '')
+    .toLowerCase()
+    .startsWith(S3_PRIVATE_KEY_PREFIX);
+}
+
+/**
  * Один файл из multipart-формы. h3 v2 больше не экспортирует тип публично,
  * поэтому описываем форму элемента readMultipartFormData локально.
  */
@@ -125,6 +144,15 @@ export function getFileKey(
   }
 
   const sectionSlug = getSlug(trimmedSection);
+
+  if (isPrivateS3Key(`${sectionSlug}/`)) {
+    throw createError(
+      getErrorResponse(StatusCodes.BAD_REQUEST, {
+        message: 'Недопустимое название раздела',
+      }),
+    );
+  }
+
   const usernameSlug = getSlug(trimmedUsername);
   const filenameSlug = getFilenameSlug(trimmedFilename);
 
