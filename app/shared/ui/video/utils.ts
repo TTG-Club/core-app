@@ -1,3 +1,5 @@
+import type { VkVideoId } from '#shared/types';
+
 import type { VideoSource } from './types';
 
 import {
@@ -208,6 +210,27 @@ export function parseVideoUrl(
   }
 
   return null;
+}
+
+/**
+ * Ролик ВК из ссылки (или кода iframe): владелец, id и ключ доступа. Нужен,
+ * чтобы взять кадр ролика обложкой через ВК редактора.
+ *
+ * @param input - Ссылка на ролик любого вида
+ * @returns Id ролика или `null`, если это не ВК Видео
+ */
+export function getVkVideoId(
+  input: string | null | undefined,
+): VkVideoId | null {
+  const url = toUrl(extractAddress(input ?? ''));
+
+  if (!url || !VIDEO_VK_HOSTS.includes(getBareHost(url))) {
+    return null;
+  }
+
+  const ids = getVkIds(url);
+
+  return ids ? { ...ids, hash: url.searchParams.get('hash') } : null;
 }
 
 /**

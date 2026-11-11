@@ -5,7 +5,7 @@ import type { S3UploadResponse } from '#server/domain/s3';
 import { StatusCodes } from 'http-status-codes';
 import { z } from 'zod/v4';
 
-import { getFileKey, S3Service } from '#server/domain/s3';
+import { getFileKey, isPrivateS3Key, S3Service } from '#server/domain/s3';
 
 const requestSchema = z.object({
   url: z.string().startsWith('/s3/'),
@@ -43,6 +43,11 @@ export default defineEventHandler<Request, Promise<S3UploadResponse>>(
     }
 
     const sourceKey = parsed.data.url.replace('/s3/', '');
+
+    if (isPrivateS3Key(sourceKey)) {
+      throw createError(getErrorResponse(StatusCodes.FORBIDDEN));
+    }
+
     const segments = sourceKey.split('/');
     const [section, username, filename] = segments;
 

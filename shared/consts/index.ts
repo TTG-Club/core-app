@@ -9,5 +9,6 @@ export * from './subscription-codes';
 export * from './subscription-extension';
 export * from './subscription-sales';
 export * from './upload';
+export * from './vk-video';
 export * from './vttg-compendium';
 export * from './vttg-modules';
