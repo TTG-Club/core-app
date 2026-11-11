@@ -88,8 +88,7 @@
         </div>
       </template>
 
-      <!-- Строка не шире 65 знаков: длинный текст во всю ширину читать тяжело -->
-      <div class="flex max-w-prose flex-col">
+      <div class="flex flex-col">
         <MarkupRender
           v-if="hasContent"
           :render-node="contentNodes"

@@ -144,8 +144,7 @@
         </div>
       </template>
 
-      <!-- Строка не шире 65 знаков: длинный текст во всю ширину читать тяжело -->
-      <div class="flex max-w-prose flex-col">
+      <div class="flex flex-col">
         <div
           v-if="article.tags.length"
           class="mb-3 @min-3xl:hidden"
