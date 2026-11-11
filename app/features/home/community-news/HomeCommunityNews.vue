@@ -8,7 +8,7 @@
     COMMUNITY_NEWS_TITLE,
     parseCommunityNewsList,
   } from '~community-news/model';
-  import { HomePanel } from '~home/ui-kit';
+  import { HomeLoadError, HomePanel, useHomeLoadRetry } from '~home/ui-kit';
 
   import {
     HOME_COMMUNITY_NEWS_ALL_LABEL,
@@ -51,6 +51,12 @@
       (status.value === 'pending' || status.value === 'idle') && !hasNews.value,
   );
 
+  // Ошибка — только если новости так и не загрузились: упавшее фоновое
+  // обновление оставляет показанное.
+  const isError = computed(() => status.value === 'error' && !hasNews.value);
+
+  const { retryNow } = useHomeLoadRetry(status, refresh);
+
   const overlay = useOverlay();
 
   const newsDrawer = overlay.create(CommunityNewsDrawer, {
@@ -68,9 +74,9 @@
 </script>
 
 <template>
-  <!-- Блок виден всегда: если новостей нет или бэкенд их ещё не отдаёт,
-    стоит та же заглушка «пока нет», что у новостей и статей — раскладка ленты
-    не прыгает -->
+  <!-- Блок виден всегда: если новостей нет, стоит заглушка «пока нет», если
+    запрос упал — «не удалось загрузить» с повтором; раскладка ленты не
+    прыгает -->
   <HomePanel
     :label="COMMUNITY_NEWS_TITLE"
     :icon="COMMUNITY_NEWS_ICON"
@@ -99,6 +105,13 @@
         </div>
       </div>
     </div>
+
+    <HomeLoadError
+      v-else-if="isError"
+      class="m-1"
+      :retrying="status === 'pending'"
+      @retry="retryNow"
+    />
 
     <p
       v-else-if="!hasNews"

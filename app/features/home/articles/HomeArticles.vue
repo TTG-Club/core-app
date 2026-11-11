@@ -9,7 +9,7 @@
     ARTICLES_SEARCH_PATH,
     HOME_ARTICLES_COUNT,
   } from '~articles/model';
-  import { HomePanel } from '~home/ui-kit';
+  import { HomeLoadError, HomePanel, useHomeLoadRetry } from '~home/ui-kit';
 
   import {
     HOME_ARTICLES_ALL_LABEL,
@@ -56,11 +56,13 @@
       && !hasArticles.value,
   );
 
-  // Блок прячем целиком, только если статьи ТАК И НЕ загрузились (бэкенд ещё не
-  // включён и т.п.) — аккуратнее показать пустую главную, чем ошибку гостям.
+  // Заглушку ошибки показываем, только если статьи ТАК И НЕ загрузились; упавшее
+  // фоновое обновление оставляет показанное.
   const isError = computed(
     () => status.value === 'error' && !hasArticles.value,
   );
+
+  const { retryNow } = useHomeLoadRetry(status, refresh);
 
   // По умолчанию статья открывается в дровере (страница остаётся доступной по
   // ссылке/ctrl+click). Паттерн как в HomeNews.
@@ -81,7 +83,6 @@
 
 <template>
   <HomePanel
-    v-if="!isError"
     :label="HOME_ARTICLES_LABEL"
     :icon="HOME_ARTICLES_ICON"
     :to="ARTICLES_ROUTE"
@@ -106,6 +107,13 @@
         </div>
       </div>
     </div>
+
+    <HomeLoadError
+      v-else-if="isError"
+      class="m-1"
+      :retrying="status === 'pending'"
+      @retry="retryNow"
+    />
 
     <p
       v-else-if="!hasArticles"

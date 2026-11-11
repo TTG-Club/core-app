@@ -11,6 +11,7 @@
   import { ADMIN_DASHBOARD_ROUTE } from '~admin/navigation/model';
   import { BUG_REPORT_STATS_API_URL } from '~bug-report/model';
   import { COMMUNITY_BUG_STATS_DATA_KEY } from '~home/community/model';
+  import { useHomeLoadRetry } from '~home/ui-kit';
   import { MODERATION_BUGS_ROUTE } from '~moderation/model';
   import { AnimatedNumber } from '~ui/animated-number';
 
@@ -56,6 +57,10 @@
   } = await useAsyncData(MATERIAL_COUNTER_DATA_KEY, () =>
     $fetch<number>(MATERIAL_COUNTER_API_URL),
   );
+
+  // Материалы не опрашиваются по таймеру: упавший запрос оставил бы скелетон
+  // до F5. Листы и баг-репорты подтянет регулярный опрос ниже.
+  useHomeLoadRetry(materialsStatus, refreshMaterials);
 
   const { execute: resetCache, status: resetStatus } = await useAsyncData(
     MATERIAL_COUNTER_RESET_DATA_KEY,
