@@ -186,10 +186,13 @@ export function getBackgroundSkillNode(
  * игрока.
  *
  * @param background деталь предыстории.
+ * @param featNames названия черт по адресу — для ссылок, сохранённых без
+ *   снимка названия. Без них такие ссылки показываются адресом.
  * @returns разметка блока черты.
  */
 export function getBackgroundFeatNode(
   background: BackgroundDetailResponse,
+  featNames: Record<string, string> = {},
 ): string {
   if (background.feat) {
     return background.feat;
@@ -202,7 +205,7 @@ export function getBackgroundFeatNode(
   }
 
   return choices
-    .map((reference) => toMarker(reference, 'feat'))
+    .map((reference) => toMarker(reference, 'feat', featNames))
     .join(BACKGROUND_DETAIL_LABELS.choiceSeparator);
 }
 

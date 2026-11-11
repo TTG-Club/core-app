@@ -9,6 +9,8 @@
   defineProps<{
     abilityScores: string;
     feat: string;
+    /** Черты на выбор ещё ждут своих названий. */
+    isFeatPending?: boolean;
     skillProficiencies: string;
     toolProficiency: string[];
     /** Владение ещё собирается: выбор ждёт категорий инструментов. */
@@ -40,7 +42,12 @@
 
       <!-- Одиночная строка разметки рисуется без обёртки: без span ссылки и
         запятые встали бы отдельными строками флекс-колонки -->
-      <span>
+      <USkeleton
+        v-if="isFeatPending"
+        class="mt-1 h-4 w-3/4"
+      />
+
+      <span v-else>
         <MarkupRender :render-node="feat" />
       </span>
     </div>
