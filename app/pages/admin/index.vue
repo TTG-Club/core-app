@@ -260,7 +260,10 @@
             />
 
             <AdminDashboardPanel :title="ADMIN_DASHBOARD_TOTALS_TITLE">
-              <div class="grid h-full grid-cols-4 divide-x divide-default">
+              <!-- Две плитки в ряд: вчетвером подписи обрезались («Листы персо…») -->
+              <div
+                class="grid h-full grid-cols-2 [&>*]:border-default [&>:nth-child(-n+2)]:border-b [&>:nth-child(odd)]:border-r"
+              >
                 <AdminUsersTotalTile
                   :total="resolvedUsersTotal"
                   :is-loading="isUsersTotalLoading"
