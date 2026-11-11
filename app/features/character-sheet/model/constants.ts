@@ -3847,13 +3847,13 @@ export const TOOL_MATCH_KEYWORDS: Record<ToolProficiencyGroupKey, string[]> = {
 };
 
 /** Эндпоинт поиска предметов (раздел «Предметы»). */
-export const ITEMS_SEARCH_PATH = '/api/v2/item/search';
+export const ITEMS_SEARCH_PATH = '/api/v2/items/search';
 
 /** Эндпоинт фильтров предметов — источник списка категорий для чипов. */
-export const ITEMS_FILTERS_PATH = '/api/v2/item/filters';
+export const ITEMS_FILTERS_PATH = '/api/v2/items/filters';
 
 /** Базовый путь деталей предмета (`/{url}`). */
-export const ITEMS_DETAIL_BASE_PATH = '/api/v2/item';
+export const ITEMS_DETAIL_BASE_PATH = '/api/v2/items';
 
 /**
  * Хвост пути «сырого» ответа раздела: у предмета в нём числовой КД доспеха и

@@ -10,7 +10,7 @@
   const sectionPath = useSectionDetailRedirect('items');
 
   const { data: item } = await useAsyncData(`item-${route.params.url}`, () =>
-    $fetch<ItemDetailResponse>(`/api/v2/item/${route.params.url}`),
+    $fetch<ItemDetailResponse>(`/api/v2/items/${route.params.url}`),
   );
 
   const markdown = useEntityMarkdown(item, getItemMarkdown);
