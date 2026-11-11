@@ -269,7 +269,7 @@
       <UiDetailPaneEmpty
         v-else
         title="Запись не выбрана"
-        description="Выберите запись из списка слева, чтобы прочитать её здесь."
+        description="Выберите запись из списка, чтобы прочитать её здесь."
       />
     </template>
   </NuxtLayout>

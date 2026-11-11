@@ -50,6 +50,14 @@
   } from '~admin/subscription-stats/model';
   import { AdminSubscribersTile } from '~admin/subscription-stats/ui';
   import { SubscriptionSalesSwitch } from '~admin/subscriptions/ui';
+  import {
+    ADMIN_USERS_API_PATH,
+    ADMIN_USERS_DASHBOARD_DATA_KEY,
+    ADMIN_USERS_DASHBOARD_PAGE_INDEX,
+    ADMIN_USERS_DASHBOARD_PAGE_SIZE,
+    parseAdminUsersTotal,
+  } from '~admin/users/model';
+  import { AdminUsersTotalTile } from '~admin/users/ui';
 
   const {
     data: onlineStats,
@@ -160,9 +168,38 @@
 
   const hasSubscriptionsError = computed(() => !!subscriptionsError.value);
 
+  // Число пользователей — итог первой страницы списка из auth-service.
+  const {
+    data: usersTotal,
+    error: usersTotalError,
+    refresh: refreshUsersTotal,
+    status: usersTotalStatus,
+  } = await useAsyncData<number>(
+    ADMIN_USERS_DASHBOARD_DATA_KEY,
+    async () =>
+      parseAdminUsersTotal(
+        await requestFetch<unknown>(ADMIN_USERS_API_PATH, {
+          query: {
+            page: ADMIN_USERS_DASHBOARD_PAGE_INDEX,
+            size: ADMIN_USERS_DASHBOARD_PAGE_SIZE,
+          },
+        }),
+      ),
+    { server: false, lazy: true },
+  );
+
+  const isUsersTotalLoading = computed(
+    () => usersTotalStatus.value === FetchStatus.Pending,
+  );
+
+  const hasUsersTotalError = computed(() => !!usersTotalError.value);
+
+  const resolvedUsersTotal = computed(() => usersTotal.value ?? null);
+
   const isStatsLoading = computed(
     () =>
       isOnlineStatsLoading.value
+      || isUsersTotalLoading.value
       || isSheetStatsLoading.value
       || isGameStatisticsLoading.value
       || isSubscriptionsLoading.value,
@@ -177,6 +214,7 @@
       refreshSheetStats(),
       refreshGameStatistics(),
       refreshSubscriptions(),
+      refreshUsersTotal(),
     ]);
   }
 </script>
@@ -222,7 +260,13 @@
             />
 
             <AdminDashboardPanel :title="ADMIN_DASHBOARD_TOTALS_TITLE">
-              <div class="grid h-full grid-cols-3 divide-x divide-default">
+              <div class="grid h-full grid-cols-4 divide-x divide-default">
+                <AdminUsersTotalTile
+                  :total="resolvedUsersTotal"
+                  :is-loading="isUsersTotalLoading"
+                  :has-error="hasUsersTotalError"
+                />
+
                 <ClientOnly>
                   <AdminCharacterSheetStatsTile
                     :stats="resolvedSheetStats"

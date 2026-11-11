@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   getBackgroundEquipmentNode,
+  getBackgroundFeatNode,
   getBackgroundToolNodes,
 } from '~backgrounds/model';
 
@@ -75,5 +76,33 @@ describe('getBackgroundEquipmentNode', () => {
         equipment: ['Старый текст'],
       }),
     ).toEqual(['Старый текст']);
+  });
+});
+
+describe('getBackgroundFeatNode', () => {
+  const withFeatChoices: BackgroundDetailResponse = {
+    ...BACKGROUND,
+    featChoices: [
+      { url: 'gathered-whispers-rhw' },
+      { url: 'second-skin-rhw', name: 'Вторая кожа' },
+    ],
+  };
+
+  it('подписывает черты без снимка названием из справочника', () => {
+    expect(
+      getBackgroundFeatNode(withFeatChoices, {
+        'gathered-whispers-rhw': 'Собранные шёпоты',
+      }),
+    ).toBe(
+      '{@feat Собранные шёпоты|url:gathered-whispers-rhw} или '
+        + '{@feat Вторая кожа|url:second-skin-rhw}',
+    );
+  });
+
+  it('без названий показывает адрес', () => {
+    expect(getBackgroundFeatNode(withFeatChoices)).toBe(
+      '{@feat gathered-whispers-rhw|url:gathered-whispers-rhw} или '
+        + '{@feat Вторая кожа|url:second-skin-rhw}',
+    );
   });
 });

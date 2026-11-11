@@ -5,7 +5,10 @@
 
   import { UiDetailLayout } from '~ui/detail-layout';
 
-  import { useBackgroundToolCatalog } from '../composable';
+  import {
+    useBackgroundFeatNames,
+    useBackgroundToolCatalog,
+  } from '../composable';
   import {
     getBackgroundEquipmentNode,
     getBackgroundFeatNode,
@@ -18,8 +21,15 @@
     background: BackgroundDetailResponse;
   }>();
 
+  /** Названия черт на выбор, сохранённых без снимка названия. */
+  const { featNames, isPending: isFeatNamesPending } = useBackgroundFeatNames(
+    () => background,
+  );
+
   /** Черта: названная предысторией либо список на выбор игрока. */
-  const featNode = computed<string>(() => getBackgroundFeatNode(background));
+  const featNode = computed<string>(() =>
+    getBackgroundFeatNode(background, featNames.value),
+  );
 
   /** Навыки: ссылки на статьи глоссария. */
   const skillNode = computed<string>(() => getBackgroundSkillNode(background));
@@ -49,6 +59,7 @@
         <StatsBlock
           :ability-scores="background.abilityScores"
           :feat="featNode"
+          :is-feat-pending="isFeatNamesPending"
           :skill-proficiencies="skillNode"
           :tool-proficiency="toolNodes"
           :is-tool-proficiency-pending="isToolCatalogPending"

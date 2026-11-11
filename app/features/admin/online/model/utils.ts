@@ -158,6 +158,7 @@ export function createPreferenceSummary(
   );
 
   return {
+    hint: section.hint,
     name: section.name,
     rows: optionRows,
     title: section.title,

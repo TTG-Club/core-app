@@ -19,6 +19,9 @@ export const ADMIN_DASHBOARD_CREATE_ICON = 'tabler:plus';
 /** Значок у заголовка панели, за которым спрятано пояснение. */
 export const ADMIN_DASHBOARD_HINT_ICON = 'tabler:info-circle';
 
+/** Формат чисел в плитках дашборда: тысячи отделяются пробелом. */
+export const ADMIN_DASHBOARD_NUMBER_FORMAT = new Intl.NumberFormat('ru-RU');
+
 /** Значение, которого нет: числа не выдумываем, ставим прочерк. */
 export const ADMIN_DASHBOARD_EMPTY_VALUE = '—';
 
