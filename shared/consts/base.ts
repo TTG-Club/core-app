@@ -14,6 +14,12 @@ export const ONE_DAY_IN_SECONDS = 24 * 60 * 60;
 /** Год в секундах: срок хранения кук с настройками отображения. */
 export const ONE_YEAR_IN_SECONDS = ONE_DAY_IN_SECONDS * 365;
 
+/**
+ * Начало имени куки с выбранным фильтром раздела: выбор переживает
+ * перезагрузку и новый заход, а сервер сразу отдаёт отфильтрованный список.
+ */
+export const SECTION_FILTER_STORE_KEY_PREFIX = 'ttg-section-';
+
 /** Колонка фильтров разделов свёрнута в строку над списком (широкий режим). */
 export const SECTION_FILTERS_COLLAPSED_STORE_KEY =
   'ttg-section-filters-collapsed';
