@@ -65,7 +65,11 @@
 </script>
 
 <template>
-  <UPopover :content="{ side, align: 'start', sideOffset: 8 }">
+  <!-- Свои отступы у панели: общие отступы всплывашек сайта (app.config) выталкивали её за край телефона -->
+  <UPopover
+    :content="{ side, align: 'start', sideOffset: 8 }"
+    :ui="{ content: 'p-0' }"
+  >
     <UButton
       variant="ghost"
       size="xl"
@@ -75,7 +79,10 @@
     />
 
     <template #content>
-      <div class="flex w-104 flex-col gap-4 p-3">
+      <!-- На телефоне панель не шире экрана, а высокая (своя тема) прокручивается -->
+      <div
+        class="flex max-h-(--reka-popover-content-available-height) w-104 max-w-[calc(100vw-1rem)] flex-col gap-4 overflow-y-auto p-3"
+      >
         <section class="flex flex-col gap-3">
           <h3 class="text-sm font-semibold text-highlighted">
             {{ APPEARANCE_GROUP_TITLE }}
