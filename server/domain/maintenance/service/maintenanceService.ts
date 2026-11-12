@@ -282,7 +282,7 @@ export async function saveMaintenanceSiteSettings(
 
 /**
  * Решает, показывать ли посетителю заглушку: при включённом режиме сайт
- * открыт только администраторам (роль из токена запроса).
+ * открыт только администраторам и ролям из настройки (роли из токена запроса).
  *
  * @param event Событие H3.
  * @param settings настройка режима этого сайта
@@ -297,7 +297,11 @@ export async function resolveMaintenanceGate(
 
   const roles = await getRequestRoles(event);
 
-  if (roles?.includes(Role.ADMIN)) {
+  if (
+    roles?.some(
+      (role) => role === Role.ADMIN || settings.allowedRoles.includes(role),
+    )
+  ) {
     return MAINTENANCE_OPEN_GATE;
   }
 

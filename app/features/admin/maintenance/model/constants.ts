@@ -5,12 +5,15 @@ import type {
   MaintenanceSiteId,
 } from '#shared/types';
 
+import { Role } from '~/shared/types';
+
 /** Страница режима обновления в админке. */
 export const MAINTENANCE_ADMIN_ROUTE = '/admin/maintenance';
 
 /** Пустая форма — до загрузки сохранённой настройки. */
 export const MAINTENANCE_ADMIN_EMPTY_FORM: MaintenanceSettingsUpdate = {
   enabled: true,
+  allowedRoles: [],
   title: '',
   message: '',
 };
@@ -26,7 +29,7 @@ export const MAINTENANCE_ADMIN_SEO_TITLE = `${MAINTENANCE_ADMIN_PAGE_TITLE}: Н�
 export const MAINTENANCE_ADMIN_NAVIGATION_ICON = 'tabler:barrier-block';
 
 export const MAINTENANCE_ADMIN_PAGE_HINT =
-  'Пока режим включён, все, кроме администраторов, вместо любой страницы сайта видят заглушку с текстом ниже и формой входа (ответ 503, поисковики её не индексируют). API продолжает работать. Если хранилище настроек недоступно или настройку ни разу не сохраняли, сайт считается закрытым. У каждого сайта настройка своя: сайт D&D 2014 берёт её отсюда и, не получив, тоже считается закрытым.';
+  'Пока режим включён, все, кроме администраторов и отмеченных ниже ролей, вместо любой страницы сайта видят заглушку с текстом ниже и формой входа (ответ 503, поисковики её не индексируют). API продолжает работать. Если хранилище настроек недоступно или настройку ни разу не сохраняли, сайт считается закрытым. У каждого сайта настройка своя: сайт D&D 2014 берёт её отсюда и, не получив, тоже считается закрытым.';
 
 /** Вкладка сайта на странице режима обновления. */
 export interface MaintenanceAdminSiteTab {
@@ -56,6 +59,29 @@ export const MAINTENANCE_ADMIN_SITE_TABS: MaintenanceAdminSiteTab[] = [
 ];
 
 export const MAINTENANCE_ADMIN_SWITCH_LABEL = 'Сайт закрыт на обновление';
+
+export const MAINTENANCE_ADMIN_ROLES_LABEL =
+  'Кого ещё пускать на закрытый сайт';
+
+export const MAINTENANCE_ADMIN_ROLES_HINT =
+  'Администраторы проходят всегда. Роли, которой нет в списке, впишите её имя из core-api латиницей (например, TESTER) и нажмите Enter.';
+
+export const MAINTENANCE_ADMIN_ROLES_PLACEHOLDER = 'Только администраторы';
+
+/**
+ * Подписи ролей в выборе «кого пускать». Администратора нет — он проходит
+ * всегда. Новая роль в `Role` без подписи здесь не соберётся — так она сразу
+ * попадёт в список.
+ */
+export const MAINTENANCE_ADMIN_ROLE_LABELS: Record<
+  Exclude<Role, Role.ADMIN>,
+  string
+> = {
+  [Role.MODERATOR]: 'Модераторы',
+  [Role.WRITER]: 'Авторы',
+  [Role.VTTG]: 'Подписчики VTTG',
+  [Role.USER]: 'Все вошедшие пользователи',
+};
 
 export const MAINTENANCE_ADMIN_TITLE_LABEL = 'Заголовок заглушки';
 

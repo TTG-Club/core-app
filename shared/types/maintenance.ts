@@ -6,10 +6,17 @@ export type MaintenanceSiteId = '5e24' | '5e14';
 
 /**
  * Режим «сайт закрыт на обновление» одного сайта. Пока он включён, всем,
- * кроме администраторов, вместо страниц показывается заглушка.
+ * кроме администраторов и ролей из `allowedRoles`, вместо страниц
+ * показывается заглушка.
  */
 export interface MaintenanceSiteSettings {
   enabled: boolean;
+  /**
+   * Роли, которых пускают на закрытый сайт, помимо администраторов (те проходят
+   * всегда). Строки, а не `Role`: роль, заведённая в core-api позже, чем
+   * обновился сайт, тоже должна сохраняться и работать.
+   */
+  allowedRoles: string[];
   /** Заголовок заглушки. */
   title: string;
   /** Текст заглушки — обычный текст, переносы строк сохраняются. */
@@ -26,13 +33,13 @@ export interface MaintenanceSiteSettings {
  */
 export type MaintenancePublicSiteSettings = Pick<
   MaintenanceSiteSettings,
-  'enabled' | 'title' | 'message'
+  'enabled' | 'allowedRoles' | 'title' | 'message'
 >;
 
 /** То, что администратор меняет в форме режима обновления. */
 export type MaintenanceSettingsUpdate = Pick<
   MaintenanceSiteSettings,
-  'enabled' | 'title' | 'message'
+  'enabled' | 'allowedRoles' | 'title' | 'message'
 >;
 
 /**
@@ -42,7 +49,7 @@ export type MaintenanceSettingsUpdate = Pick<
 export interface MaintenanceGate {
   /** Показать заглушку вместо страницы. */
   blocked: boolean;
-  /** Посетитель вошёл, но он не администратор — форма входа ему не нужна. */
+  /** Посетитель вошёл, но его роль не пускают — форма входа ему не нужна. */
   signedIn: boolean;
   title: string;
   message: string;

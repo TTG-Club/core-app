@@ -12,7 +12,8 @@ import { maintenanceSiteParamsSchema } from '#shared/utils';
 /**
  * Настройка режима «сайт закрыт на обновление» сайта для его сервера: так
  * сайт D&D 2014 узнаёт, закрыт ли он (`/api/maintenance/sites/5e14`). Роут
- * публичный, без того, кто и когда сохранил настройку. Логика та же, что у
+ * публичный, без того, кто и когда сохранил настройку. Кого пускать, кроме
+ * администраторов, сервер сайта берёт из `allowedRoles`. Логика та же, что у
  * этого сайта: настройка из хранилища с кешем, а без неё или при сбое
  * хранилища сайт считается закрытым.
  *
@@ -31,10 +32,9 @@ export default defineEventHandler(
 
     setResponseHeader(event, CACHE_CONTROL_HEADER, MAINTENANCE_CACHE_CONTROL);
 
-    const { enabled, title, message } = await getMaintenanceSiteSettings(
-      parsedParams.data.siteId,
-    );
+    const { enabled, allowedRoles, title, message } =
+      await getMaintenanceSiteSettings(parsedParams.data.siteId);
 
-    return { enabled, title, message };
+    return { enabled, allowedRoles, title, message };
   },
 );
