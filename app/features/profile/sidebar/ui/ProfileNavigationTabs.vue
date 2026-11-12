@@ -11,6 +11,7 @@
   } from '~comments/model';
   import { useMyCommentUpdates } from '~comments/my';
   import { FIND_GAME_PROFILE_NAVIGATION_LABEL } from '~find-game/model';
+  import { PROFILE_ACTIVATION_NAVIGATION_LABEL } from '~profile/activation/model';
   import { UpdatesDot } from '~ui/updates-dot';
 
   const props = defineProps<{
@@ -35,7 +36,7 @@
     },
     {
       value: ProfileTabs.ACTIVATION,
-      label: 'Подписка / Коды',
+      label: PROFILE_ACTIVATION_NAVIGATION_LABEL,
       icon: 'tabler:ticket',
     },
     {

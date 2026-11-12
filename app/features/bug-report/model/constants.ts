@@ -492,7 +492,7 @@ export const BUG_REPORT_STATUS_COMMENT_PUBLIC_HINT =
 export const MY_BUGS_TITLE = 'Мои баг-репорты';
 
 /** Подпись вкладки в навигации профиля */
-export const MY_BUGS_NAVIGATION_LABEL = 'Баг-репорты';
+export const MY_BUGS_NAVIGATION_LABEL = 'Баг-репорты / предложения';
 
 /** Путь раздела в профиле */
 export const MY_BUGS_ROUTE = '/user/profile/bugs';
