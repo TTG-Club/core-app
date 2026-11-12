@@ -251,7 +251,7 @@
               <div class="relative grid size-20 place-items-center">
                 <span
                   v-if="cell.isCurrent"
-                  class="reel-halo absolute inset-0 m-auto size-24 rounded-full bg-primary/25 blur-xl"
+                  class="reel-halo absolute inset-0 m-auto size-24 rounded-full bg-primary/25 blur-xl performance:hidden"
                 />
 
                 <div

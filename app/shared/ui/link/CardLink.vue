@@ -95,7 +95,7 @@
     <a
       :href="href ?? undefined"
       :class="[
-        'group overflow-hidden transition-all',
+        'group overflow-hidden transition-[color,background-color,border-color,box-shadow]',
         layoutClasses.link,
         'rounded-xl border',
         isOpened
@@ -114,17 +114,19 @@
         ]"
       >
         <img
+          decoding="async"
           :src="img"
           :alt="name.rus"
           :class="['absolute h-full w-full', 'object-cover opacity-90']"
         />
 
-        <!-- Gradient Overlay -->
+        <!-- Градиент уезжает при наведении сдвигом, а не сменой размеров:
+          без пересчёта вёрстки -->
         <div
           :class="[
             'absolute inset-0',
             'bg-linear-to-t from-muted to-transparent to-50%',
-            'transition-all duration-300',
+            'transition-transform duration-300',
             layoutClasses.gradient,
           ]"
         />

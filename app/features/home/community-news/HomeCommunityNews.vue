@@ -1,5 +1,7 @@
 <script setup lang="ts">
-  import { CommunityNewsTile } from '~community-news/card';
+  import type { ComponentPublicInstance } from 'vue';
+
+  import { CommunityNewsHero } from '~community-news/card';
   import { CommunityNewsDrawer } from '~community-news/drawer';
   import {
     COMMUNITY_NEWS_ICON,
@@ -8,13 +10,27 @@
     COMMUNITY_NEWS_TITLE,
     parseCommunityNewsList,
   } from '~community-news/model';
-  import { HomeLoadError, HomePanel, useHomeLoadRetry } from '~home/ui-kit';
+  import {
+    HOME_NEWS_COVER_SKELETON_CLASS,
+    HOME_PANEL_COVER_BODY_CLASS,
+    HomeLoadError,
+    HomeNewsSwitcher,
+    HomePanel,
+    useHomeLoadRetry,
+    useHomeNewsRotation,
+  } from '~home/ui-kit';
 
   import {
     HOME_COMMUNITY_NEWS_ALL_LABEL,
     HOME_COMMUNITY_NEWS_COUNT,
     HOME_COMMUNITY_NEWS_EMPTY_TEXT,
   } from './model';
+
+  /**
+   * Новости сообщества — как новости сайта, только в узкой панели: одна
+   * новость обложкой, свежие сменяют друг друга по таймеру или по
+   * переключателю в подвале.
+   */
 
   // Клиентская загрузка, как у новостей и статей: блок ниже сгиба и не должен
   // держать первый ответ главной в ожидании бэкенда.
@@ -67,10 +83,42 @@
     },
   });
 
-  /** Открывает новость в дровере. */
-  function openNews(url: string): void {
-    newsDrawer.open({ url });
+  /** Новость читают в дровере: пока он открыт, новости не листаются */
+  const isReading = ref(false);
+
+  /**
+   * Открывает новость в дровере и ждёт, пока его закроют.
+   *
+   * @param url - адрес новости
+   */
+  async function openNews(url: string): Promise<void> {
+    isReading.value = true;
+
+    try {
+      await newsDrawer.open({ url });
+    } finally {
+      isReading.value = false;
+    }
   }
+
+  const newsCount = computed(() => newsList.value.length);
+
+  const panel = useTemplateRef<ComponentPublicInstance>('panel');
+
+  const {
+    activeIndex,
+    isStopped,
+    isRunning,
+    select,
+    showNext,
+    showPrevious,
+    toggleStopped,
+    setVideoOpen,
+  } = useHomeNewsRotation(newsCount, panel, isReading);
+
+  const activeNews = computed(() => newsList.value[activeIndex.value]);
+
+  const hasSwitcher = computed(() => newsCount.value > 1);
 </script>
 
 <template>
@@ -78,58 +126,57 @@
     запрос упал — «не удалось загрузить» с повтором; раскладка ленты не
     прыгает -->
   <HomePanel
+    ref="panel"
     :label="COMMUNITY_NEWS_TITLE"
     :icon="COMMUNITY_NEWS_ICON"
     :to="COMMUNITY_NEWS_ROUTE"
     :link-label="HOME_COMMUNITY_NEWS_ALL_LABEL"
-    body-class="@container p-2"
+    :body-class="HOME_PANEL_COVER_BODY_CLASS"
   >
-    <!-- Столбец или две колонки — по ширине самой панели, а не экрана: на
-      xl блок стоит в четверти ленты, но если соседа нет, растягивается на
-      половину -->
-    <div
-      v-if="isLoading"
-      class="grid grid-cols-1 gap-1 @lg:grid-cols-2"
+    <!-- В узкой панели от переключателя остаются только точки -->
+    <template
+      v-if="hasSwitcher"
+      #aside
     >
-      <div
-        v-for="index in HOME_COMMUNITY_NEWS_COUNT"
-        :key="index"
-        class="flex items-center gap-3 p-2"
-      >
-        <USkeleton class="h-16 w-24 shrink-0 rounded-md" />
+      <HomeNewsSwitcher
+        :news-list="newsList"
+        :active-index="activeIndex"
+        :is-stopped="isStopped"
+        :is-running="isRunning"
+        compact
+        @select="select"
+        @next="showNext"
+        @previous="showPrevious"
+        @toggle="toggleStopped"
+      />
+    </template>
 
-        <div class="flex flex-1 flex-col gap-2">
-          <USkeleton class="h-2.5 w-16 rounded" />
-
-          <USkeleton class="h-4 w-3/4 rounded" />
-        </div>
-      </div>
-    </div>
+    <USkeleton
+      v-if="isLoading"
+      :class="HOME_NEWS_COVER_SKELETON_CLASS.compact"
+    />
 
     <HomeLoadError
       v-else-if="isError"
-      class="m-1"
+      class="m-3"
       :retrying="status === 'pending'"
       @retry="retryNow"
     />
 
     <p
-      v-else-if="!hasNews"
-      class="m-1 rounded-xl border border-dashed border-default px-3 py-8 text-center text-sm text-muted"
+      v-else-if="!activeNews"
+      class="m-3 flex flex-auto items-center justify-center rounded-xl border border-dashed border-default px-3 py-8 text-center text-sm text-muted"
     >
       {{ HOME_COMMUNITY_NEWS_EMPTY_TEXT }}
     </p>
 
-    <div
+    <CommunityNewsHero
       v-else
-      class="grid grid-cols-1 gap-1 @lg:grid-cols-2"
-    >
-      <CommunityNewsTile
-        v-for="news in newsList"
-        :key="news.id"
-        :news
-        @open="openNews(news.url)"
-      />
-    </div>
+      :key="activeNews.id"
+      :news="activeNews"
+      class="animate-appear motion-reduce:animate-none"
+      @open="openNews(activeNews.url)"
+      @video="setVideoOpen"
+    />
   </HomePanel>
 </template>
