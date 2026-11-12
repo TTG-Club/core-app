@@ -239,26 +239,29 @@
             </UButton>
 
             <!-- Второй уровень: короткий путь к вкладкам профиля, до которых
-              иначе два клика. Без иконок и с отступом под текст «Профиля» -->
-            <UButton
-              v-for="shortcut in profileShortcuts"
-              :key="shortcut.to"
-              color="neutral"
-              variant="ghost"
-              size="md"
-              class="w-full pl-10 text-muted"
-              :to="shortcut.to"
-              @click.left.exact="closeMenu"
-            >
-              <span class="flex items-center gap-2">
-                {{ shortcut.label }}
+              иначе два клика. Без иконок; линия слева идёт от центра иконки
+              «Профиля», как ветка дерева, а текст встаёт под его текст -->
+            <div class="ml-5.5 flex flex-col border-l border-default">
+              <UButton
+                v-for="shortcut in profileShortcuts"
+                :key="shortcut.to"
+                color="neutral"
+                variant="ghost"
+                size="md"
+                class="w-full pl-4 text-muted"
+                :to="shortcut.to"
+                @click.left.exact="closeMenu"
+              >
+                <span class="flex items-center gap-2">
+                  {{ shortcut.label }}
 
-                <UpdatesDot
-                  v-if="shortcut.updates?.hasUpdates"
-                  :title="shortcut.updates.hint"
-                />
-              </span>
-            </UButton>
+                  <UpdatesDot
+                    v-if="shortcut.updates?.hasUpdates"
+                    :title="shortcut.updates.hint"
+                  />
+                </span>
+              </UButton>
+            </div>
 
             <!-- Короткий путь к своим листам: раздел лежит в «Инструментах»
               бокового меню, а из шапки до него было не добраться -->
