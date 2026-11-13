@@ -3598,6 +3598,7 @@ export const BACKGROUND_WIZARD_LABELS = {
   skillsUnknown: 'не распознаны',
   tool: 'Инструмент',
   toolEmpty: 'нет',
+  toolCatalogErrorLog: 'Ошибка загрузки каталога инструментов:',
   featPreview: 'Открыть описание черты',
   featPreviewAria: 'Описание черты',
   featNoChoices: 'Черта ни о чём не спрашивает — она добавится как есть.',

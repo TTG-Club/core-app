@@ -354,7 +354,8 @@ modals), so its capabilities are listed here rather than squeezed into the table
   stores `{ name, url }`, so its chip opens the item drawer; anything the site
   does not have — including tools named in class or background prose — is kept as
   the player's own entry without a link, and one can be typed in by hand in the
-  proficiency modal.
+  proficiency modal. Background tool links may come without a name snapshot:
+  the background wizard waits for the catalog and names them by `url`.
 - Character portrait uploaded to S3 (hover the avatar to add / replace /
   remove); the chosen file first goes through the `shared/ui/image-crop`
   square-crop editor.
