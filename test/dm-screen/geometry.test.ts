@@ -371,6 +371,30 @@ describe('isScreenPickerBand', () => {
   });
 });
 
+describe('раскладка «одно сверху, два снизу»', () => {
+  const layout = DM_SCREEN_LAYOUTS.find(
+    (candidate) => candidate.key === 'main-top',
+  );
+
+  it('верхнее окно во всю ширину, нижние делят её пополам', () => {
+    const [topZone, leftZone, rightZone] = layout?.zones ?? [];
+
+    if (!topZone || !leftZone || !rightZone) {
+      throw new Error('В раскладке должно быть три места');
+    }
+
+    const top = getScreenZoneRect(topZone, BOARD);
+    const left = getScreenZoneRect(leftZone, BOARD);
+    const right = getScreenZoneRect(rightZone, BOARD);
+
+    expect(top.width).toBe(BOARD.width - DM_SCREEN_MARGIN * 2);
+    expect(left.y - (top.y + top.height)).toBe(DM_SCREEN_GAP);
+    expect(right.x - (left.x + left.width)).toBe(DM_SCREEN_GAP);
+    expect(right.x + right.width).toBe(BOARD.width - DM_SCREEN_MARGIN);
+    expect(left.y + left.height).toBe(BOARD.height - DM_SCREEN_MARGIN);
+  });
+});
+
 describe('getScreenEdgeTarget', () => {
   it('у левого края окно займёт левую половину, у правого — правую', () => {
     expect(getScreenEdgeTarget({ x: 5, y: 400 }, BOARD)?.zoneIndex).toBe(0);

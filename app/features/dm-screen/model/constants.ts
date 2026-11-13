@@ -268,10 +268,10 @@ export const DM_SCREEN_LAYOUTS: ReadonlyArray<ScreenLayout> = [
   { key: 'grid-4x3', zones: createGridZones(4, 3) },
   { key: 'grid-6x3', zones: createGridZones(6, 3) },
   {
-    key: 'main-half',
+    key: 'main-top',
     zones: [
-      { left: 0, top: 0, width: 0.5, height: 1 },
-      { left: 0.5, top: 0, width: 0.5, height: 0.5 },
+      { left: 0, top: 0, width: 1, height: 0.5 },
+      { left: 0, top: 0.5, width: 0.5, height: 0.5 },
       { left: 0.5, top: 0.5, width: 0.5, height: 0.5 },
     ],
   },
