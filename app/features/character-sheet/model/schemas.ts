@@ -3645,10 +3645,12 @@ export function parseBackgroundDetail(
 
   const detail = result.data;
 
-  const toolFixed: CharacterToolProficiency[] = toToolProficiencies(
+  const linkedTools = toToolProficiencies(
     detail.toolProficiencies,
     toolEntries,
   );
+
+  const toolFixed: CharacterToolProficiency[] = [...linkedTools];
 
   let toolChoice: ClassChoice | null = toBackgroundToolChoice(
     detail.toolChoice,
@@ -3674,6 +3676,12 @@ export function parseBackgroundDetail(
     }
   }
 
+  // Ссылка есть, а названия ей не нашлось ни в каталоге, ни в тексте: владение
+  // предыстория даёт, но выдать его лист не может.
+  const hasUnnamedTools =
+    detail.toolProficiencies.length > linkedTools.length
+    && toolFixed.length === linkedTools.length;
+
   const feat = parseFeatMarker(detail.feat);
 
   // Собственные дары предыстории разбираются схемой черты: модель у них общая,
@@ -3697,6 +3705,7 @@ export function parseBackgroundDetail(
     ),
     skillsText: detail.skillProficiencies,
     toolFixed,
+    hasUnnamedTools,
     toolChoice,
     featUrl: feat.url,
     featName: feat.name,

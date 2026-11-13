@@ -22,6 +22,7 @@ import {
   SHEET_EMPTY_LABELS,
   WEAPON_PROFICIENCY_GROUPS,
 } from '../constants';
+import { isMissingInventoryItem } from '../effect-engine';
 import {
   collapseProficiencies,
   getAbilityModifier,
@@ -48,7 +49,6 @@ import {
   getVisionRows,
   getWeaponAttackBonus,
   getWeaponDamage,
-  isMissingInventoryItem,
   isProficientWeapon,
 } from '../utils';
 import {

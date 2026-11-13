@@ -80,6 +80,30 @@ describe('названия инструментов предыстории', () 
     );
 
     expect(background?.toolFixed).toEqual([]);
+    expect(background?.hasUnnamedTools).toBe(true);
+  });
+
+  it('не считает потерянным инструмент, названный в тексте', () => {
+    const background = parseBackgroundDetail(
+      createBackgroundResponse({
+        toolProficiencies: [{ url: THIEVES_TOOLS_URL }],
+        toolProficiency: [THIEVES_TOOLS_NAME],
+      }),
+      [],
+      [],
+    );
+
+    expect(background?.hasUnnamedTools).toBe(false);
+  });
+
+  it('не сообщает о потере, когда предыстория инструмент не даёт', () => {
+    const background = parseBackgroundDetail(
+      createBackgroundResponse({}),
+      [],
+      TOOL_ENTRIES,
+    );
+
+    expect(background?.hasUnnamedTools).toBe(false);
   });
 
   it('называет по каталогу варианты выбора инструмента', () => {

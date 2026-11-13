@@ -3598,6 +3598,9 @@ export const BACKGROUND_WIZARD_LABELS = {
   skillsUnknown: 'не распознаны',
   tool: 'Инструмент',
   toolEmpty: 'нет',
+  toolUnavailable:
+    'Предыстория даёт инструмент, но его нет среди доступных — возможно, книга '
+    + 'с ним отключена в профиле. Владение можно добавить на листе вручную.',
   toolCatalogErrorLog: 'Ошибка загрузки каталога инструментов:',
   featPreview: 'Открыть описание черты',
   featPreviewAria: 'Описание черты',

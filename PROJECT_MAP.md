@@ -350,12 +350,16 @@ modals), so its capabilities are listed here rather than squeezed into the table
 - Tool proficiencies are catalog-backed: the sheet keeps no tool list of its own,
   `composables/useToolCatalog.ts` builds one from the «Предметы» section
   (`itemType` = `ARTISAN_S_TOOLS` / `GAMING_SET` / `INSTRUMENT` / `TOOL`, group
-  titles taken from `/item/filters`, profile sources respected). A proficiency
+  titles taken from `/item/filters`, profile sources respected; `TOOL` is a
+  superset of the other three, so the «прочие» group is `TOOL` minus all of
+  them). A proficiency
   stores `{ name, url }`, so its chip opens the item drawer; anything the site
   does not have — including tools named in class or background prose — is kept as
   the player's own entry without a link, and one can be typed in by hand in the
   proficiency modal. Background tool links may come without a name snapshot:
-  the background wizard waits for the catalog and names them by `url`.
+  the background wizard waits for the catalog and names them by `url`; a link
+  the catalog does not have (its book is switched off in the profile) shows a
+  hint instead of «нет».
 - Character portrait uploaded to S3 (hover the avatar to add / replace /
   remove); the chosen file first goes through the `shared/ui/image-crop`
   square-crop editor.
@@ -511,7 +515,9 @@ modals), so its capabilities are listed here rather than squeezed into the table
   `@speed.*` tokens and keys the sheet has no target for, as are disabled effects
   and effects aimed at someone else. The `transfer` flag is not read — the
   sheet's own gate (the item's activation condition, and attunement where the
-  item asks for it) plays that role. A bonus therefore carries a `mode` (`add` / `override` / `upgrade` /
+  item asks for it) plays that role: one predicate, `isActiveBonusItem` in
+  `model/effect-engine.ts`, gates the item's passive bonuses, its effect
+  changes and its effect flags (resistances, roll modes) alike. A bonus therefore carries a `mode` (`add` / `override` / `upgrade` /
   `downgrade`) and a `priority`, and every total is folded rather than summed
   (`getInventoryBonusTotal(character, targets, base)`): the sheet computes the
   base itself (`getBaseAbilityScore`, `getBaseSavingThrowValue`,
@@ -679,7 +685,9 @@ modals), so its capabilities are listed here rather than squeezed into the table
   (`getVisibleFeatChoices` decides what is asked): a skill for proficiency or
   expertise (the «Наблюдательный» case turns a skill the character already has
   into expertise), a tool, a language, a spellcasting ability, a spell or
-  cantrip (the pool is a catalog search, `fetchChoiceSpells`), the spell list
+  cantrip (the pool is a catalog search, `fetchChoiceSpells`; an «up to circle
+  N» pool starts at circle 1 — cantrips come only from a choice with the exact
+  circle 0, see `getChoiceSpellLevels`), the spell list
   a feat draws from (the answer narrows the pool through
   `classesFromChoiceKey`, and a background that names the class itself still
   wins), the damage type a defence applies to («Закалённая кожа» resists

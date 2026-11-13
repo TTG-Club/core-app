@@ -579,6 +579,7 @@
         || detail.skillsText
         || detail.toolChoice
         || detail.toolFixed.length
+        || detail.hasUnnamedTools
         || grantChoices.value.length,
       ),
       feat: Boolean(detail.featUrl || detail.featChoices.length),
@@ -722,6 +723,25 @@
     const choice = backgroundDetail.value?.toolChoice;
 
     return choice ? choiceControl(choice, backgroundOrigin.value) : null;
+  });
+
+  /**
+   * Приписка к фиксированным инструментам: «нет» — предыстория их не даёт;
+   * подсказка — даёт, но лист не нашёл карточку и владение не выдаст. Пусто —
+   * все инструменты показаны бейджами.
+   */
+  const toolNote = computed(() => {
+    const detail = backgroundDetail.value;
+
+    if (!detail) {
+      return '';
+    }
+
+    if (detail.hasUnnamedTools) {
+      return BACKGROUND_WIZARD_LABELS.toolUnavailable;
+    }
+
+    return detail.toolFixed.length ? '' : BACKGROUND_WIZARD_LABELS.toolEmpty;
   });
 
   /** Собственные выборы предыстории единым пикером. */
@@ -1424,10 +1444,10 @@
                   </UBadge>
 
                   <span
-                    v-if="!backgroundDetail.toolFixed.length"
+                    v-if="toolNote"
                     class="text-sm text-dimmed italic"
                   >
-                    {{ BACKGROUND_WIZARD_LABELS.toolEmpty }}
+                    {{ toolNote }}
                   </span>
                 </div>
               </div>

@@ -80,6 +80,7 @@ import type {
   FeatSelectOption,
   FeatSpeedGrantNote,
   FeatSpeedModifiers,
+  FeatSpellChoiceFilter,
   FeatSummary,
   FeatureDamageDefenseChoice,
   FeatureDamageDefenseKind,
@@ -474,6 +475,7 @@ import {
   SPELL_DAMAGE_TYPE_TAG_LABELS,
   SPELL_DAMAGE_TYPE_TAG_PREFIX,
   SPELL_DUPLICATE_WARNING,
+  SPELL_LEVELS,
   SPELL_NAME_SORT_LOCALE,
   SPELL_OWNED_HINTS,
   SPELL_REMOVE_MENU_LABEL,
@@ -507,6 +509,8 @@ import {
   collectAppliedEffects,
   getCharacterEffectFlags,
   getSheetArmorState,
+  isActiveBonusItem,
+  isMissingInventoryItem,
   isSpeedZeroedByEffects,
   matchesArmorCondition,
 } from './effect-engine';
@@ -569,41 +573,6 @@ export function getCharacterProficiencyBonus(character: Character): number {
           (bonus) => bonus.kind !== 'proficiency',
         ),
       ),
-  );
-}
-
-/**
- * Выполнено ли условие применения предмета. «При себе» довольствуется самим
- * наличием предмета, «вручную» ждёт переключателя в его строке, остальное —
- * отметки «надет», как лист считал всегда.
- *
- * @param inventoryItem предмет инвентаря.
- * @returns true — магия предмета включена.
- */
-function isActivatedBonusItem(inventoryItem: CharacterInventoryItem): boolean {
-  switch (inventoryItem.bonusActivation) {
-    case 'carried':
-      return true;
-    case 'manual':
-      return inventoryItem.active;
-    default:
-      return inventoryItem.equipped;
-  }
-}
-
-/**
- * Работают ли сейчас пассивные бонусы предмета. Бонус даёт включённый предмет,
- * которого у персонажа не ноль, а предмету с настройкой нужна ещё и сама
- * настройка — ненастроенный магический предмет по правилам 2024 не работает.
- *
- * @param inventoryItem предмет инвентаря.
- * @returns true — бонусы предмета идут в лист.
- */
-function isActiveBonusItem(inventoryItem: CharacterInventoryItem): boolean {
-  return (
-    isActivatedBonusItem(inventoryItem)
-    && !isMissingInventoryItem(inventoryItem)
-    && (!inventoryItem.requiresAttunement || inventoryItem.attuned)
   );
 }
 
@@ -797,8 +766,9 @@ interface EffectCarrier {
 
 /**
  * Записи листа, чьи активные эффекты действуют прямо сейчас: свои эффекты,
- * умения и надетое снаряжение. Умение работает, пока оно на листе, предмет —
- * пока надет; своими эффектами распоряжается сам игрок.
+ * умения и действующее снаряжение. Умение работает, пока оно на листе, предмет —
+ * пока его магия включена (см. `isActiveBonusItem`); своими эффектами
+ * распоряжается сам игрок.
  *
  * @param character персонаж.
  * @returns носители эффектов с подписью источника.
@@ -826,7 +796,7 @@ function getEffectCarriers(character: Character): EffectCarrier[] {
   );
 
   const itemCarriers: EffectCarrier[] = character.inventory
-    .filter((item) => item.equipped)
+    .filter(isActiveBonusItem)
     .map((item) => ({
       source: { id: item.id, name: item.name, kind: 'item' },
       effects: item.activeEffects ?? [],
@@ -3204,19 +3174,6 @@ export function isCustomInventoryItem(
   inventoryItem: CharacterInventoryItem,
 ): boolean {
   return inventoryItem.url.startsWith(CUSTOM_INVENTORY_URL_PREFIX);
-}
-
-/**
- * Кончился ли предмет: количество доведено до нуля. Запись остаётся в списке,
- * но предмета у персонажа нет — надеть его и катить им атаку с уроном нельзя.
- *
- * @param inventoryItem предмет инвентаря.
- * @returns true — предмета не осталось.
- */
-export function isMissingInventoryItem(
-  inventoryItem: CharacterInventoryItem,
-): boolean {
-  return inventoryItem.quantity <= 0;
 }
 
 /**
@@ -14993,6 +14950,32 @@ export function toChoicePickerOptions(
     ...(hints[name] ? { hint: hints[name] } : {}),
     ...getChoicePickerOptionExtras(choice, name, input),
   }));
+}
+
+/**
+ * Круги, которые уходят в фильтр поиска пула заклинаний. Точный круг задаётся
+ * одним значением; «не выше круга» — перечислением с первого круга до него,
+ * потому что фильтр каталога знает только точные круги. Заговоры в «не выше
+ * круга» не входят: это выбор заклинаний под ячейки, а заговор спрашивается
+ * своим выбором с точным нулевым кругом.
+ *
+ * @param filter ограничения пула из механики записи.
+ * @returns круги для параметра `level`; пусто — круг не ограничен.
+ */
+export function getChoiceSpellLevels(filter: FeatSpellChoiceFilter): number[] {
+  if (filter.level !== null) {
+    return [filter.level];
+  }
+
+  const { maxLevel } = filter;
+
+  if (maxLevel === null) {
+    return [];
+  }
+
+  return SPELL_LEVELS.filter(
+    (spellLevel) => spellLevel > CANTRIP_SPELL_LEVEL && spellLevel <= maxLevel,
+  );
 }
 
 /**

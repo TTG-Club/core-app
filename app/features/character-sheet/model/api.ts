@@ -64,6 +64,7 @@ import {
 } from './schemas';
 import {
   buildStartingEquipmentItem,
+  getChoiceSpellLevels,
   getInventoryItemDetailPath,
   uniqueSpellsByName,
 } from './utils';
@@ -768,24 +769,4 @@ export async function fetchSpellsByUrls(
 
     return null;
   }
-}
-
-/**
- * Круги, которые уходят в фильтр поиска: точный круг задаётся одним значением,
- * «не выше круга» — перечислением от заговора до него, потому что фильтр
- * каталога знает только точные круги.
- *
- * @param filter ограничения пула из механики черты.
- * @returns круги для параметра `level`; пусто — круг не ограничен.
- */
-function getChoiceSpellLevels(filter: FeatSpellChoiceFilter): number[] {
-  if (filter.level !== null) {
-    return [filter.level];
-  }
-
-  if (filter.maxLevel === null) {
-    return [];
-  }
-
-  return Array.from({ length: filter.maxLevel + 1 }, (_, level) => level);
 }
