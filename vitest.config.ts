@@ -36,6 +36,9 @@ export default defineConfig({
       ),
       '#shared': fileURLToPath(new URL('./shared', import.meta.url)),
       '#server': fileURLToPath(new URL('./server', import.meta.url)),
+      '~dm-screen': fileURLToPath(
+        new URL('./app/features/dm-screen', import.meta.url),
+      ),
       '~find-game': fileURLToPath(
         new URL('./app/features/find-game', import.meta.url),
       ),

@@ -139,6 +139,7 @@
           <DrawerActions
             :edit-url="editUrl"
             :url
+            :title="computedTitle"
             :markdown
             @close="$emit('close')"
           />
