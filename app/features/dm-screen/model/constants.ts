@@ -18,6 +18,9 @@ export const DM_SCREEN_ICON = 'tabler:layout-board-split';
 /** Ширма пользователя на сервере. */
 export const DM_SCREEN_API_PATH = '/api/v2/tools/dm-screen';
 
+/** Имя ширмы в сервисе учёта: под ним копится статистика работы с ней. */
+export const DM_SCREEN_USAGE_FEATURE = 'dm-screen';
+
 /** Ключ окон гостевой ширмы в localStorage. */
 export const DM_SCREEN_STORAGE_KEY = 'dm-screen:windows';
 

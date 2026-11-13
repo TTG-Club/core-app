@@ -8,7 +8,9 @@
     DM_SCREEN_ICONS,
     DM_SCREEN_SEO,
     DM_SCREEN_TEXT,
+    DM_SCREEN_USAGE_FEATURE,
   } from '~dm-screen/model';
+  import { useFeatureUsage } from '~infrastructure/analytics/composables';
   import { AuthModal } from '~user/auth-modal';
 
   useSeoMeta({
@@ -19,6 +21,9 @@
   // Гостю — ширма из браузера, вошедшему — из аккаунта. Модель живёт в
   // браузере, поэтому вся страница рисуется только на клиенте
   const { status, isAuthorized, load, switchToLocal } = useDmScreenSession();
+
+  // Статистика: открыть ширму мало, считается время работы с ней
+  useFeatureUsage(DM_SCREEN_USAGE_FEATURE);
 
   const isLoading = computed(() => status.value === 'loading');
   const isFailed = computed(() => status.value === 'failed');
