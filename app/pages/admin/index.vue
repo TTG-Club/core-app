@@ -33,6 +33,7 @@
     ADMIN_VTTG_SECTION_GROUP,
   } from '~admin/navigation/model';
   import {
+    ADMIN_ONLINE_DM_SCREEN_USAGE,
     ADMIN_ONLINE_STATS_API_URL,
     ADMIN_ONLINE_STATS_DATA_KEY,
     parseAdminOnlineStats,
@@ -41,6 +42,7 @@
     AdminOnlinePreferencesPanel,
     AdminOnlineSitesPanel,
     AdminOnlineSummary,
+    AdminOnlineUsagePanel,
     AdminOnlineVttgPanel,
   } from '~admin/online/ui';
   import {
@@ -304,6 +306,12 @@
               :stats="resolvedOnlineStats"
               :is-pending="isOnlineStatsPending"
               class="flex-1"
+            />
+
+            <AdminOnlineUsagePanel
+              :section="ADMIN_ONLINE_DM_SCREEN_USAGE"
+              :stats="resolvedOnlineStats"
+              :is-pending="isOnlineStatsPending"
             />
           </div>
 

@@ -3,6 +3,8 @@ import type {
   MaintenanceSiteId,
 } from '#shared/types';
 
+import { xor } from 'es-toolkit';
+
 import { MAINTENANCE_ADMIN_API_PATH } from '#shared/consts';
 import { maintenanceSiteSettingsSchema } from '#shared/utils';
 
@@ -53,6 +55,7 @@ export function useMaintenanceEditor(siteId: MaintenanceSiteId) {
 
       form.value = {
         enabled: settings.enabled,
+        allowedRoles: [...settings.allowedRoles],
         title: settings.title,
         message: settings.message,
       };
@@ -64,6 +67,8 @@ export function useMaintenanceEditor(siteId: MaintenanceSiteId) {
     () =>
       !!data.value
       && (form.value.enabled !== data.value.enabled
+        // Наборы ролей без повторов: порядок выбора не делает форму изменённой.
+        || xor(form.value.allowedRoles, data.value.allowedRoles).length > 0
         || form.value.title !== data.value.title
         || form.value.message !== data.value.message),
   );

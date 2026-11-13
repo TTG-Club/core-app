@@ -4,7 +4,10 @@
   import type { MaintenanceAdminSiteTab } from '../model';
 
   import {
+    MAINTENANCE_ALLOWED_ROLES_MAX_COUNT,
     MAINTENANCE_MESSAGE_MAX_LENGTH,
+    MAINTENANCE_ROLE_MAX_LENGTH,
+    MAINTENANCE_ROLE_PATTERN,
     MAINTENANCE_TITLE_MAX_LENGTH,
   } from '#shared/consts';
   import { maintenanceSettingsUpdateSchema } from '#shared/utils';
@@ -19,6 +22,10 @@
     MAINTENANCE_ADMIN_MESSAGE_ROWS,
     MAINTENANCE_ADMIN_NEVER_SAVED_LABEL,
     MAINTENANCE_ADMIN_RETRY_LABEL,
+    MAINTENANCE_ADMIN_ROLE_LABELS,
+    MAINTENANCE_ADMIN_ROLES_HINT,
+    MAINTENANCE_ADMIN_ROLES_LABEL,
+    MAINTENANCE_ADMIN_ROLES_PLACEHOLDER,
     MAINTENANCE_ADMIN_SAVE_ICON,
     MAINTENANCE_ADMIN_SAVE_LABEL,
     MAINTENANCE_ADMIN_STATE_BADGES,
@@ -46,6 +53,45 @@
       onClick: () => refresh(),
     },
   ];
+
+  /**
+   * Роли для выбора: известные сайту — с подписями, а вписанные вручную (роль
+   * из core-api, о которой сайт ещё не знает) — под своим именем.
+   */
+  const roleItems = computed(() => {
+    const knownItems = Object.entries(MAINTENANCE_ADMIN_ROLE_LABELS).map(
+      ([value, label]) => ({ value, label }),
+    );
+
+    const customItems = form.value.allowedRoles
+      .filter(
+        (role) => !knownItems.some((knownItem) => knownItem.value === role),
+      )
+      .map((role) => ({ value: role, label: role }));
+
+    return [...knownItems, ...customItems];
+  });
+
+  /**
+   * Добавляет вписанную вручную роль: имя приводится к виду из токена, чужие
+   * символы и повторы не принимаются.
+   *
+   * @param input что вписал администратор
+   */
+  function addCustomRole(input: string): void {
+    const role = input.trim().toUpperCase();
+
+    if (
+      role.length > MAINTENANCE_ROLE_MAX_LENGTH
+      || !MAINTENANCE_ROLE_PATTERN.test(role)
+      || form.value.allowedRoles.includes(role)
+      || form.value.allowedRoles.length >= MAINTENANCE_ALLOWED_ROLES_MAX_COUNT
+    ) {
+      return;
+    }
+
+    form.value.allowedRoles = [...form.value.allowedRoles, role];
+  }
 
   const stateBadge = computed(() =>
     savedSettings.value?.enabled
@@ -112,6 +158,23 @@
         :label="MAINTENANCE_ADMIN_SWITCH_LABEL"
         :description="site.switchDescription"
       />
+
+      <UFormField
+        name="allowedRoles"
+        :label="MAINTENANCE_ADMIN_ROLES_LABEL"
+        :help="MAINTENANCE_ADMIN_ROLES_HINT"
+      >
+        <USelectMenu
+          v-model="form.allowedRoles"
+          class="w-full"
+          :items="roleItems"
+          value-key="value"
+          multiple
+          create-item
+          :placeholder="MAINTENANCE_ADMIN_ROLES_PLACEHOLDER"
+          @create="addCustomRole"
+        />
+      </UFormField>
 
       <UFormField
         name="title"

@@ -24,6 +24,31 @@ export interface AdminOnlinePreferencePeriod {
   preferences: AdminOnlinePreferenceCounts;
 }
 
+/**
+ * Работа с инструментом площадки за последние `days` суток, включая сегодня.
+ * День человека засчитан, если за него набралось достаточно времени работы;
+ * порог держит сервис учёта.
+ */
+export interface AdminOnlineUsagePeriod {
+  /** Сколько засчитанных дней набралось у всех людей вместе */
+  activeDays: number;
+  /** Сколько минут работы пришлось на засчитанные дни */
+  activeMinutes: number;
+  days: number;
+  /** Сколько разных людей набрали два засчитанных дня и больше */
+  returning: number;
+  /** Сколько разных людей набрали хотя бы один засчитанный день */
+  users: number;
+  /** Сколько разных людей открывали инструмент */
+  visitors: number;
+}
+
+/** Статистика одного инструмента площадки по периодам. */
+export interface AdminOnlineFeatureUsage {
+  feature: string;
+  periods: AdminOnlineUsagePeriod[];
+}
+
 export interface AdminOnlineSiteStats extends AdminOnlineCounters {
   /**
    * Срезы настроек отображения. Поле необязательное: площадки, которые настройки
@@ -31,6 +56,20 @@ export interface AdminOnlineSiteStats extends AdminOnlineCounters {
    */
   preferences?: AdminOnlinePreferencePeriod[];
   siteId: string;
+  /**
+   * Работа с инструментами площадки. Поле необязательное: online-app до
+   * обновления его не отдаёт.
+   */
+  usage?: AdminOnlineFeatureUsage[];
+}
+
+/** Инструмент, чью статистику показывает панель. */
+export interface AdminOnlineUsageSection {
+  /** Имя инструмента в сервисе учёта */
+  feature: string;
+  /** Пояснение к панели: прячется за значком у заголовка */
+  hint: string;
+  title: string;
 }
 
 export interface AdminOnlineStatsResponse {

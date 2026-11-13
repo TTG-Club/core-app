@@ -357,6 +357,7 @@ const myCommentReplyPreviewSchema = z.object({
 /** Схема своего комментария в профиле: сервис отдаёт только опубликованные. */
 const myCommentSchema = z.object({
   id: z.string().min(1),
+  sourcePlatform: z.enum(SOURCE_PLATFORMS).nullish().catch(null),
   section: z.string().nullish().catch(null),
   url: z.string().nullish().catch(null),
   parentId: z.string().nullish().catch(null),
@@ -418,6 +419,7 @@ export function parseMyCommentsPage(input: unknown): CommentsPage<MyComment> {
   return {
     items: parsed.content.map((comment) => ({
       ...comment,
+      sourcePlatform: comment.sourcePlatform ?? null,
       section: comment.section ?? null,
       url: comment.url ?? null,
       parentId: comment.parentId ?? null,

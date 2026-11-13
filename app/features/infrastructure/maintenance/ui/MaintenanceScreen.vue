@@ -14,8 +14,8 @@
     MAINTENANCE_SIGN_OUT_LABEL,
   } from '../model';
 
-  const { gate, setSignedIn } = useMaintenanceGate();
-  const { isAdmin, logout } = useUser();
+  const { gate, refresh, setSignedIn } = useMaintenanceGate();
+  const { logout } = useUser();
 
   const isSigningOut = ref(false);
 
@@ -27,12 +27,15 @@
   });
 
   /**
-   * После входа: администратору страница перезагружается — сервер откроет ему
-   * сайт. Остальные остаются вошедшими (выйти можно кнопкой), но вместо формы
-   * видят отказ: разлогинивать молча было бы неожиданно.
+   * После входа сервер решает заново: кого пускают (администратора или роль из
+   * настройки), тому страница перезагружается — сервер откроет сайт. Остальные
+   * остаются вошедшими (выйти можно кнопкой), но вместо формы видят отказ:
+   * разлогинивать молча было бы неожиданно.
    */
-  function handleSignedIn(): void {
-    if (isAdmin.value) {
+  async function handleSignedIn(): Promise<void> {
+    await refresh();
+
+    if (!gate.value.blocked) {
       reloadNuxtApp({ force: true });
 
       return;

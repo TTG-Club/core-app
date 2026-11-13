@@ -1,7 +1,9 @@
 <script setup lang="ts">
+  import type { ComponentPublicInstance } from 'vue';
+
   import type { ArticleShortResponse } from '~articles/model';
 
-  import { ArticleHero, ArticleTile } from '~articles/card';
+  import { ArticleHero } from '~articles/card';
   import { ArticleDrawer } from '~articles/drawer';
   import {
     ARTICLE_TYPE,
@@ -9,7 +11,15 @@
     HOME_NEWS_COUNT,
     NEWS_ROUTE,
   } from '~articles/model';
-  import { HomeLoadError, HomePanel, useHomeLoadRetry } from '~home/ui-kit';
+  import {
+    HOME_NEWS_COVER_SKELETON_CLASS,
+    HOME_PANEL_COVER_BODY_CLASS,
+    HomeLoadError,
+    HomeNewsSwitcher,
+    HomePanel,
+    useHomeLoadRetry,
+    useHomeNewsRotation,
+  } from '~home/ui-kit';
 
   import {
     HOME_NEWS_ALL_LABEL,
@@ -17,6 +27,11 @@
     HOME_NEWS_ICON,
     HOME_NEWS_LABEL,
   } from './model';
+
+  /**
+   * Новости сайта: на месте всегда одна новость обложкой, свежие сменяют
+   * друг друга по таймеру или по переключателю в подвале панели.
+   */
 
   // Клиентская (не-SSR) загрузка: блок новостей ниже сгиба и не должен держать
   // TTFB главной в ожидании бэкенда статей (как HomeRecentChanges). Пока запрос
@@ -61,10 +76,9 @@
 
   const { retryNow } = useHomeLoadRetry(status, refresh);
 
-  const heroArticle = computed(() => data.value?.[0] ?? null);
+  const newsList = computed(() => data.value ?? []);
 
-  /** Остальные новости после «геройской» — компактной сеткой плиток */
-  const restArticles = computed(() => (data.value ?? []).slice(1));
+  const newsCount = computed(() => newsList.value.length);
 
   // По умолчанию новость открывается в дровере (страница остаётся доступной
   // по ссылке/ctrl+click и по кнопке «открыть на отдельной странице»).
@@ -78,43 +92,75 @@
     },
   });
 
-  function openArticle(url: string) {
-    articleDrawer.open({ url });
+  /** Новость читают в дровере: пока он открыт, новости не листаются */
+  const isReading = ref(false);
+
+  /**
+   * Открывает новость в дровере и ждёт, пока его закроют.
+   *
+   * @param url - адрес новости
+   */
+  async function openArticle(url: string): Promise<void> {
+    isReading.value = true;
+
+    try {
+      await articleDrawer.open({ url });
+    } finally {
+      isReading.value = false;
+    }
   }
+
+  const panel = useTemplateRef<ComponentPublicInstance>('panel');
+
+  const {
+    activeIndex,
+    isStopped,
+    isRunning,
+    select,
+    showNext,
+    showPrevious,
+    toggleStopped,
+    setVideoOpen,
+  } = useHomeNewsRotation(newsCount, panel, isReading);
+
+  const activeArticle = computed(() => newsList.value[activeIndex.value]);
+
+  const hasSwitcher = computed(() => newsCount.value > 1);
 </script>
 
 <template>
   <HomePanel
+    ref="panel"
     :label="HOME_NEWS_LABEL"
     :icon="HOME_NEWS_ICON"
     :to="NEWS_ROUTE"
     :link-label="HOME_NEWS_ALL_LABEL"
-    body-class="p-0"
+    :body-class="HOME_PANEL_COVER_BODY_CLASS"
   >
-    <div
-      v-if="isLoading"
-      class="flex flex-col"
+    <!-- Переключатель стоит в подвале, в одной строке со ссылкой на все
+      новости -->
+    <template
+      v-if="hasSwitcher"
+      #aside
     >
-      <USkeleton
-        class="aspect-16/10 w-full rounded-none sm:aspect-2/1 xl:aspect-21/9"
+      <HomeNewsSwitcher
+        :news-list="newsList"
+        :active-index="activeIndex"
+        :is-stopped="isStopped"
+        :is-running="isRunning"
+        @select="select"
+        @next="showNext"
+        @previous="showPrevious"
+        @toggle="toggleStopped"
       />
+    </template>
 
-      <div class="grid grid-cols-1 gap-2 p-2 sm:grid-cols-2">
-        <div
-          v-for="index in HOME_NEWS_COUNT - 1"
-          :key="index"
-          class="flex items-center gap-3 p-2"
-        >
-          <USkeleton class="h-16 w-24 shrink-0 rounded-md" />
-
-          <div class="flex flex-1 flex-col gap-2">
-            <USkeleton class="h-2.5 w-16 rounded" />
-
-            <USkeleton class="h-4 w-3/4 rounded" />
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- Скелетон повторяет обложку, чтобы лента не прыгала, когда новости
+      приедут -->
+    <USkeleton
+      v-if="isLoading"
+      :class="HOME_NEWS_COVER_SKELETON_CLASS.regular"
+    />
 
     <HomeLoadError
       v-else-if="isError"
@@ -124,33 +170,22 @@
     />
 
     <p
-      v-else-if="!hasNews"
-      class="m-3 rounded-xl border border-dashed border-default px-3 py-8 text-center text-sm text-muted"
+      v-else-if="!activeArticle"
+      class="m-3 flex flex-auto items-center justify-center rounded-xl border border-dashed border-default px-3 py-8 text-center text-sm text-muted"
     >
       {{ HOME_NEWS_EMPTY_TEXT }}
     </p>
 
-    <div
+    <!-- Новая обложка проявляется на месте прежней: обложки одного размера,
+      вёрстка под ними не двигается. Проявление — CSS-анимация самой обложки,
+      а не Transition: ей не нужно ждать ухода прежней -->
+    <ArticleHero
       v-else
-      class="flex flex-col"
-    >
-      <ArticleHero
-        v-if="heroArticle"
-        :article="heroArticle"
-        @open="openArticle(heroArticle.url)"
-      />
-
-      <div
-        v-if="restArticles.length"
-        class="grid grid-cols-1 gap-1 border-t border-default p-2 sm:grid-cols-2"
-      >
-        <ArticleTile
-          v-for="article in restArticles"
-          :key="article.id"
-          :article
-          @open="openArticle(article.url)"
-        />
-      </div>
-    </div>
+      :key="activeArticle.id"
+      :article="activeArticle"
+      class="animate-appear motion-reduce:animate-none"
+      @open="openArticle(activeArticle.url)"
+      @video="setVideoOpen"
+    />
   </HomePanel>
 </template>

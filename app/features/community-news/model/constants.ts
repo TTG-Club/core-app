@@ -84,6 +84,9 @@ export const COMMUNITY_NEWS_IMAGE_MAX_SIZE = '1024';
 export const COMMUNITY_NEWS_FALLBACK_IMAGE = '/img/no-img.webp';
 
 /** Подпись ссылки на первоисточник. */
+/** Подпись кнопки на обложке новости: открыть её на отдельной странице. */
+export const COMMUNITY_NEWS_OPEN_PAGE_LABEL = 'Открыть на отдельной странице';
+
 export const COMMUNITY_NEWS_SOURCE_LABEL = 'Первоисточник';
 
 /** Подпись поля автора в редакторе. */

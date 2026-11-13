@@ -8,7 +8,10 @@ import type {
 import { z } from 'zod';
 
 import {
+  MAINTENANCE_ALLOWED_ROLES_MAX_COUNT,
   MAINTENANCE_MESSAGE_MAX_LENGTH,
+  MAINTENANCE_ROLE_MAX_LENGTH,
+  MAINTENANCE_ROLE_PATTERN,
   MAINTENANCE_SITE_IDS,
   MAINTENANCE_TITLE_MAX_LENGTH,
 } from '../consts/maintenance';
@@ -29,6 +32,8 @@ export const maintenanceSiteParamsSchema = z.object({
 export const maintenanceSiteSettingsSchema: z.ZodType<MaintenanceSiteSettings> =
   z.object({
     enabled: z.boolean(),
+    // Записи, сохранённые до появления поля, пускают только администраторов.
+    allowedRoles: z.array(z.string()).default([]),
     title: z.string(),
     message: z.string(),
     updatedAt: z.string().nullable(),
@@ -39,6 +44,15 @@ export const maintenanceSiteSettingsSchema: z.ZodType<MaintenanceSiteSettings> =
 export const maintenanceSettingsUpdateSchema: z.ZodType<MaintenanceSettingsUpdate> =
   z.object({
     enabled: z.boolean(),
+    allowedRoles: z
+      .array(
+        z
+          .string()
+          .max(MAINTENANCE_ROLE_MAX_LENGTH)
+          .regex(MAINTENANCE_ROLE_PATTERN),
+      )
+      .max(MAINTENANCE_ALLOWED_ROLES_MAX_COUNT)
+      .transform((roles) => [...new Set(roles)]),
     title: z.string().trim().min(1).max(MAINTENANCE_TITLE_MAX_LENGTH),
     message: z.string().trim().min(1).max(MAINTENANCE_MESSAGE_MAX_LENGTH),
   });

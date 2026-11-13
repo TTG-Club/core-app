@@ -43,6 +43,7 @@ export const MAINTENANCE_DEFAULT_MESSAGE =
  */
 export const MAINTENANCE_DEFAULT_SITE_SETTINGS: MaintenanceSiteSettings = {
   enabled: true,
+  allowedRoles: [],
   title: MAINTENANCE_DEFAULT_TITLE,
   message: MAINTENANCE_DEFAULT_MESSAGE,
   updatedAt: null,
@@ -66,3 +67,11 @@ export const MAINTENANCE_CONTEXT_KEY = 'maintenanceGate';
 export const MAINTENANCE_TITLE_MAX_LENGTH = 120;
 
 export const MAINTENANCE_MESSAGE_MAX_LENGTH = 2000;
+
+/** Сколько ролей можно пустить на закрытый сайт. */
+export const MAINTENANCE_ALLOWED_ROLES_MAX_COUNT = 20;
+
+export const MAINTENANCE_ROLE_MAX_LENGTH = 50;
+
+/** Имя роли как в токене: заглавные латинские буквы, цифры и `_`. */
+export const MAINTENANCE_ROLE_PATTERN = /^[A-Z][A-Z0-9_]*$/;

@@ -8,6 +8,11 @@ import {
   COMMUNITY_NEWS_TITLE,
 } from '~community-news/model/constants';
 import {
+  DM_SCREEN_ICON,
+  DM_SCREEN_ROUTE,
+  DM_SCREEN_TITLE,
+} from '~dm-screen/model';
+import {
   FIND_GAME_PROFILE_NAVIGATION_LABEL,
   FIND_GAME_PROFILE_ROUTE,
   GAMES_CATALOG_NAVIGATION_LABEL,
@@ -163,6 +168,11 @@ export const MENU_SECTIONS: Array<MenuSection> = [
         href: '/tools/character-sheet',
         label: 'Лист персонажа',
         icon: 'tabler:id',
+      },
+      {
+        href: DM_SCREEN_ROUTE,
+        label: DM_SCREEN_TITLE,
+        icon: DM_SCREEN_ICON,
       },
       {
         href: '/tools/bastion',

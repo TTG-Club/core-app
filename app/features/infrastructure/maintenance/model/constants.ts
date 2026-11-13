@@ -21,14 +21,14 @@ export const MAINTENANCE_REFRESH_FAILED_LOG =
 export const MAINTENANCE_ROBOTS_RULE = 'noindex, nofollow';
 
 export const MAINTENANCE_SIGN_IN_HINT =
-  'Ворота открыты только для мастеров подземелий — администраторов сайта.';
+  'Ворота открыты только для мастеров подземелий — команды сайта.';
 
 export const MAINTENANCE_SIGN_IN_HINT_ICON = 'tabler:crown';
 
 export const MAINTENANCE_FORBIDDEN_TITLE = 'Вход воспрещён';
 
 export const MAINTENANCE_FORBIDDEN_MESSAGE =
-  'Стража у ворот качает головой: сейчас в цитадель пускают только мастеров подземелий (администраторов). Возвращайся, когда ворота откроются.';
+  'Стража у ворот качает головой: сейчас в цитадель пускают только мастеров подземелий — команду сайта. Возвращайся, когда ворота откроются.';
 
 export const MAINTENANCE_FORBIDDEN_ICON = 'tabler:shield-lock';
 

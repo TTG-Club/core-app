@@ -2,11 +2,11 @@
   import type { ArticleShortResponse } from '../model';
 
   import {
-    getVideoPoster,
-    UiVideoModal,
-    VIDEO_PLAY_ICON,
-    VIDEO_PLAY_LABEL,
-  } from '~ui/video';
+    getNewsCoverMeta,
+    NEWS_COVER_ACTION_CLASS,
+    UiNewsCover,
+  } from '~ui/news-cover';
+  import { getVideoPoster } from '~ui/video';
 
   import {
     ARTICLE_ADMIN_NEWS_LIST_LABEL,
@@ -25,17 +25,15 @@
   }>();
 
   defineEmits<{
-    (e: 'open'): void;
+    open: [];
+    /** Ролик новости открыли или закрыли */
+    video: [isOpen: boolean];
   }>();
 
   // Кнопку «Создать новость» показываем только администратору (см. useUserRoles).
   const { isAdmin } = useUserRoles();
 
   const { format } = useDayjs();
-
-  // Общий вид кнопок-действий поверх обложки (стеклянный тёмный фон).
-  const heroActionClass =
-    'bg-black/40 text-white ring-1 ring-white/20 backdrop-blur-sm hover:bg-black/60 hover:text-white';
 
   // У записи с роликом обложка — его заставка (своя или превью площадки).
   const coverImage = computed(
@@ -44,25 +42,16 @@
       ?? ARTICLE_FALLBACK_IMAGE,
   );
 
-  // Ролик смотрят прямо с главной, в окне поверх страницы: кнопка «Смотреть»
-  // по центру обложки. Клик мимо неё по-прежнему открывает саму запись.
-  const overlay = useOverlay();
-
-  const videoModal = overlay.create(UiVideoModal, { destroyOnClose: true });
-
-  /** Открывает ролик новости в окне поверх страницы. */
-  function playVideo(): void {
-    if (article.videoUrl) {
-      videoModal.open({ url: article.videoUrl, title: article.title });
-    }
-  }
-
   const articleRoute = computed(() => getArticleRoute(article.url));
 
-  const publishedAt = computed(() =>
-    article.publishDateTime
-      ? format(article.publishDateTime, ARTICLE_DATE_FORMAT)
-      : '',
+  // Над заголовком — тип записи и дата одной моноширинной строкой
+  const meta = computed(() =>
+    getNewsCoverMeta([
+      article.typeName,
+      article.publishDateTime
+        ? format(article.publishDateTime, ARTICLE_DATE_FORMAT)
+        : undefined,
+    ]),
   );
 
   // Анонс короткого ответа приходит сырой JSON-строкой (`["текст"]`) — берём
@@ -72,96 +61,24 @@
 </script>
 
 <template>
-  <!--
-    Кнопки действий лежат рядом со ссылкой-обложкой, а не внутри неё: ссылка
-    внутри ссылки — невалидная разметка, и клик по кнопке пришлось бы глушить,
-    чтобы он не открывал дровер.
-  -->
-  <div class="group relative overflow-hidden">
-    <!--
-      Обычный клик открывает дровер, ctrl+click и средняя кнопка — страницу
-      записи (за это отвечает `.exact`). `custom` обязателен: у обычного
-      NuxtLink собственный переход RouterLink срабатывает раньше нашего
-      `.prevent`, и вместо дровера открывалась страница.
-    -->
-    <NuxtLink
-      v-slot="{ href }"
-      custom
-      :to="articleRoute"
-    >
-      <a
-        :href="href ?? undefined"
-        class="relative block text-white no-underline"
-        @click.left.exact.prevent="$emit('open')"
-      >
-        <img
-          :src="coverImage"
-          :alt="article.title"
-          class="aspect-16/10 w-full object-cover transition-transform duration-500 group-hover:scale-105 sm:aspect-2/1 xl:aspect-21/9"
-        />
-
-        <div
-          aria-hidden="true"
-          class="absolute inset-0 bg-linear-to-t from-black/80 via-black/25 to-black/5"
-        />
-
-        <div
-          class="absolute inset-x-0 bottom-0 z-10 flex flex-col gap-2 p-4 sm:p-6"
-        >
-          <span
-            class="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] leading-none tracking-[0.16em] text-white/70 uppercase"
-          >
-            {{ article.typeName }}
-
-            <template v-if="publishedAt">
-              <span
-                aria-hidden="true"
-                class="text-white/40"
-              >
-                ·
-              </span>
-
-              {{ publishedAt }}
-            </template>
-          </span>
-
-          <h3
-            class="line-clamp-2 text-xl leading-tight font-semibold text-balance [text-shadow:0_2px_8px_#000000a0] sm:text-2xl xl:text-3xl"
-          >
-            {{ article.title }}
-          </h3>
-
-          <p
-            v-if="previewText"
-            class="line-clamp-2 max-w-3xl text-sm leading-snug text-white/80 [text-shadow:0_2px_6px_#00000090] sm:text-base"
-          >
-            {{ previewText }}
-          </p>
-        </div>
-      </a>
-    </NuxtLink>
-
-    <button
-      v-if="article.videoUrl"
-      type="button"
-      class="absolute top-1/2 left-1/2 z-20 flex size-16 -translate-x-1/2 -translate-y-[75%] cursor-pointer items-center justify-center rounded-full bg-black/60 text-white ring-1 ring-white/30 backdrop-blur-sm transition-transform hover:scale-110 sm:size-20"
-      :aria-label="`${VIDEO_PLAY_LABEL}: ${article.title}`"
-      @click.left.exact.prevent="playVideo"
-    >
-      <UIcon
-        :name="VIDEO_PLAY_ICON"
-        class="size-7 sm:size-9"
-      />
-    </button>
-
-    <div class="absolute top-2 right-2 z-20 flex items-center gap-1">
+  <UiNewsCover
+    :to="articleRoute"
+    :title="article.title"
+    :image="coverImage"
+    :meta
+    :preview="previewText"
+    :video-url="article.videoUrl"
+    @open="$emit('open')"
+    @video="$emit('video', $event)"
+  >
+    <template #actions>
       <UButton
         v-if="isAdmin"
         :to="ARTICLES_ADMIN_CREATE_ROUTE"
         icon="tabler:plus"
         variant="ghost"
         size="sm"
-        :class="heroActionClass"
+        :class="NEWS_COVER_ACTION_CLASS"
         :aria-label="ARTICLE_CREATE_NEWS_LABEL"
       />
 
@@ -171,7 +88,7 @@
         icon="tabler:list-details"
         variant="ghost"
         size="sm"
-        :class="heroActionClass"
+        :class="NEWS_COVER_ACTION_CLASS"
         :aria-label="ARTICLE_ADMIN_NEWS_LIST_LABEL"
       />
 
@@ -180,9 +97,9 @@
         icon="tabler:external-link"
         variant="ghost"
         size="sm"
-        :class="heroActionClass"
+        :class="NEWS_COVER_ACTION_CLASS"
         :aria-label="ARTICLE_OPEN_PAGE_LABEL"
       />
-    </div>
-  </div>
+    </template>
+  </UiNewsCover>
 </template>

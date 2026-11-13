@@ -1,6 +1,10 @@
-import type { AdminOnlinePreferenceSection } from './types';
+import type {
+  AdminOnlinePreferenceSection,
+  AdminOnlineUsageSection,
+} from './types';
 
 import { ADMIN_DASHBOARD_EMPTY_VALUE } from '~admin/dashboard/model';
+import { DM_SCREEN_TITLE, DM_SCREEN_USAGE_FEATURE } from '~dm-screen/model';
 import { LIST_VIEW_OPTIONS } from '~infrastructure/list-presentation/model';
 import {
   LAYOUT_WIDTH_OPTIONS,
@@ -112,7 +116,6 @@ export const ADMIN_ONLINE_STATS_EMPTY_VALUE = ADMIN_DASHBOARD_EMPTY_VALUE;
 export const ADMIN_ONLINE_STATS_EMPTY_TEXT =
   'Online-app пока не вернул сайты для отображения.';
 
-/** Срезы настроек — единственная статистика за период, поэтому период выбирается здесь. */
 export const ADMIN_ONLINE_PREFERENCES_TITLE = 'Настройки отображения';
 
 export const ADMIN_ONLINE_PREFERENCES_PERIOD_HINT =
@@ -147,6 +150,42 @@ export const ADMIN_ONLINE_PREFERENCES_LAYOUT_HINT =
 
 export const ADMIN_ONLINE_PREFERENCES_LIST_HINT =
   'Вид списков разделов: карточками до двух, трёх или четырёх колонок либо строками. Кто вид не менял, учтён в «До трёх колонок».';
+
+/**
+ * Ширма Мастера: открыть её мало, считается работа с ней. Имя инструмента то
+ * же, под которым его шлёт страница ширмы на обоих сайтах.
+ */
+export const ADMIN_ONLINE_DM_SCREEN_USAGE: AdminOnlineUsageSection = {
+  feature: DM_SCREEN_USAGE_FEATURE,
+  hint: 'Кто работает с ширмой, а не просто её открыл. День человека засчитан, если он провёл за ширмой не меньше 5 минут: вкладка на экране, и он что-то делал на странице.',
+  title: DM_SCREEN_TITLE,
+};
+
+/** Главное число плитки площадки: люди хотя бы с одним засчитанным днём. */
+export const ADMIN_ONLINE_USAGE_USERS_HINT =
+  'Сколько разных людей за период работали с ширмой хотя бы в один день.';
+
+export const ADMIN_ONLINE_USAGE_VISITORS_LABEL = 'Открыли';
+
+export const ADMIN_ONLINE_USAGE_VISITORS_HINT =
+  'Сколько разных людей открывали страницу ширмы — вместе с теми, кто сразу ушёл.';
+
+export const ADMIN_ONLINE_USAGE_RETURNING_LABEL = 'Вернулись';
+
+export const ADMIN_ONLINE_USAGE_RETURNING_HINT =
+  'Сколько разных людей работали с ширмой в два разных дня и больше.';
+
+export const ADMIN_ONLINE_USAGE_AVERAGE_LABEL = 'В среднем';
+
+export const ADMIN_ONLINE_USAGE_AVERAGE_HINT =
+  'Сколько времени человек проводит за ширмой в день, когда ей пользуется.';
+
+/** Единицы времени работы с инструментом. */
+export const ADMIN_ONLINE_USAGE_MINUTES_UNIT = 'мин';
+
+export const ADMIN_ONLINE_USAGE_HOURS_UNIT = 'ч';
+
+export const ADMIN_ONLINE_USAGE_MINUTES_IN_HOUR = 60;
 
 /**
  * Какие настройки показываем. Имена совпадают с теми, под которыми браузер

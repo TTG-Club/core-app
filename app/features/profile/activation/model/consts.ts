@@ -13,6 +13,12 @@ import ms from 'ms';
 
 import { VTTG_SUBSCRIPTION_LINK } from '~vttg/model';
 
+/** Путь вкладки «Подписка / Коды» в профиле. */
+export const PROFILE_ACTIVATION_ROUTE = '/user/profile/activation';
+
+/** Подпись вкладки в навигации профиля и в меню шлема. */
+export const PROFILE_ACTIVATION_NAVIGATION_LABEL = 'Подписка / Коды';
+
 /** Эндпоинты подписок/наград (проксируются как есть). */
 export const SUBSCRIPTION_MY_CODES_API_PATH = '/api/subscriptions/my-codes';
 export const SUBSCRIPTION_MY_API_PATH = '/api/subscriptions/my';

@@ -1,1 +1,1 @@
-export { default as CommunityNewsTile } from './CommunityNewsTile.vue';
+export { default as CommunityNewsHero } from './CommunityNewsHero.vue';

@@ -1,5 +1,9 @@
 <script setup lang="ts">
-  import { MY_BUGS_UPDATES_HINT } from '~bug-report/model';
+  import {
+    MY_BUGS_NAVIGATION_LABEL,
+    MY_BUGS_ROUTE,
+    MY_BUGS_UPDATES_HINT,
+  } from '~bug-report/model';
   import { useMyBugReportUpdates } from '~bug-report/my';
   import {
     useCharacterSheetEditGrants,
@@ -11,10 +15,16 @@
     SHEET_EDIT_GRANTS_UPDATES_HINT,
     SHEET_EDIT_REQUESTS_UPDATES_HINT,
   } from '~character-sheet/model';
-  import { MY_COMMENTS_UPDATES_HINT } from '~comments/model';
+  import {
+    MY_COMMENTS_NAVIGATION_LABEL,
+    MY_COMMENTS_ROUTE,
+    MY_COMMENTS_UPDATES_HINT,
+  } from '~comments/model';
   import { useMyCommentUpdates } from '~comments/my';
   import { useFindGameNotifications } from '~find-game/composables';
   import {
+    FIND_GAME_PROFILE_NAVIGATION_LABEL,
+    FIND_GAME_PROFILE_ROUTE,
     GAMES_MY_NAVIGATION_LABEL,
     GAMES_MY_ROUTE,
     MY_GAMES_UPDATES_HINT,
@@ -25,6 +35,10 @@
     MODERATION_ROUTE,
   } from '~moderation/model';
   import { useProfileBadges } from '~profile/activation/composables';
+  import {
+    PROFILE_ACTIVATION_NAVIGATION_LABEL,
+    PROFILE_ACTIVATION_ROUTE,
+  } from '~profile/activation/model';
   import { KbdShortcut } from '~ui/kbd-shortcut';
   import { UpdatesDot } from '~ui/updates-dot';
   import {
@@ -98,16 +112,36 @@
       hasProfileUpdates.value || hasGameUpdates.value || hasSheetUpdates.value,
   );
 
-  // Подсказка называет всё, что ждёт в профиле: точка одна, а поводов может
-  // быть два сразу.
-  const profileUpdatesHint = computed(() =>
-    [
-      bugReportUpdates.hasUpdates.value ? MY_BUGS_UPDATES_HINT : '',
-      commentUpdates.hasUpdates.value ? MY_COMMENTS_UPDATES_HINT : '',
-    ]
-      .filter(Boolean)
-      .join(' · '),
-  );
+  /**
+   * Подпункты «Профиля»: точка новостей стоит у своей вкладки, а не у профиля
+   * целиком — так видно, куда именно идти.
+   */
+  const profileShortcuts = computed(() => [
+    {
+      label: PROFILE_ACTIVATION_NAVIGATION_LABEL,
+      to: PROFILE_ACTIVATION_ROUTE,
+    },
+    {
+      label: MY_BUGS_NAVIGATION_LABEL,
+      to: MY_BUGS_ROUTE,
+      updates: {
+        hasUpdates: bugReportUpdates.hasUpdates.value,
+        hint: MY_BUGS_UPDATES_HINT,
+      },
+    },
+    {
+      label: MY_COMMENTS_NAVIGATION_LABEL,
+      to: MY_COMMENTS_ROUTE,
+      updates: {
+        hasUpdates: commentUpdates.hasUpdates.value,
+        hint: MY_COMMENTS_UPDATES_HINT,
+      },
+    },
+    {
+      label: FIND_GAME_PROFILE_NAVIGATION_LABEL,
+      to: FIND_GAME_PROFILE_ROUTE,
+    },
+  ]);
 
   function logout() {
     closeMenu();
@@ -201,15 +235,33 @@
               icon="tabler:user-cog"
               @click.left.exact.prevent="openProfile"
             >
-              <span class="flex items-center gap-2">
-                Профиль
-
-                <UpdatesDot
-                  v-if="hasProfileUpdates"
-                  :title="profileUpdatesHint"
-                />
-              </span>
+              Профиль
             </UButton>
+
+            <!-- Второй уровень: короткий путь к вкладкам профиля, до которых
+              иначе два клика. Без иконок; линия слева идёт от центра иконки
+              «Профиля», как ветка дерева, а текст встаёт под его текст -->
+            <div class="ml-5.5 flex flex-col border-l border-default">
+              <UButton
+                v-for="shortcut in profileShortcuts"
+                :key="shortcut.to"
+                color="neutral"
+                variant="ghost"
+                size="md"
+                class="w-full pl-4 text-muted"
+                :to="shortcut.to"
+                @click.left.exact="closeMenu"
+              >
+                <span class="flex items-center gap-2">
+                  {{ shortcut.label }}
+
+                  <UpdatesDot
+                    v-if="shortcut.updates?.hasUpdates"
+                    :title="shortcut.updates.hint"
+                  />
+                </span>
+              </UButton>
+            </div>
 
             <!-- Короткий путь к своим листам: раздел лежит в «Инструментах»
               бокового меню, а из шапки до него было не добраться -->

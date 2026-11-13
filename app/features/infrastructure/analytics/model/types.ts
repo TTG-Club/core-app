@@ -25,14 +25,29 @@ declare global {
 /** Имя настройки отображения → выбранное значение. */
 export type OnlineDisplayPreferences = Record<string, string>;
 
-/** Данные посетителя для собственного счётчика онлайн. */
-export interface OnlineHeartbeatBody {
+/** Кем посетитель представляется сервису учёта: логин или идентификатор гостя. */
+export interface OnlineVisitor {
   key: string;
+  /** Идентификатор, под которым вошедший считался до входа */
+  previousGuestKey?: string;
+  type: typeof REGISTERED_ONLINE_TYPE | typeof VISITOR_ONLINE_TYPE;
+}
+
+/** Данные посетителя для собственного счётчика онлайн. */
+export interface OnlineHeartbeatBody extends OnlineVisitor {
   /**
    * Настройки отображения посетителя (тема, ширина сайта, раскладка разделов, вид списков) для статистики в админке.
    * Без заданных настроек поле не отправляется.
    */
   preferences?: OnlineDisplayPreferences;
-  previousGuestKey?: string;
-  type: typeof REGISTERED_ONLINE_TYPE | typeof VISITOR_ONLINE_TYPE;
+}
+
+/** Отметка работы посетителя с инструментом сайта. */
+export interface FeatureUsageBody {
+  /** Сколько секунд посетитель работал с инструментом с прошлой отметки; ноль — только открыл */
+  activeSeconds: number;
+  /** Инструмент, например `dm-screen` */
+  feature: string;
+  key: OnlineVisitor['key'];
+  type: OnlineVisitor['type'];
 }

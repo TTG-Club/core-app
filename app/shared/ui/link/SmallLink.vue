@@ -44,8 +44,10 @@
       :href="href ?? undefined"
       @click.exact.prevent.stop="handleClick"
     >
+      <!-- Плитка за экраном не раскладывается и не рисуется (`lazy-render-tile`):
+        в длинных списках их сотни -->
       <div
-        class="flex min-h-12.5 w-full items-center gap-3 rounded-xl border px-3 py-1.5 transition-all"
+        class="flex min-h-12.5 w-full items-center gap-3 rounded-xl border px-3 py-1.5 transition-[color,background-color,border-color,box-shadow] lazy-render-tile"
         :class="
           isOpened
             ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary/50'

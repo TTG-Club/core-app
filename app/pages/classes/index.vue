@@ -7,10 +7,17 @@
   } from '~/shared/consts';
   import { ClassBody } from '~classes/body';
   import { ClassLink } from '~classes/link';
-  import { getClassMarkdown } from '~classes/model';
+  import {
+    CLASS_LIST_GROUP_FIELD,
+    CLASS_LIST_GROUP_SORT,
+    getClassGroupLabel,
+    getClassMarkdown,
+    sortClassesByGroup,
+  } from '~classes/model';
   import { FilterControls, useFilter } from '~infrastructure/filter';
   import { useListView } from '~infrastructure/list-presentation/composable';
   import { UiDetailPane, UiDetailPaneEmpty } from '~ui/detail-pane';
+  import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkBig } from '~ui/skeleton';
 
@@ -50,6 +57,18 @@
     },
   );
 
+  // Классы в порядке экрана — по группам: по нему панель листает соседние
+  const orderedClasses = computed(() =>
+    classes.value ? sortClassesByGroup(classes.value) : undefined,
+  );
+
+  const listResetKey = computed(() =>
+    JSON.stringify({
+      filter: filterQuery.value,
+      search: search.value ?? '',
+    }),
+  );
+
   const {
     detailUrl,
     detailData: detailClass,
@@ -63,14 +82,9 @@
   } = useSectionDetail<ClassDetailResponse>({
     sectionPath: '/classes',
     apiBasePath: '/api/v2/classes',
-    items: classes,
+    items: orderedClasses,
     getParentUrl: (detail) => detail.parent?.url,
   });
-
-  // На телефоне страница класса листает соседние классы списка
-  useSectionNeighbours('/classes', () =>
-    classes.value?.map((link) => link.url),
-  );
 
   const markdown = useEntityMarkdown(detailClass, getClassMarkdown);
 
@@ -118,16 +132,20 @@
           />
         </PageGrid>
 
-        <PageGrid
-          v-else-if="status === 'success' && classes?.length"
+        <GroupedList
+          v-else-if="status === 'success' && orderedClasses?.length"
           :columns="listColumns"
+          :items="orderedClasses"
+          :reset-key="listResetKey"
+          :field="CLASS_LIST_GROUP_FIELD"
+          :separator-label="getClassGroupLabel"
+          :group-sort="CLASS_LIST_GROUP_SORT"
+          :active-item-key="detailUrl"
         >
-          <ClassLink
-            v-for="link in classes"
-            :key="link.url"
-            :character-class="link"
-          />
-        </PageGrid>
+          <template #default="{ item: characterClass }">
+            <ClassLink :character-class />
+          </template>
+        </GroupedList>
 
         <PageResult
           v-else

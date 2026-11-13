@@ -47,8 +47,13 @@
 
   &-enter-active,
   &-leave-active {
+    // Размытие под панелью включается после анимации: пока панель меняет
+    // размер, оно пересчитывалось бы на каждом кадре
+    backdrop-filter: none;
+
     @include css-anim(
       $time: 0.25s,
+      $item: transform opacity,
       $style: cubic-bezier(0.215, 0.61, 0.355, 1)
     );
   }

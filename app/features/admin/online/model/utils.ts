@@ -4,6 +4,8 @@ import type {
   AdminOnlinePreferenceSection,
   AdminOnlinePreferenceSummary,
   AdminOnlineSiteStats,
+  AdminOnlineSiteTile,
+  AdminOnlineUsagePeriod,
 } from './types';
 
 import {
@@ -14,6 +16,15 @@ import {
   ADMIN_ONLINE_STATS_EMPTY_VALUE,
   ADMIN_ONLINE_STATS_VTTG_SITE_ID,
   ADMIN_ONLINE_STATS_VTTG_TABLE_SITE_ID,
+  ADMIN_ONLINE_USAGE_AVERAGE_HINT,
+  ADMIN_ONLINE_USAGE_AVERAGE_LABEL,
+  ADMIN_ONLINE_USAGE_HOURS_UNIT,
+  ADMIN_ONLINE_USAGE_MINUTES_IN_HOUR,
+  ADMIN_ONLINE_USAGE_MINUTES_UNIT,
+  ADMIN_ONLINE_USAGE_RETURNING_HINT,
+  ADMIN_ONLINE_USAGE_RETURNING_LABEL,
+  ADMIN_ONLINE_USAGE_VISITORS_HINT,
+  ADMIN_ONLINE_USAGE_VISITORS_LABEL,
 } from './constants';
 
 /**
@@ -105,6 +116,96 @@ export function sumPreferencePeriod(
       ),
     {},
   );
+}
+
+/**
+ * Собирает периоды, за которые площадки прислали статистику инструмента, — по
+ * возрастанию и без повторов.
+ */
+export function collectUsagePeriods(
+  sites: ReadonlyArray<AdminOnlineSiteStats>,
+  feature: string,
+): Array<number> {
+  const periods = new Set(
+    sites.flatMap((site) =>
+      (site.usage ?? [])
+        .filter((featureUsage) => featureUsage.feature === feature)
+        .flatMap((featureUsage) =>
+          featureUsage.periods.map(({ days }) => days),
+        ),
+    ),
+  );
+
+  return [...periods].sort((first, second) => first - second);
+}
+
+/**
+ * Находит статистику инструмента на площадке за период. Площадка её не
+ * прислала — `null`: плитка покажет прочерки, а не нули.
+ */
+export function findUsagePeriod(
+  site: AdminOnlineSiteStats,
+  feature: string,
+  days: number | null,
+): AdminOnlineUsagePeriod | null {
+  const featureUsage = site.usage?.find(
+    (siteUsage) => siteUsage.feature === feature,
+  );
+
+  return featureUsage?.periods.find((period) => period.days === days) ?? null;
+}
+
+/**
+ * Приводит минуты к виду «42 мин» или «2 ч 15 мин».
+ */
+export function formatUsageMinutes(minutes: number): string {
+  const hours = Math.floor(minutes / ADMIN_ONLINE_USAGE_MINUTES_IN_HOUR);
+  const restMinutes = minutes % ADMIN_ONLINE_USAGE_MINUTES_IN_HOUR;
+
+  return hours
+    ? `${hours} ${ADMIN_ONLINE_USAGE_HOURS_UNIT} ${restMinutes} ${ADMIN_ONLINE_USAGE_MINUTES_UNIT}`
+    : `${restMinutes} ${ADMIN_ONLINE_USAGE_MINUTES_UNIT}`;
+}
+
+/**
+ * Считает, сколько времени приходится на один засчитанный день. Засчитанных
+ * дней нет — среднего тоже нет: прочерк честнее нуля минут.
+ */
+function formatUsageAverage(period: AdminOnlineUsagePeriod | null): string {
+  return period?.activeDays
+    ? formatUsageMinutes(Math.round(period.activeMinutes / period.activeDays))
+    : ADMIN_ONLINE_STATS_EMPTY_VALUE;
+}
+
+/**
+ * Собирает плитку площадки для панели инструмента: главное число — люди,
+ * которые с ним работали, под ним — открывшие, вернувшиеся и среднее время.
+ */
+export function createUsageTile(
+  siteId: string,
+  period: AdminOnlineUsagePeriod | null,
+): AdminOnlineSiteTile {
+  return {
+    figures: [
+      {
+        hint: ADMIN_ONLINE_USAGE_VISITORS_HINT,
+        label: ADMIN_ONLINE_USAGE_VISITORS_LABEL,
+        value: formatCounter(period?.visitors),
+      },
+      {
+        hint: ADMIN_ONLINE_USAGE_RETURNING_HINT,
+        label: ADMIN_ONLINE_USAGE_RETURNING_LABEL,
+        value: formatCounter(period?.returning),
+      },
+      {
+        hint: ADMIN_ONLINE_USAGE_AVERAGE_HINT,
+        label: ADMIN_ONLINE_USAGE_AVERAGE_LABEL,
+        value: formatUsageAverage(period),
+      },
+    ],
+    siteId,
+    value: formatCounter(period?.users),
+  };
 }
 
 /**
