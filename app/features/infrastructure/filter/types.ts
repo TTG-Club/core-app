@@ -51,3 +51,38 @@ export interface Filter {
   filters: FilterGroups;
   sources?: FilterGroups;
 }
+
+/** Источник из общего списка сайта — то, что нужно панели выбора. */
+export interface SourceCatalogRecord {
+  /** Акроним источника, например `PHB`. */
+  acronym: string;
+  /** Русское название. */
+  name: string;
+  /** Английское название. */
+  english: string;
+  /** Адрес обложки; есть не у каждого источника. */
+  image?: string;
+}
+
+/** Английское название и акроним источника. */
+export interface SourceNames {
+  acronym: string;
+  english: string;
+  image?: string;
+}
+
+/** Справочник названий источников: по акрониму и по русскому названию. */
+export interface SourceCatalog {
+  byAcronym: ReadonlyMap<string, SourceNames>;
+  byName: ReadonlyMap<string, SourceNames>;
+}
+
+/** Строка панели выбора источников. */
+export interface SourceEntry {
+  item: FilterItem;
+  /** Отмечен ли источник: у значения фильтра это `true`, иначе `null`. */
+  selected: boolean;
+  english?: string;
+  acronym?: string;
+  image?: string;
+}

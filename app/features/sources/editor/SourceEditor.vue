@@ -5,6 +5,11 @@
   import { z } from 'zod';
 
   import { SourcePreview } from '~sources/preview';
+  import {
+    SOURCE_ACRONYM_HELP,
+    SOURCE_ACRONYM_RESTORE_ICON,
+    SOURCE_ACRONYM_RESTORE_LABEL,
+  } from '~sources/types';
   import { DatePicker } from '~ui/date-picker';
   import { EditorFormControls } from '~ui/editor';
   import { InputUrl } from '~ui/input';
@@ -49,7 +54,16 @@
       getInitialState,
     });
 
-  const acronym = computed<string>(() => {
+  const route = useRoute();
+
+  // У сохранённого источника акроним — его идентификатор: сам он за названием
+  // уже не идёт, меняется только рукой.
+  const isEditForm = computed(
+    () => typeof route.params.url === 'string' && !!route.params.url,
+  );
+
+  /** Акроним по первым буквам английского названия, без служебных слов. */
+  const generatedAcronym = computed<string>(() => {
     const words = state.value.name.eng
       ?.split(' ')
       .map((word) => word.trim())
@@ -64,9 +78,30 @@
       .join('');
   });
 
-  watchEffect(() => {
-    state.value.acronym = acronym.value;
+  // Кнопка возврата нужна, только когда есть что возвращать: акроним из
+  // названия собрался и в поле стоит не он.
+  const isAcronymRestorable = computed(
+    () =>
+      !!generatedAcronym.value
+      && state.value.acronym !== generatedAcronym.value,
+  );
+
+  // Акроним идёт за названием, пока его не правили рукой: поле пустое или в
+  // нём стоит прежний подставленный вариант. Введённое вручную не трогаем.
+  watch(generatedAcronym, (nextAcronym, previousAcronym) => {
+    if (isEditForm.value) {
+      return;
+    }
+
+    if (!state.value.acronym || state.value.acronym === previousAcronym) {
+      state.value.acronym = nextAcronym;
+    }
   });
+
+  /** Возвращает в поле акроним, собранный из английского названия. */
+  function restoreGeneratedAcronym(): void {
+    state.value.acronym = generatedAcronym.value;
+  }
 
   // === Локальная схема "Основной информации" (без source/page) ===
   const nameSchema = z.object({
@@ -140,14 +175,30 @@
 
         <UFormField
           label="Акроним"
-          help="Генерируется автоматически из английского названия"
+          :help="SOURCE_ACRONYM_HELP"
           name="acronym"
+          required
         >
           <UInput
             v-model="state.acronym"
-            :default-value="acronym"
             placeholder="Введи акроним"
-          />
+            :ui="{ trailing: 'pe-0.5' }"
+          >
+            <template
+              v-if="isAcronymRestorable"
+              #trailing
+            >
+              <UButton
+                :icon="SOURCE_ACRONYM_RESTORE_ICON"
+                variant="link"
+                color="neutral"
+                size="sm"
+                :title="SOURCE_ACRONYM_RESTORE_LABEL"
+                :aria-label="SOURCE_ACRONYM_RESTORE_LABEL"
+                @click.left.exact.prevent="restoreGeneratedAcronym"
+              />
+            </template>
+          </UInput>
         </UFormField>
       </div>
     </UCard>
