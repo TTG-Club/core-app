@@ -15,6 +15,9 @@
       $fetch<CreatureDetailResponse>(`/api/v2/bestiary/${route.params.url}`),
   );
 
+  // Запись могла переехать на новый адрес: по прежнему сервис отдаёт её же
+  useEntityUrlRedirect(() => creature.value?.url);
+
   const markdown = useEntityMarkdown(creature, getCreatureMarkdown);
 
   useSeoMeta({

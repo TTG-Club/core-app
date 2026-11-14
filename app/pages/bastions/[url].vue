@@ -29,6 +29,9 @@
       ),
   );
 
+  // Запись могла переехать на новый адрес: по прежнему сервис отдаёт её же
+  useEntityUrlRedirect(() => facility.value?.url);
+
   const markdown = useEntityMarkdown(facility, getBastionFacilityMarkdown);
 
   useSeoMeta({
