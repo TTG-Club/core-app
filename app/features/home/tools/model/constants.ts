@@ -1,5 +1,10 @@
 import type { HomeTool } from './types';
 
+import {
+  DICE_CALCULATOR_ICON,
+  DICE_CALCULATOR_ROUTE,
+  DICE_CALCULATOR_TITLE,
+} from '~calculator/dice/model';
 import { CHARACTER_SHEET_ROUTE } from '~character-sheet/model';
 import {
   DM_SCREEN_ICON,
@@ -36,6 +41,11 @@ export const HOME_TOOLS: Array<HomeTool> = [
     label: 'Калькулятор характеристик',
     icon: 'tabler:calculator',
     to: '/calculators/abilities',
+  },
+  {
+    label: DICE_CALCULATOR_TITLE,
+    icon: DICE_CALCULATOR_ICON,
+    to: DICE_CALCULATOR_ROUTE,
   },
   {
     label: 'Лист персонажа',
