@@ -19,6 +19,12 @@ export const HOME_LOAD_RETRY_DELAYS_MS = [5_000, 15_000, 30_000, 60_000];
 /** Сколько секунд новость стоит на месте до смены следующей */
 export const HOME_NEWS_ROTATE_SECONDS = 8;
 
+/**
+ * Сколько секунд стоит первая, самая свежая новость: читатель только открыл
+ * главную и не успевает её разглядеть за обычные секунды
+ */
+export const HOME_NEWS_FIRST_ROTATE_SECONDS = 20;
+
 export const HOME_NEWS_ROTATION_TEXT = {
   switcher: 'Переключатель новостей',
   pause: 'Остановить смену новостей',
