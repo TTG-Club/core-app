@@ -7,6 +7,8 @@
 
   import { useSourceCatalog } from '../composable';
   import {
+    FILTER_DRAWER_SIDE,
+    FILTER_DRAWER_UI,
     FILTER_SEARCH_DEBOUNCE,
     FILTER_SEARCH_EMPTY_SUBTITLE,
     FILTER_SEARCH_EMPTY_TITLE,
@@ -210,10 +212,8 @@
     v-model:open="opened"
     :title
     :description="summary"
-    side="left"
-    :ui="{
-      content: 'w-full max-w-192 min-w-80',
-    }"
+    :side="FILTER_DRAWER_SIDE"
+    :ui="FILTER_DRAWER_UI"
   >
     <template #body>
       <!-- Блок растянут на padding скроллящегося body во все стороны: иначе -->
