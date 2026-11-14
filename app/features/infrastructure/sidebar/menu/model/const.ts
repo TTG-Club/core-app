@@ -1,6 +1,11 @@
 import type { MenuSection } from './types';
 
 import { Role } from '~/shared/types';
+import {
+  DICE_CALCULATOR_ICON,
+  DICE_CALCULATOR_ROUTE,
+  DICE_CALCULATOR_TITLE,
+} from '~calculator/dice/model';
 import { RECENT_COMMENTS_ROUTE, RECENT_COMMENTS_TITLE } from '~comments/model';
 import {
   COMMUNITY_NEWS_ICON,
@@ -158,6 +163,11 @@ export const MENU_SECTIONS: Array<MenuSection> = [
         href: '/calculators/abilities',
         label: 'Калькулятор характеристик',
         icon: 'tabler:calculator',
+      },
+      {
+        href: DICE_CALCULATOR_ROUTE,
+        label: DICE_CALCULATOR_TITLE,
+        icon: DICE_CALCULATOR_ICON,
       },
       {
         href: '/tools/initiative',
