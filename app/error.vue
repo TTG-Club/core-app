@@ -75,7 +75,8 @@
             </UButton>
 
             <UButton
-              variant="soft"
+              color="neutral"
+              variant="outline"
               @click.left.exact.prevent="reload"
             >
               Обновить страницу

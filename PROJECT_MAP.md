@@ -29,7 +29,7 @@ core-app/
 │   ├── layouts/                    # Layouts: default, home (full-bleed hero + wide 2K column), detail, section, vttg
 │   ├── middleware/                 # Route middleware: auth.global, close-overlay.global
 │   ├── pages/                      # 📄 Routes (file-based routing)
-│   ├── plugins/                    # analytics (automatic Metrika + GA), anchorScroll, dayjs, online-heartbeat (automatic presence tracking), scrollBehavior, scrollbarWidth
+│   ├── plugins/                    # analytics (automatic Metrika + GA), anchorScroll, arrayPolyfills (array methods for old browsers), dayjs, online-heartbeat (automatic presence tracking), scrollBehavior, scrollbarWidth
 │   ├── shared/                     # 🔧 Global shared layer (FSD-style)
 │   │   ├── api/                    # Typed API fetchers (dictionaries/select-options)
 │   │   ├── consts/                 # Global constants (levels, layout-width, theme, fetch-status, button action labels, support email)
@@ -1190,7 +1190,9 @@ imported via the auto-generated `~<domain>` alias (see
   catalog card in a drawer over the current page — one drawer per section,
   reopened with the next slug; used by the creature-card inventory and by the
   catalog picker/chips in workshop forms) (22 in total).
-- **Plugins** (`app/plugins/`) — `anchorScroll.client`, `dayjs`,
+- **Plugins** (`app/plugins/`) — `anchorScroll.client`, `arrayPolyfills.client`
+  (`toSorted`, `toReversed`, `toSpliced`, `with`, `findLast`, `findLastIndex`
+  for Chrome / Android WebView below 110 and Safari below 16), `dayjs`,
   `online-heartbeat.client` (30 s presence ping), `scrollBehavior`, `scrollbarWidth`.
 - **Middleware** (`app/middleware/`) — `auth.global` (role guard vs
   `route.meta.auth.roles`), `close-overlay.global`.
