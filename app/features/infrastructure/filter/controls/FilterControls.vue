@@ -17,10 +17,10 @@
     FILTER_FILTERS_TITLE,
     FILTER_SHARE_ICON,
     FILTER_SHARE_ICON_APPLE,
-    FILTER_SOURCES_SEARCH_PLACEHOLDER,
     FILTER_SOURCES_TITLE,
   } from '../model';
   import { FilterSearchInput } from '../search-input';
+  import { FilterSourcesDrawer } from '../sources-drawer';
   import {
     getGroupItems,
     getSelectedItemIds,
@@ -352,11 +352,10 @@
       @reset="resetFilter"
     />
 
-    <FilterDrawer
+    <FilterSourcesDrawer
       v-if="filter?.sources"
       v-model="sourcesOpened"
       :title="FILTER_SOURCES_TITLE"
-      :search-placeholder="FILTER_SOURCES_SEARCH_PLACEHOLDER"
       :groups="filter.sources"
       @save="saveSources"
       @reset="resetSources"

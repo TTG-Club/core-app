@@ -10,7 +10,24 @@ import { useSectionPaths } from '~/composables/useSectionNeighbours';
 import { FetchStatus } from '~/shared/consts';
 import { createLruCache } from '~/utils/createLruCache';
 import { getOrigin } from '~/utils/getOrigin';
+import { z } from '~/utils/zod';
 import { GALLERY_OPENED_STATE_KEY } from '~ui/gallery';
+
+/** Адрес записи в ответе сервиса: есть у любой записи каталога. */
+const entityUrlSchema = z.object({ url: z.string().min(1) });
+
+/**
+ * Достаёт адрес записи из ответа сервиса. Тип ответа у каждого раздела свой,
+ * поэтому поле проверяется схемой, а не предполагается.
+ *
+ * @param detail Ответ сервиса с записью.
+ * @returns Адрес записи либо `undefined`, если его в ответе нет.
+ */
+function getEntityUrl(detail: unknown): string | undefined {
+  const result = entityUrlSchema.safeParse(detail);
+
+  return result.success ? result.data.url : undefined;
+}
 
 export interface UseSectionDetailOptions<TDetail = unknown> {
   /** Базовый путь раздела (например, '/classes') */
@@ -149,6 +166,39 @@ export function useSectionDetail<TDetail>(
   const isRouterReady = ref(false);
 
   /**
+   * Переводит открытую карточку с прежнего адреса записи на текущий.
+   *
+   * Адрес записи может смениться (например, вместе с акронимом источника);
+   * сервис по прежнему адресу отдаёт ту же запись с новым `url`. Тогда `detail`
+   * в адресной строке заменяется текущим адресом, а ответ кладётся в кэш и под
+   * ним — повторного запроса после замены не будет.
+   *
+   * Пока шёл запрос, пользователь мог открыть другую запись: тогда адресную
+   * строку трогать нельзя.
+   *
+   * @param requestedUrl Адрес, по которому запрашивали запись.
+   * @param detail Ответ сервиса.
+   */
+  function moveToCurrentUrl(requestedUrl: string, detail: TDetail): void {
+    const currentUrl = getEntityUrl(detail);
+
+    if (
+      !currentUrl
+      || currentUrl === requestedUrl
+      || detailUrl.value !== requestedUrl
+    ) {
+      return;
+    }
+
+    detailCache.set(currentUrl, detail);
+
+    router.replace({
+      query: { ...route.query, detail: currentUrl },
+      hash: route.hash,
+    });
+  }
+
+  /**
    * Загружает детальные данные сущности по её URL-идентификатору.
    * Использует кэширование во избежание повторных запросов.
    *
@@ -179,6 +229,8 @@ export function useSectionDetail<TDetail>(
       detailCache.set(url, response);
       detailData.value = response;
       detailStatus.value = FetchStatus.Success;
+
+      moveToCurrentUrl(url, response);
     } catch {
       detailData.value = null;
       detailStatus.value = FetchStatus.Error;

@@ -80,6 +80,7 @@ import type {
   FeatSelectOption,
   FeatSpeedGrantNote,
   FeatSpeedModifiers,
+  FeatSpellChoiceFilter,
   FeatSummary,
   FeatureDamageDefenseChoice,
   FeatureDamageDefenseKind,
@@ -402,6 +403,7 @@ import {
   PERSONALITY_EMPTY_VALUE,
   PERSONALITY_TEXT_FIELDS,
   PREPARED_KIND_LABELS,
+  PREPARED_LIMIT_PHRASES,
   PREPARED_SPELLS_COLUMN_KEYWORD,
   PREPARED_SPELLS_COLUMN_PREFIX,
   PREPARED_SPELLS_EMPTY_VALUE,
@@ -474,6 +476,7 @@ import {
   SPELL_DAMAGE_TYPE_TAG_LABELS,
   SPELL_DAMAGE_TYPE_TAG_PREFIX,
   SPELL_DUPLICATE_WARNING,
+  SPELL_LEVELS,
   SPELL_NAME_SORT_LOCALE,
   SPELL_OWNED_HINTS,
   SPELL_REMOVE_MENU_LABEL,
@@ -507,6 +510,8 @@ import {
   collectAppliedEffects,
   getCharacterEffectFlags,
   getSheetArmorState,
+  isActiveBonusItem,
+  isMissingInventoryItem,
   isSpeedZeroedByEffects,
   matchesArmorCondition,
 } from './effect-engine';
@@ -569,41 +574,6 @@ export function getCharacterProficiencyBonus(character: Character): number {
           (bonus) => bonus.kind !== 'proficiency',
         ),
       ),
-  );
-}
-
-/**
- * Выполнено ли условие применения предмета. «При себе» довольствуется самим
- * наличием предмета, «вручную» ждёт переключателя в его строке, остальное —
- * отметки «надет», как лист считал всегда.
- *
- * @param inventoryItem предмет инвентаря.
- * @returns true — магия предмета включена.
- */
-function isActivatedBonusItem(inventoryItem: CharacterInventoryItem): boolean {
-  switch (inventoryItem.bonusActivation) {
-    case 'carried':
-      return true;
-    case 'manual':
-      return inventoryItem.active;
-    default:
-      return inventoryItem.equipped;
-  }
-}
-
-/**
- * Работают ли сейчас пассивные бонусы предмета. Бонус даёт включённый предмет,
- * которого у персонажа не ноль, а предмету с настройкой нужна ещё и сама
- * настройка — ненастроенный магический предмет по правилам 2024 не работает.
- *
- * @param inventoryItem предмет инвентаря.
- * @returns true — бонусы предмета идут в лист.
- */
-function isActiveBonusItem(inventoryItem: CharacterInventoryItem): boolean {
-  return (
-    isActivatedBonusItem(inventoryItem)
-    && !isMissingInventoryItem(inventoryItem)
-    && (!inventoryItem.requiresAttunement || inventoryItem.attuned)
   );
 }
 
@@ -797,8 +767,9 @@ interface EffectCarrier {
 
 /**
  * Записи листа, чьи активные эффекты действуют прямо сейчас: свои эффекты,
- * умения и надетое снаряжение. Умение работает, пока оно на листе, предмет —
- * пока надет; своими эффектами распоряжается сам игрок.
+ * умения и действующее снаряжение. Умение работает, пока оно на листе, предмет —
+ * пока его магия включена (см. `isActiveBonusItem`); своими эффектами
+ * распоряжается сам игрок.
  *
  * @param character персонаж.
  * @returns носители эффектов с подписью источника.
@@ -826,7 +797,7 @@ function getEffectCarriers(character: Character): EffectCarrier[] {
   );
 
   const itemCarriers: EffectCarrier[] = character.inventory
-    .filter((item) => item.equipped)
+    .filter(isActiveBonusItem)
     .map((item) => ({
       source: { id: item.id, name: item.name, kind: 'item' },
       effects: item.activeEffects ?? [],
@@ -3204,19 +3175,6 @@ export function isCustomInventoryItem(
   inventoryItem: CharacterInventoryItem,
 ): boolean {
   return inventoryItem.url.startsWith(CUSTOM_INVENTORY_URL_PREFIX);
-}
-
-/**
- * Кончился ли предмет: количество доведено до нуля. Запись остаётся в списке,
- * но предмета у персонажа нет — надеть его и катить им атаку с уроном нельзя.
- *
- * @param inventoryItem предмет инвентаря.
- * @returns true — предмета не осталось.
- */
-export function isMissingInventoryItem(
-  inventoryItem: CharacterInventoryItem,
-): boolean {
-  return inventoryItem.quantity <= 0;
 }
 
 /**
@@ -9307,13 +9265,10 @@ function countSpellsOfKind(
     // и в счёт не идёт (см. `getGrantedCantripUrls`)
     const grantedCantripUrls = getGrantedCantripUrls(character);
 
-    // Только явная отметка выводит выданный заговор из счёта: у выдачи до
-    // появления флага поля нет, и такой заговор, как и прежде, считается
     return (
       bookSpells.filter(
         (spell) => spell.prepared && !grantedCantripUrls.has(spell.url),
-      ).length
-      + classSpells.filter((spell) => spell.alwaysPrepared !== true).length
+      ).length + getClassCantripNamesTakingSpace(character).length
     );
   }
 
@@ -9467,17 +9422,73 @@ export function getPreparedSpellsHint(
  * Описание предупреждения о достигнутом пределе подготовленных: у заклинаний и
  * заговоров он свой, как и плитка, в которой меняют число.
  *
+ * Заговоры класса называются поимённо: они готовы всегда, и пока места заняты
+ * ими, совет «снимите подготовку» выполнить нечем.
+ *
  * @param limit сколько можно держать подготовленными.
  * @param kind вид счёта: заклинания кругов 1+ либо заговоры.
+ * @param classCantripNames названия заговоров класса, занимающих место; у
+ *   заклинаний кругов не читается.
  * @returns текст тоста.
  */
 export function getPreparedSpellsLimitDescription(
   limit: number,
   kind: PreparedSpellKind,
+  classCantripNames: string[],
 ): string {
   const { statFull } = PREPARED_KIND_LABELS[kind];
 
-  return `Подготовлено ${limit} из ${limit} — снимите подготовку с другой записи или измените число в блоке «${statFull}».`;
+  const {
+    prepared,
+    countSeparator,
+    unprepareRecord,
+    unprepareBookCantrip,
+    changeNumber,
+    allTakenByClass,
+    replaceHint,
+    someTakenByClass,
+    alwaysPrepared,
+    namesSeparator,
+  } = PREPARED_LIMIT_PHRASES;
+
+  const reached = `${prepared} ${limit} ${countSeparator} ${limit}`;
+  const blockHint = `${changeNumber} «${statFull}»`;
+
+  if (kind !== 'cantrips' || !classCantripNames.length) {
+    return `${reached} — ${unprepareRecord} или ${blockHint}.`;
+  }
+
+  const cantripNames = classCantripNames.join(namesSeparator);
+
+  // Снимать нечего: значок выданного заговора не нажимается, и совет снять
+  // подготовку отправил бы игрока искать пометку, которой нет
+  if (classCantripNames.length >= limit) {
+    return `${allTakenByClass}: ${cantripNames}. ${replaceHint} или ${blockHint}.`;
+  }
+
+  return `${reached} — ${unprepareBookCantrip} или ${blockHint}. ${someTakenByClass} (${cantripNames}) ${alwaysPrepared}.`;
+}
+
+/**
+ * Названия заговоров класса, которые занимают место в колонке «Заговоры»:
+ * выданные умениями класса либо выбранные игроком в мастере. Такой заговор
+ * готов всегда и считается целиком. Только явная отметка «Подготавливать не
+ * нужно» выводит заговор из счёта: у выдачи до появления флага поля нет, и
+ * такой заговор считается.
+ *
+ * @param character персонаж.
+ * @returns названия заговоров класса, идущих в счёт подготовленных.
+ */
+export function getClassCantripNamesTakingSpace(
+  character: Character,
+): string[] {
+  return getClassGrantedSpells(character)
+    .filter(
+      (spell) =>
+        getSpellPreparedKind(spell) === 'cantrips'
+        && spell.alwaysPrepared !== true,
+    )
+    .map((spell) => spell.name);
 }
 
 /**
@@ -14993,6 +15004,32 @@ export function toChoicePickerOptions(
     ...(hints[name] ? { hint: hints[name] } : {}),
     ...getChoicePickerOptionExtras(choice, name, input),
   }));
+}
+
+/**
+ * Круги, которые уходят в фильтр поиска пула заклинаний. Точный круг задаётся
+ * одним значением; «не выше круга» — перечислением с первого круга до него,
+ * потому что фильтр каталога знает только точные круги. Заговоры в «не выше
+ * круга» не входят: это выбор заклинаний под ячейки, а заговор спрашивается
+ * своим выбором с точным нулевым кругом.
+ *
+ * @param filter ограничения пула из механики записи.
+ * @returns круги для параметра `level`; пусто — круг не ограничен.
+ */
+export function getChoiceSpellLevels(filter: FeatSpellChoiceFilter): number[] {
+  if (filter.level !== null) {
+    return [filter.level];
+  }
+
+  const { maxLevel } = filter;
+
+  if (maxLevel === null) {
+    return [];
+  }
+
+  return SPELL_LEVELS.filter(
+    (spellLevel) => spellLevel > CANTRIP_SPELL_LEVEL && spellLevel <= maxLevel,
+  );
 }
 
 /**

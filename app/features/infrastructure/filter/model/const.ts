@@ -4,6 +4,64 @@ export const FILTER_DRAWER_SEARCH_PLACEHOLDER = 'Поиск по фильтра�
 /** Плейсхолдер того же поля в дровере источников */
 export const FILTER_SOURCES_SEARCH_PLACEHOLDER = 'Поиск по источникам...';
 
+/** Адрес общего списка источников сайта: из него панель берёт названия */
+export const FILTER_SOURCES_CATALOG_PATH = '/api/v2/source/search';
+
+/** Ключ кэша этого списка: один на все панели выбора источников */
+export const FILTER_SOURCES_CATALOG_KEY = 'filter-sources-catalog';
+
+/**
+ * Подпись кнопки панели, когда всё показанное уже отмечено; пока отмечено не
+ * всё, на ней общая подпись «Выбрать все»
+ */
+export const FILTER_SOURCES_CLEAR_ALL_LABEL = 'Снять все';
+
+/** Значки той же кнопки в двух её состояниях */
+export const FILTER_SOURCES_SELECT_ALL_ICON = 'tabler:checks';
+export const FILTER_SOURCES_CLEAR_ALL_ICON = 'tabler:square-off';
+
+/**
+ * Быстрые наборы над списком источников: одним нажатием отмечают целые группы
+ * и снимают остальное. Ключи — типы источников из фильтров разделов.
+ */
+export const FILTER_SOURCES_PRESETS: ReadonlyArray<{
+  id: string;
+  label: string;
+  keys: ReadonlyArray<string>;
+}> = [
+  { id: 'official', label: 'Только базовые', keys: ['OFFICIAL'] },
+  {
+    id: 'official-settings',
+    label: 'Базовые и сеттинги',
+    keys: ['OFFICIAL', 'SETTING'],
+  },
+];
+
+/** Значок на месте обложки у источника без неё */
+export const FILTER_SOURCES_COVER_PLACEHOLDER_ICON = 'tabler:book';
+
+/** Отметка на обложке выбранного источника */
+export const FILTER_SOURCES_SELECTED_ICON = 'tabler:check';
+
+/** Значок поля поиска в панели источников */
+export const FILTER_SOURCES_SEARCH_ICON = 'tabler:search';
+
+/** Стрелка в шапке группы источников: повёрнута вниз у раскрытой группы */
+export const FILTER_SOURCES_GROUP_TOGGLE_ICON = 'tabler:chevron-right';
+
+/** Подпись кнопки, применяющей выбор источников */
+export const FILTER_SOURCES_APPLY_LABEL = 'Применить';
+
+/** Подпись и значок кнопки, возвращающей исходный набор источников */
+export const FILTER_SOURCES_RESET_LABEL = 'Сбросить';
+export const FILTER_SOURCES_RESET_ICON = 'tabler:trash';
+
+/** Начало строки-сводки под заголовком панели: «Выбрано 3 из 24» */
+export const FILTER_SOURCES_SUMMARY_PREFIX = 'Выбрано';
+
+/** Связка в той же сводке и в счётчике группы */
+export const FILTER_SOURCES_SUMMARY_SEPARATOR = 'из';
+
 /** Плейсхолдер поля поиска по разделу в тулбаре */
 export const FILTER_CONTROLS_SEARCH_PLACEHOLDER = 'Поиск...';
 
@@ -106,6 +164,22 @@ export const FILTER_SELECT_ALL_LABEL = 'Выбрать все';
 
 /** Подпись переключателя, превращающего выбор группы в исключение */
 export const FILTER_EXCLUDE_LABEL = 'Исключать';
+
+/**
+ * Подписи ответа «нет» у группы с единственным значением — по названию этого
+ * значения, каким его отдаёт сервер. Такая группа показывает оба ответа сразу:
+ * «Требуется» и «Не требуется».
+ */
+export const FILTER_SINGLE_CHOICE_EXCLUDE_LABELS: Readonly<
+  Record<string, string>
+> = {
+  Требуется: 'Не требуется',
+  Есть: 'Нет',
+  Да: 'Нет',
+};
+
+/** Отрицание для значения, которому своя подпись ответа «нет» не задана */
+export const FILTER_SINGLE_CHOICE_EXCLUDE_PREFIX = 'Не';
 
 /** Подпись переключателя, требующего совпадения по всем выбранным значениям */
 export const FILTER_UNION_LABEL = 'Точное совпадение (AND)';

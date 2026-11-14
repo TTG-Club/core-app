@@ -21,6 +21,9 @@
     $fetch<SpeciesDetailResponse>(`/api/v2/species/${url}`),
   );
 
+  // Запись могла переехать на новый адрес: по прежнему сервис отдаёт её же
+  useEntityUrlRedirect(() => species.value?.url);
+
   const markdown = useEntityMarkdown(species, getSpeciesMarkdown);
 
   /** Возврат к странице родительского вида. */

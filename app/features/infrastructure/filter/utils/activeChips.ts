@@ -2,6 +2,10 @@ import type { FilterGroups } from '../types';
 
 import { normalizeDependentSelections } from './filterDependencies';
 import { getGroupItems } from './getGroupItems';
+import {
+  getSingleChoiceExcludeLabel,
+  isSingleChoiceGroup,
+} from './singleChoice';
 
 /** Плашка выбранного значения фильтра над списком. */
 export interface ActiveFilterChip {
@@ -24,16 +28,24 @@ export interface ActiveFilterChip {
 export function getActiveFilterChips(
   groups: FilterGroups,
 ): Array<ActiveFilterChip> {
-  return groups.flatMap((group) =>
-    getGroupItems(group)
+  return groups.flatMap((group) => {
+    // Исключённый признак «да или нет» называется своим ответом: «Настройка:
+    // Не требуется» читается сразу, а «Настройка: Требуется» красным — нет
+    const isExcludedChoice = isSingleChoiceGroup(group) && !!group.mode;
+
+    return getGroupItems(group)
       .filter((filterItem) => filterItem.selected)
       .map((filterItem) => ({
         groupKey: group.key,
         itemId: String(filterItem.id),
-        label: `${group.name}: ${filterItem.name}`,
+        label: `${group.name}: ${
+          isExcludedChoice
+            ? getSingleChoiceExcludeLabel(filterItem.name)
+            : filterItem.name
+        }`,
         isExcluded: !!group.mode,
-      })),
-  );
+      }));
+  });
 }
 
 /**

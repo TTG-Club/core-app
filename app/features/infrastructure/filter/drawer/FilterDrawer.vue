@@ -19,14 +19,9 @@
     (event: 'reset'): void;
   }>();
 
-  const {
-    groups,
-    title,
-    searchPlaceholder = FILTER_DRAWER_SEARCH_PLACEHOLDER,
-  } = defineProps<{
+  const { groups, title } = defineProps<{
     groups: FilterGroups;
     title: string;
-    searchPlaceholder?: string;
   }>();
 
   const opened = defineModel<boolean>();
@@ -69,7 +64,7 @@
         <FilterSearchInput
           v-model="search"
           class="w-full"
-          :placeholder="searchPlaceholder"
+          :placeholder="FILTER_DRAWER_SEARCH_PLACEHOLDER"
           icon="tabler:search"
         />
       </div>

@@ -46,6 +46,7 @@ import type {
   SpellDamageFormulas,
   StartingEquipmentItem,
   StartingEquipmentOption,
+  ToolCatalogEntry,
 } from './types';
 
 import { clamp, uniq, uniqBy } from 'es-toolkit';
@@ -3539,15 +3540,40 @@ interface BackgroundRef {
 }
 
 /**
+ * Ссылки на инструменты с названиями из каталога. Снимок названия в ссылке
+ * необязателен: записи, сохранённые без него, иначе выпали бы из листа, и
+ * предыстория показывала бы «инструмент: нет». Снимок, если он есть, главнее.
+ *
+ * @param toolRefs ссылки на карточки инструментов.
+ * @param toolEntries инструменты каталога сайта.
+ * @returns те же ссылки; ненайденная в каталоге остаётся без названия.
+ */
+function nameToolRefs(
+  toolRefs: BackgroundRef[],
+  toolEntries: ToolCatalogEntry[],
+): BackgroundRef[] {
+  const toolNamesByUrl = new Map(
+    toolEntries.map((toolEntry) => [toolEntry.url, toolEntry.name]),
+  );
+
+  return toolRefs.map((reference) => ({
+    url: reference.url,
+    name: reference.name || toolNamesByUrl.get(reference.url) || null,
+  }));
+}
+
+/**
  * Владения инструментами из ссылок мастерской.
  *
- * @param refs ссылки на карточки инструментов.
+ * @param toolRefs ссылки на карточки инструментов.
+ * @param toolEntries инструменты каталога — названия ссылкам без снимка.
  * @returns владения с подписью и адресом карточки.
  */
 function toToolProficiencies(
-  refs: BackgroundRef[],
+  toolRefs: BackgroundRef[],
+  toolEntries: ToolCatalogEntry[],
 ): CharacterToolProficiency[] {
-  return refs
+  return nameToolRefs(toolRefs, toolEntries)
     .filter((reference) => reference.name)
     .map((reference) => ({ name: reference.name ?? '', url: reference.url }));
 }
@@ -3558,10 +3584,12 @@ function toToolProficiencies(
  * выбор»).
  *
  * @param choice блок выбора из ответа.
+ * @param toolEntries инструменты каталога — названия ссылкам без снимка.
  * @returns выбор для мастера; null — выбора у предыстории нет.
  */
 function toBackgroundToolChoice(
   choice: { count: number | null; from: BackgroundRef[] } | null,
+  toolEntries: ToolCatalogEntry[],
 ): ClassChoice | null {
   if (!choice?.count || choice.count < 1) {
     return null;
@@ -3572,7 +3600,7 @@ function toBackgroundToolChoice(
     kind: 'tool',
     label: BACKGROUND_TOOL_CHOICE_LABEL,
     count: choice.count,
-    listed: choice.from
+    listed: nameToolRefs(choice.from, toolEntries)
       .filter((reference) => reference.name)
       .map((reference) => reference.name ?? ''),
   };
@@ -3601,11 +3629,13 @@ function hasOwnBackgroundGrants(grants: FeatSummary): boolean {
  *
  * @param input сырой детальный ответ предыстории.
  * @param skillNames имена всех навыков персонажа (для распознавания навыков).
+ * @param toolEntries инструменты каталога — названия ссылкам без снимка.
  * @returns деталь предыстории или null при неожиданном ответе.
  */
 export function parseBackgroundDetail(
   input: unknown,
   skillNames: string[],
+  toolEntries: ToolCatalogEntry[],
 ): BackgroundSummary | null {
   const result = backgroundDetailSchema.safeParse(input);
 
@@ -3615,12 +3645,16 @@ export function parseBackgroundDetail(
 
   const detail = result.data;
 
-  const toolFixed: CharacterToolProficiency[] = toToolProficiencies(
+  const linkedTools = toToolProficiencies(
     detail.toolProficiencies,
+    toolEntries,
   );
+
+  const toolFixed: CharacterToolProficiency[] = [...linkedTools];
 
   let toolChoice: ClassChoice | null = toBackgroundToolChoice(
     detail.toolChoice,
+    toolEntries,
   );
 
   // Текст читается, только пока владение не задано ссылками: у переведённых
@@ -3641,6 +3675,12 @@ export function parseBackgroundDetail(
       }
     }
   }
+
+  // Ссылка есть, а названия ей не нашлось ни в каталоге, ни в тексте: владение
+  // предыстория даёт, но выдать его лист не может.
+  const hasUnnamedTools =
+    detail.toolProficiencies.length > linkedTools.length
+    && toolFixed.length === linkedTools.length;
 
   const feat = parseFeatMarker(detail.feat);
 
@@ -3665,6 +3705,7 @@ export function parseBackgroundDetail(
     ),
     skillsText: detail.skillProficiencies,
     toolFixed,
+    hasUnnamedTools,
     toolChoice,
     featUrl: feat.url,
     featName: feat.name,

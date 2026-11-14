@@ -17,6 +17,9 @@
       ),
   );
 
+  // Запись могла переехать на новый адрес: по прежнему сервис отдаёт её же
+  useEntityUrlRedirect(() => background.value?.url);
+
   const markdown = useEntityMarkdown(background, getBackgroundMarkdown);
 
   useSeoMeta({
