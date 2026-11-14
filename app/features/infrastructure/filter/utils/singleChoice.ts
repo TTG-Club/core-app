@@ -71,6 +71,66 @@ export function setSingleChoiceState(
 }
 
 /**
+ * Нажатие на ответ «да»: отмечает его или снимает, если он уже отмечен.
+ *
+ * @param group группа с единственным значением.
+ * @param selected отмечен ли ответ после нажатия.
+ * @returns новая группа.
+ */
+export function toggleSingleChoiceInclude(
+  group: FilterGroup,
+  selected: boolean | null,
+): FilterGroup {
+  return setSingleChoiceState(group, selected ? 'include' : 'any');
+}
+
+/**
+ * Нажатие на ответ «нет»: отмечает его или снимает, если он уже отмечен.
+ *
+ * @param group группа с единственным значением.
+ * @param selected отмечен ли ответ после нажатия.
+ * @returns новая группа.
+ */
+export function toggleSingleChoiceExclude(
+  group: FilterGroup,
+  selected: boolean | null,
+): FilterGroup {
+  return setSingleChoiceState(group, selected ? 'exclude' : 'any');
+}
+
+/**
+ * Отмечен ли у группы ответ «да».
+ *
+ * @param group группа с единственным значением.
+ * @returns признак отмеченного ответа «да».
+ */
+export function isSingleChoiceIncluded(group: FilterGroup): boolean {
+  return getSingleChoiceState(group) === 'include';
+}
+
+/**
+ * Отмечен ли у группы ответ «нет».
+ *
+ * @param group группа с единственным значением.
+ * @returns признак отмеченного ответа «нет».
+ */
+export function isSingleChoiceExcluded(group: FilterGroup): boolean {
+  return getSingleChoiceState(group) === 'exclude';
+}
+
+/**
+ * Подпись ответа «нет» для единственного значения группы.
+ *
+ * @param group группа с единственным значением.
+ * @returns подпись; пустая строка — значения у группы нет.
+ */
+export function getSingleChoiceGroupExcludeLabel(group: FilterGroup): string {
+  const [filterItem] = getGroupItems(group);
+
+  return filterItem ? getSingleChoiceExcludeLabel(filterItem.name) : '';
+}
+
+/**
  * Подпись ответа «нет» для значения группы: «Требуется» → «Не требуется»,
  * «Есть» → «Нет». Значение без своей подписи получает отрицание приставкой.
  *

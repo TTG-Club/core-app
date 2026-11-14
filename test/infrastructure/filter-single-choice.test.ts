@@ -6,9 +6,14 @@ import {
   buildSearchQuery,
   getActiveFilterChips,
   getSingleChoiceExcludeLabel,
+  getSingleChoiceGroupExcludeLabel,
   getSingleChoiceState,
+  isSingleChoiceExcluded,
   isSingleChoiceGroup,
+  isSingleChoiceIncluded,
   setSingleChoiceState,
+  toggleSingleChoiceExclude,
+  toggleSingleChoiceInclude,
 } from '~infrastructure/filter';
 
 /** Ключ группы-признака в тестах. */
@@ -182,5 +187,49 @@ describe('плашка исключённого признака', () => {
     expect(getActiveFilterChips([group])[0]?.label).toBe(
       `Настройка: ${REQUIRED_LABEL}`,
     );
+  });
+});
+
+describe('нажатия на ответы группы-признака', () => {
+  it('нажатие на «да» отмечает его', () => {
+    const group = toggleSingleChoiceInclude(createAttunementGroup(), true);
+
+    expect(isSingleChoiceIncluded(group)).toBe(true);
+    expect(isSingleChoiceExcluded(group)).toBe(false);
+  });
+
+  it('нажатие на «нет» отмечает его и снимает «да»', () => {
+    const included = toggleSingleChoiceInclude(createAttunementGroup(), true);
+    const excluded = toggleSingleChoiceExclude(included, true);
+
+    expect(isSingleChoiceExcluded(excluded)).toBe(true);
+    expect(isSingleChoiceIncluded(excluded)).toBe(false);
+  });
+
+  it('повторное нажатие снимает ответ', () => {
+    const included = toggleSingleChoiceInclude(createAttunementGroup(), true);
+    const excluded = toggleSingleChoiceExclude(createAttunementGroup(), true);
+
+    expect(
+      getSingleChoiceState(toggleSingleChoiceInclude(included, null)),
+    ).toBe('any');
+
+    expect(
+      getSingleChoiceState(toggleSingleChoiceExclude(excluded, null)),
+    ).toBe('any');
+  });
+});
+
+describe('getSingleChoiceGroupExcludeLabel', () => {
+  it('строит подпись ответа «нет» по значению группы', () => {
+    expect(getSingleChoiceGroupExcludeLabel(createAttunementGroup())).toBe(
+      NOT_REQUIRED_LABEL,
+    );
+  });
+
+  it('у группы без значений подписи нет', () => {
+    expect(
+      getSingleChoiceGroupExcludeLabel(createAttunementGroup({ values: [] })),
+    ).toBe('');
   });
 });

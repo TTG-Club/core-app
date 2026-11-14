@@ -403,6 +403,7 @@ import {
   PERSONALITY_EMPTY_VALUE,
   PERSONALITY_TEXT_FIELDS,
   PREPARED_KIND_LABELS,
+  PREPARED_LIMIT_PHRASES,
   PREPARED_SPELLS_COLUMN_KEYWORD,
   PREPARED_SPELLS_COLUMN_PREFIX,
   PREPARED_SPELLS_EMPTY_VALUE,
@@ -9264,13 +9265,10 @@ function countSpellsOfKind(
     // и в счёт не идёт (см. `getGrantedCantripUrls`)
     const grantedCantripUrls = getGrantedCantripUrls(character);
 
-    // Только явная отметка выводит выданный заговор из счёта: у выдачи до
-    // появления флага поля нет, и такой заговор, как и прежде, считается
     return (
       bookSpells.filter(
         (spell) => spell.prepared && !grantedCantripUrls.has(spell.url),
-      ).length
-      + classSpells.filter((spell) => spell.alwaysPrepared !== true).length
+      ).length + getClassCantripNamesTakingSpace(character).length
     );
   }
 
@@ -9424,17 +9422,73 @@ export function getPreparedSpellsHint(
  * Описание предупреждения о достигнутом пределе подготовленных: у заклинаний и
  * заговоров он свой, как и плитка, в которой меняют число.
  *
+ * Заговоры класса называются поимённо: они готовы всегда, и пока места заняты
+ * ими, совет «снимите подготовку» выполнить нечем.
+ *
  * @param limit сколько можно держать подготовленными.
  * @param kind вид счёта: заклинания кругов 1+ либо заговоры.
+ * @param classCantripNames названия заговоров класса, занимающих место; у
+ *   заклинаний кругов не читается.
  * @returns текст тоста.
  */
 export function getPreparedSpellsLimitDescription(
   limit: number,
   kind: PreparedSpellKind,
+  classCantripNames: string[],
 ): string {
   const { statFull } = PREPARED_KIND_LABELS[kind];
 
-  return `Подготовлено ${limit} из ${limit} — снимите подготовку с другой записи или измените число в блоке «${statFull}».`;
+  const {
+    prepared,
+    countSeparator,
+    unprepareRecord,
+    unprepareBookCantrip,
+    changeNumber,
+    allTakenByClass,
+    replaceHint,
+    someTakenByClass,
+    alwaysPrepared,
+    namesSeparator,
+  } = PREPARED_LIMIT_PHRASES;
+
+  const reached = `${prepared} ${limit} ${countSeparator} ${limit}`;
+  const blockHint = `${changeNumber} «${statFull}»`;
+
+  if (kind !== 'cantrips' || !classCantripNames.length) {
+    return `${reached} — ${unprepareRecord} или ${blockHint}.`;
+  }
+
+  const cantripNames = classCantripNames.join(namesSeparator);
+
+  // Снимать нечего: значок выданного заговора не нажимается, и совет снять
+  // подготовку отправил бы игрока искать пометку, которой нет
+  if (classCantripNames.length >= limit) {
+    return `${allTakenByClass}: ${cantripNames}. ${replaceHint} или ${blockHint}.`;
+  }
+
+  return `${reached} — ${unprepareBookCantrip} или ${blockHint}. ${someTakenByClass} (${cantripNames}) ${alwaysPrepared}.`;
+}
+
+/**
+ * Названия заговоров класса, которые занимают место в колонке «Заговоры»:
+ * выданные умениями класса либо выбранные игроком в мастере. Такой заговор
+ * готов всегда и считается целиком. Только явная отметка «Подготавливать не
+ * нужно» выводит заговор из счёта: у выдачи до появления флага поля нет, и
+ * такой заговор считается.
+ *
+ * @param character персонаж.
+ * @returns названия заговоров класса, идущих в счёт подготовленных.
+ */
+export function getClassCantripNamesTakingSpace(
+  character: Character,
+): string[] {
+  return getClassGrantedSpells(character)
+    .filter(
+      (spell) =>
+        getSpellPreparedKind(spell) === 'cantrips'
+        && spell.alwaysPrepared !== true,
+    )
+    .map((spell) => spell.name);
 }
 
 /**
