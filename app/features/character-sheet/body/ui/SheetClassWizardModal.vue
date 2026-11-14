@@ -32,6 +32,7 @@
     useCharacterSheet,
     useChoiceHints,
     useChoiceSpellPools,
+    usePickedFeatChoices,
     useToolCatalog,
   } from '../../composables';
   import {
@@ -55,6 +56,7 @@
     CLASSES_FILTERS_PATH,
     CLASSES_SEARCH_PATH,
     collectFeatAbilityIncreases,
+    collectPickedFeatGrants,
     CUSTOM_CLASS_LABELS,
     DEFAULT_ABILITY_IMPROVEMENT,
     deriveCantripsScaling,
@@ -95,6 +97,7 @@
     getTakenOptionValues,
     getToolNames,
     getUnmetMulticlassRequirements,
+    getVisibleFeatChoices,
     getWeaponNamesForProficiencies,
     isAbilityImprovementComplete,
     isAbilityImprovementFeatChoice,
@@ -127,6 +130,7 @@
   import SheetClassSpellListChoice from './SheetClassSpellListChoice.vue';
   import SheetCustomClassModal from './SheetCustomClassModal.vue';
   import SheetFeatChoiceField from './SheetFeatChoiceField.vue';
+  import SheetPickedFeatChoices from './SheetPickedFeatChoices.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
   import SheetStartingEquipmentChoice from './SheetStartingEquipmentChoice.vue';
 
@@ -881,10 +885,31 @@
     );
   }
 
-  /** Все выборы мастера: по ним считается, что уже взято из общего списка. */
-  const allChoices = computed<ClassChoice[]>(() => [
+  // Собственные выборы черт, взятых выбором черты: «Посвящённый в магию»
+  // просит список, заговоры и заклинание так же, как в окне добавления черты
+  const {
+    pickedFeats,
+    choicesByPick: pickedFeatChoices,
+    isRequested: isPickedFeatRequested,
+    getChoices: getPickedFeatOwnChoices,
+    load: loadPickedFeat,
+    resolve: resolvePickedFeat,
+    reset: resetPickedFeats,
+  } = usePickedFeatChoices();
+
+  /** Выборы самого класса и его умений — без выборов взятых черт. */
+  const classOwnChoices = computed<ClassChoice[]>(() => [
     ...classChoices.value,
     ...featureRows.value.flatMap((row) => row.choiceControls),
+  ]);
+
+  /**
+   * Все выборы мастера вместе с выборами взятых черт: по ним считается, что уже
+   * взято из общего списка.
+   */
+  const allChoices = computed<ClassChoice[]>(() => [
+    ...classOwnChoices.value,
+    ...Object.values(pickedFeatChoices.value).flat(),
   ]);
 
   // Пул заклинаний собирается поиском по каталогу, а не лежит в записи класса:
@@ -898,7 +923,12 @@
     load: loadSpellPools,
     retry: retrySpellPool,
   } = useChoiceSpellPools({
-    sources: () => [{ choices: allChoices.value }],
+    sources: () => [
+      { choices: classOwnChoices.value },
+      // Черта — своей записью: заговоры «Посвящённого в магию» сужаются ответом
+      // на её же выбор списка, а ищется он среди выборов той же записи
+      ...Object.values(pickedFeatChoices.value).map((choices) => ({ choices })),
+    ],
     answers: selections,
   });
 
@@ -1066,6 +1096,30 @@
       ),
   );
 
+  /**
+   * Собственные выборы взятых черт единым пикером по идентификатору выбора
+   * черты. Только показанные: выбор заклинаний ждёт ответа про список, иначе
+   * пул был бы собран не из того списка.
+   */
+  const pickedFeatControls = computed<Record<string, SheetChoiceControl[]>>(
+    () =>
+      Object.fromEntries(
+        Object.entries(pickedFeats.value).map(([choiceId, summary]) => [
+          choiceId,
+          getVisibleFeatChoices(
+            pickedFeatChoices.value[choiceId] ?? [],
+            selections.value,
+          ).map((ownChoice) =>
+            choiceControl(ownChoice, {
+              featureName: summary.name,
+              originLabel: FEATURE_ORIGIN_LABELS.feat,
+              level: null,
+            }),
+          ),
+        ]),
+      ),
+  );
+
   /** Требуемое число опций с учётом готовности пула. */
   function choiceCount(choice: ClassChoice): number {
     return choiceControl(choice).requiredCount;
@@ -1177,7 +1231,27 @@
   }
 
   /**
-   * Незакрытые выборы черт: черта не названа либо у неё не заполнены прибавки.
+   * Сколько ответов ещё ждёт сама взятая черта: её деталь в пути либо на её
+   * выборы — список, заговоры, заклинание — ответили не до конца.
+   *
+   * @param choiceId идентификатор выбора черты.
+   * @returns число незакрытых выборов черты; деталь в пути считается за один.
+   */
+  function getPickedFeatPendingCount(choiceId: string): number {
+    if (isPickedFeatRequested(choiceId)) {
+      return 1;
+    }
+
+    return getPendingChoices(
+      (pickedFeatControls.value[choiceId] ?? []).map(
+        (control) => control.choice,
+      ),
+    ).length;
+  }
+
+  /**
+   * Незакрытые выборы черт: черта не названа, у неё не заполнены прибавки либо
+   * не отвечены её собственные выборы.
    * Сбой каталога выбор снимает — там выбирать не из чего, и торопить не с чем
    * (по той же причине снимается запрет применения).
    *
@@ -1204,7 +1278,11 @@
 
       const selection = featSelections.value[choice.id];
 
-      return !selection?.featUrl || selection.abilities.includes(null);
+      return (
+        !selection?.featUrl
+        || selection.abilities.includes(null)
+        || getPickedFeatPendingCount(choice.id) > 0
+      );
     });
   }
 
@@ -1279,10 +1357,14 @@
           return false;
         }
 
-        return !isAbilityImprovementComplete(
-          block.improvement,
-          featSelections.value[block.id],
-          block.scores,
+        return (
+          !isAbilityImprovementComplete(
+            block.improvement,
+            featSelections.value[block.id],
+            block.scores,
+          )
+          // Черта вместо прибавок спрашивает и свои выборы
+          || getPickedFeatPendingCount(block.id) > 0
         );
       }).length,
   );
@@ -1559,6 +1641,9 @@
         }).fill(null),
       },
     };
+
+    // Выборы самой черты спрашиваются тут же, под её полем
+    void loadPickedFeat(choiceId, featUrl);
   }
 
   /**
@@ -1603,6 +1688,8 @@
     mode: AbilityImprovementMode,
   ) {
     featSelections.value = omit(featSelections.value, [choiceId]);
+
+    void loadPickedFeat(choiceId, '');
 
     abilityImprovements.value = {
       ...abilityImprovements.value,
@@ -1794,6 +1881,7 @@
       choices.value = {};
       selections.value = {};
       featSelections.value = {};
+      resetPickedFeats();
       abilityImprovements.value = {};
       classSpellListModes.value = {};
       classSpellListSelections.value = {};
@@ -1825,20 +1913,22 @@
    * блокирует `isApplyDisabled`.
    */
   function buildClassFeatFeatures(): Promise<Array<ClassFeatSelection>> {
+    // У выбранной черты — идентификатор её выбора: по нему лежит деталь, на
+    // которой игрок ответил на выборы самой черты. У выданной без выбора — null
     const entries: Array<{
       rowId: string;
       featUrl: string;
       segment: string;
-      chosen: boolean;
+      choiceId: string | null;
     }> = [];
 
-    for (const selection of Object.values(featSelections.value)) {
+    for (const [choiceId, selection] of Object.entries(featSelections.value)) {
       if (selection.featUrl) {
         entries.push({
           rowId: selection.featureId,
           featUrl: selection.featUrl,
           segment: CLASS_FEAT_CHOICE_ID_SEGMENT,
-          chosen: true,
+          choiceId,
         });
       }
     }
@@ -1849,24 +1939,42 @@
           rowId: row.id,
           featUrl,
           segment: CLASS_GRANTED_FEAT_ID_SEGMENT,
-          chosen: false,
+          choiceId: null,
         });
       }
     }
 
     return Promise.all(
       entries.map(async (entry) => {
-        const summary = await fetchFeatDetail(entry.featUrl);
+        const summary = entry.choiceId
+          ? await resolvePickedFeat(entry.choiceId, entry.featUrl)
+          : await fetchFeatDetail(entry.featUrl);
 
         if (!summary) {
           throw new Error(CLASS_FEAT_INVALID_RESPONSE_ERROR);
         }
 
+        // Ответы на выборы самой черты ложатся в запись так же, как при
+        // добавлении черты окном: владения — в снимок, заклинания — в список
+        // записи, остальное лист хранит ответом. Выданная без выбора черта
+        // своих выборов в мастере не спрашивает
+        const ownChoices = entry.choiceId
+          ? getPickedFeatOwnChoices(summary)
+          : [];
+
         return {
           rowId: entry.rowId,
-          featName: entry.chosen ? summary.name : null,
+          featName: entry.choiceId ? summary.name : null,
           feature: {
-            ...buildFeatFeature(summary),
+            ...buildFeatFeature(summary, {
+              ...collectPickedFeatGrants(
+                summary,
+                ownChoices,
+                selections.value,
+                proficientSkillNames.value,
+              ),
+              spells: collectChosenSpells({ choices: ownChoices }),
+            }),
             id: `${entry.rowId}:${entry.segment}:${summary.url}`,
           },
         };
@@ -2587,20 +2695,30 @@
                     <!-- Выборы черты — боевой стиль и подобные — тем же
                 полем, что в мастере повышения. Выборы повышения
                 характеристик спрашивает свой раздел -->
-                    <SheetFeatChoiceField
+                    <template
                       v-for="choice in row.visibleFeatChoices"
                       :key="choice.id"
-                      :title="choice.label"
-                      :modal-subtitle="row.modalSubtitle"
-                      :options="featOptions(choice)"
-                      :selected="selectedFeat(choice.id)"
-                      :abilities="featAbilities(choice.id)"
-                      :scores="character.abilities"
-                      :is-loading="isFeatsLoading"
-                      :has-error="hasFeatsError"
-                      @update:feat="setFeatChoice(row.id, choice.id, $event)"
-                      @update:ability="setFeatAbility(choice.id, $event)"
-                    />
+                    >
+                      <SheetFeatChoiceField
+                        :title="choice.label"
+                        :modal-subtitle="row.modalSubtitle"
+                        :options="featOptions(choice)"
+                        :selected="selectedFeat(choice.id)"
+                        :abilities="featAbilities(choice.id)"
+                        :scores="character.abilities"
+                        :is-loading="isFeatsLoading"
+                        :has-error="hasFeatsError"
+                        @update:feat="setFeatChoice(row.id, choice.id, $event)"
+                        @update:ability="setFeatAbility(choice.id, $event)"
+                      />
+
+                      <SheetPickedFeatChoices
+                        :controls="pickedFeatControls[choice.id]"
+                        :selections="selections"
+                        @update:selection="updateSelection"
+                        @retry="handleSpellPoolRetry"
+                      />
+                    </template>
 
                     <SheetChoicePickerField
                       v-for="control in featureRowControls[row.id]"
@@ -2673,7 +2791,14 @@
                   @update:feat="setImprovementFeat(block, $event)"
                   @update:feat-ability="setFeatAbility(block.id, $event)"
                   @reset="resetAbilityImprovement(block.id)"
-                />
+                >
+                  <SheetPickedFeatChoices
+                    :controls="pickedFeatControls[block.id]"
+                    :selections="selections"
+                    @update:selection="updateSelection"
+                    @retry="handleSpellPoolRetry"
+                  />
+                </SheetAbilityImprovementChoice>
               </div>
             </template>
           </div>

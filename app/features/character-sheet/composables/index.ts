@@ -27,6 +27,7 @@ export { useCharacterSheetShare } from './useCharacterSheetShare';
 export { useChoiceHints } from './useChoiceHints';
 export { useChoiceSpellPools } from './useChoiceSpellPools';
 export { useLevelUpWizard } from './useLevelUpWizard';
+export { usePickedFeatChoices } from './usePickedFeatChoices';
 export { useSheetActiveEffects } from './useSheetActiveEffects';
 export { useSheetAvatar } from './useSheetAvatar';
 export { useSpellCatalogMechanics } from './useSpellCatalogMechanics';

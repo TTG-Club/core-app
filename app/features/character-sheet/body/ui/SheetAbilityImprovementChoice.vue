@@ -343,6 +343,9 @@
         @update:feat="handleFeat"
         @update:ability="handleFeatAbility"
       />
+
+      <!-- Выборы самой взятой черты — под её полем -->
+      <slot />
     </div>
   </div>
 </template>

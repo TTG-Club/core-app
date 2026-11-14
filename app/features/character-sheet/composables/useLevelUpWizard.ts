@@ -46,6 +46,7 @@ import {
   CLASSES_FILTERS_PATH,
   collectChoiceSelections,
   collectFeatAbilityIncreases,
+  collectPickedFeatGrants,
   DEFAULT_ABILITY_IMPROVEMENT,
   deriveCantripsScaling,
   deriveClassResources,
@@ -53,6 +54,7 @@ import {
   FEAT_SOURCES_ASYNC_DATA_KEY,
   FEATS_FILTERS_PATH,
   FEATS_SELECT_PATH,
+  FEATURE_ORIGIN_LABELS,
   fetchFeatDetail,
   filterClassOptionsBySources,
   getAbilityImprovementSpent,
@@ -72,6 +74,7 @@ import {
   getSpellChoicesKey,
   getTakenOptionValues,
   getToolNames,
+  getVisibleFeatChoices,
   isAbilityImprovementComplete,
   isAbilityImprovementFeatChoice,
   isClassSpellListPickId,
@@ -95,6 +98,7 @@ import { useLazyCatalogSourceQuery } from './useCatalogSourceQuery';
 import { useCharacterSheet } from './useCharacterSheet';
 import { useChoiceHints } from './useChoiceHints';
 import { useChoiceSpellPools } from './useChoiceSpellPools';
+import { usePickedFeatChoices } from './usePickedFeatChoices';
 import { useToolCatalog } from './useToolCatalog';
 
 /**
@@ -342,6 +346,19 @@ interface LevelUpWizard {
   /** Сколько выборов умения на шаге ещё не сделано — бейдж карточки. */
   getFeatureRowPendingCount: (
     row: ClassFeatureRow,
+    draft: LevelUpStepDraft,
+  ) => number;
+
+  /**
+   * Собственные выборы черты, взятой выбором черты, для единого пикера:
+   * «Посвящённый в магию» просит список, заговоры и заклинание. Только
+   * показанные — выбор заклинаний ждёт ответа про список.
+   */
+  pickedFeatControls: (choiceId: string) => SheetChoiceControl[];
+
+  /** Сколько собственных выборов взятой черты ещё не сделано. */
+  getPickedFeatPendingCount: (
+    choiceId: string,
     draft: LevelUpStepDraft,
   ) => number;
 
@@ -623,10 +640,31 @@ export function useLevelUpWizard(): LevelUpWizard {
   /** Итоговые характеристики персонажа: от них считаются прибавки и предел. */
   const abilityScores = computed(() => getEffectiveAbilities(character.value));
 
-  /** Все выборы мастера: по ним считается, что уже взято из общего списка. */
-  const allChoices = computed<ClassChoice[]>(() =>
+  // Собственные выборы черт, взятых выбором черты: «Посвящённый в магию»
+  // просит список, заговоры и заклинание так же, как в окне добавления черты
+  const {
+    pickedFeats,
+    choicesByPick: pickedFeatChoices,
+    isRequested: isPickedFeatRequested,
+    getChoices: getPickedFeatOwnChoices,
+    load: loadPickedFeat,
+    resolve: resolvePickedFeat,
+    reset: resetPickedFeats,
+  } = usePickedFeatChoices();
+
+  /** Выборы умений шагов — без выборов взятых черт. */
+  const stepChoices = computed<ClassChoice[]>(() =>
     steps.value.flatMap((step) => step.features.flatMap((row) => row.choices)),
   );
+
+  /**
+   * Все выборы мастера вместе с выборами взятых черт: по ним считается, что уже
+   * взято из общего списка.
+   */
+  const allChoices = computed<ClassChoice[]>(() => [
+    ...stepChoices.value,
+    ...Object.values(pickedFeatChoices.value).flat(),
+  ]);
 
   /**
    * Ответы пикеров одним словарём: пулы заклинаний их и читают, и чистят, а
@@ -661,7 +699,12 @@ export function useLevelUpWizard(): LevelUpWizard {
     load: loadSpellPools,
     retry: retrySpellPool,
   } = useChoiceSpellPools({
-    sources: () => [{ choices: allChoices.value }],
+    sources: () => [
+      { choices: stepChoices.value },
+      // Черта — своей записью: заговоры «Посвящённого в магию» сужаются ответом
+      // на её же выбор списка, а ищется он среди выборов той же записи
+      ...Object.values(pickedFeatChoices.value).map((choices) => ({ choices })),
+    ],
     answers: spellAnswers,
   });
 
@@ -874,6 +917,7 @@ export function useLevelUpWizard(): LevelUpWizard {
       );
 
       selectedSubclasses.value = {};
+      resetPickedFeats();
       drafts.value = buildLevelDrafts(growing, character.value.level);
       preparedKey.value = key;
 
@@ -899,6 +943,7 @@ export function useLevelUpWizard(): LevelUpWizard {
     hasSubclassError.value = false;
     featCatalog.value = [];
     hasFeatsError.value = false;
+    resetPickedFeats();
   }
 
   /**
@@ -1027,6 +1072,9 @@ export function useLevelUpWizard(): LevelUpWizard {
         },
       },
     });
+
+    // Выборы самой черты спрашиваются тут же, под её полем
+    void loadPickedFeat(choiceId, featUrl);
   }
 
   /**
@@ -1133,6 +1181,8 @@ export function useLevelUpWizard(): LevelUpWizard {
         [choiceId]: { mode, increases: {} },
       },
     });
+
+    void loadPickedFeat(choiceId, '');
   }
 
   /**
@@ -1293,6 +1343,10 @@ export function useLevelUpWizard(): LevelUpWizard {
     // значится — без него смена подкласса стирала бы и добор
     const knownChoiceIds = new Set([
       ...rows.flatMap((row) => row.choices.map((choice) => choice.id)),
+      // Ответы на выборы взятых черт лежат там же, а выбором умения не значатся
+      ...Object.values(pickedFeatChoices.value)
+        .flat()
+        .map((choice) => choice.id),
       ...steps.value.flatMap((step) =>
         step.classSpellListPicks.map((pick) => pick.id),
       ),
@@ -1367,6 +1421,33 @@ export function useLevelUpWizard(): LevelUpWizard {
       toolEntries: toolCatalogItems.value,
       origin,
     });
+  }
+
+  /**
+   * Собственные выборы взятой черты единым пикером. Только показанные: выбор
+   * заклинаний ждёт ответа про список, иначе пул был бы собран не из того
+   * списка.
+   *
+   * @param choiceId идентификатор выбора черты.
+   * @returns выборы черты для пикера; пусто — деталь черты ещё не пришла.
+   */
+  function pickedFeatControls(choiceId: string): SheetChoiceControl[] {
+    const summary = pickedFeats.value[choiceId];
+
+    if (!summary) {
+      return [];
+    }
+
+    const origin: SheetChoiceOrigin = {
+      featureName: summary.name,
+      originLabel: FEATURE_ORIGIN_LABELS.feat,
+      level: null,
+    };
+
+    return getVisibleFeatChoices(
+      pickedFeatChoices.value[choiceId] ?? [],
+      allSelections.value,
+    ).map((ownChoice) => choiceControl(ownChoice, origin));
   }
 
   /**
@@ -1453,7 +1534,10 @@ export function useLevelUpWizard(): LevelUpWizard {
           return true;
         }
 
-        return choice.abilities.includes(null);
+        return (
+          choice.abilities.includes(null)
+          || getPickedFeatPendingCount(featChoice.id, draft) > 0
+        );
       });
 
     return incomplete.length;
@@ -1483,10 +1567,46 @@ export function useLevelUpWizard(): LevelUpWizard {
         return false;
       }
 
-      return !isAbilityImprovementComplete(
-        improvement,
-        draft.featChoices[choice.id],
-        abilityScoresFor(choice.id),
+      return (
+        !isAbilityImprovementComplete(
+          improvement,
+          draft.featChoices[choice.id],
+          abilityScoresFor(choice.id),
+        )
+        // Черта вместо прибавок спрашивает и свои выборы
+        || getPickedFeatPendingCount(choice.id, draft) > 0
+      );
+    }).length;
+  }
+
+  /**
+   * Незакрытые выборы среди собранных для пикера.
+   *
+   * Пул заклинаний в пути или не загрузился — выбор не закрыт: иначе игрок
+   * прошёл бы шаг с «Выберите 0» и без заклинания, которое ему положено. Пустой
+   * готовый пул требование снимает — так у выбора оружейного приёма без оружия
+   * во владении шаг не становится тупиком.
+   *
+   * @param controls выборы для пикера.
+   * @param draft черновик шага.
+   * @returns сколько выборов ещё не сделано.
+   */
+  function getPendingControlCount(
+    controls: SheetChoiceControl[],
+    draft: LevelUpStepDraft,
+  ): number {
+    return controls.filter((control) => {
+      if (control.status !== 'ready') {
+        return true;
+      }
+
+      if (!control.options.length) {
+        return false;
+      }
+
+      return (
+        (draft.selections[control.choice.id] ?? []).length
+        < control.requiredCount
       );
     }).length;
   }
@@ -1494,11 +1614,6 @@ export function useLevelUpWizard(): LevelUpWizard {
   /**
    * Незакрытые выборы одного умения на шаге: по ним карточка умения и рельса
    * показывают счётчик.
-   *
-   * Пул заклинаний в пути или не загрузился — выбор не закрыт: иначе игрок
-   * прошёл бы шаг с «Выберите 0» и без заклинания, которое ему положено. Пустой
-   * готовый пул требование снимает — так у выбора оружейного приёма без оружия
-   * во владении шаг не становится тупиком.
    *
    * @param row строка умения.
    * @param draft черновик шага.
@@ -1508,19 +1623,29 @@ export function useLevelUpWizard(): LevelUpWizard {
     row: ClassFeatureRow,
     draft: LevelUpStepDraft,
   ): number {
-    return row.choices.filter((choice) => {
-      const control = choiceControl(choice);
+    return getPendingControlCount(
+      row.choices.map((choice) => choiceControl(choice)),
+      draft,
+    );
+  }
 
-      if (control.status !== 'ready') {
-        return true;
-      }
+  /**
+   * Сколько ответов ещё ждёт сама взятая черта: её деталь в пути либо на её
+   * выборы — список, заговоры, заклинание — ответили не до конца.
+   *
+   * @param choiceId идентификатор выбора черты.
+   * @param draft черновик шага, на котором черту взяли.
+   * @returns число незакрытых выборов черты; деталь в пути считается за один.
+   */
+  function getPickedFeatPendingCount(
+    choiceId: string,
+    draft: LevelUpStepDraft,
+  ): number {
+    if (isPickedFeatRequested(choiceId)) {
+      return 1;
+    }
 
-      if (!control.options.length) {
-        return false;
-      }
-
-      return (draft.selections[choice.id] ?? []).length < control.requiredCount;
-    }).length;
+    return getPendingControlCount(pickedFeatControls(choiceId), draft);
   }
 
   /**
@@ -1611,13 +1736,16 @@ export function useLevelUpWizard(): LevelUpWizard {
     // Уровень берётся из шага, на котором сделан выбор: по нему снятие уровня
     // забирает черту вместе с давшим её умением.
     const entries = drafts.value.flatMap((draft, index) => [
-      ...Object.values(draft.featChoices)
-        .filter((choice) => choice.featUrl)
-        .map((choice) => ({
+      // У выбранной черты — идентификатор её выбора: по нему лежит деталь, на
+      // которой игрок ответил на выборы самой черты
+      ...Object.entries(draft.featChoices)
+        .filter(([, choice]) => choice.featUrl)
+        .map(([choiceId, choice]) => ({
           featureId: choice.featureId,
           featUrl: choice.featUrl,
           level: draft.classLevel,
           segment: CLASS_FEAT_CHOICE_ID_SEGMENT,
+          choiceId,
         })),
       // Черты без выбора умение выдаёт на своём уровне — как черту
       // происхождения предыстория
@@ -1627,12 +1755,17 @@ export function useLevelUpWizard(): LevelUpWizard {
           featUrl,
           level: draft.classLevel,
           segment: CLASS_GRANTED_FEAT_ID_SEGMENT,
+          choiceId: '',
         })),
       ),
     ]);
 
     const summaries = await Promise.all(
-      entries.map((entry) => fetchFeatDetail(entry.featUrl)),
+      entries.map((entry) =>
+        entry.choiceId
+          ? resolvePickedFeat(entry.choiceId, entry.featUrl)
+          : fetchFeatDetail(entry.featUrl),
+      ),
     );
 
     const features: CharacterFeature[] = [];
@@ -1645,8 +1778,22 @@ export function useLevelUpWizard(): LevelUpWizard {
         continue;
       }
 
+      // Ответы на выборы самой черты ложатся в запись так же, как при
+      // добавлении черты окном: владения — в снимок, заклинания — в список
+      // записи, остальное лист хранит ответом. Выданная без выбора черта своих
+      // выборов в мастере не спрашивает
+      const ownChoices = entry.choiceId ? getPickedFeatOwnChoices(summary) : [];
+
       features.push({
-        ...buildFeatFeature(summary),
+        ...buildFeatFeature(summary, {
+          ...collectPickedFeatGrants(
+            summary,
+            ownChoices,
+            allSelections.value,
+            proficientSkillNames.value,
+          ),
+          spells: collectChosenSpells({ choices: ownChoices }),
+        }),
         id: `${entry.featureId}:${entry.segment}:${summary.url}`,
         level: entry.level,
       });
@@ -1979,6 +2126,8 @@ export function useLevelUpWizard(): LevelUpWizard {
     selectSubclass,
     choiceControl,
     getFeatureRowPendingCount,
+    pickedFeatControls,
+    getPickedFeatPendingCount,
     retrySpellPool,
     featOptions,
     selectedFeat,

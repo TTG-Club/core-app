@@ -620,6 +620,23 @@ modals), so its capabilities are listed here rather than squeezed into the table
   so removing the species takes it away with the feature that granted it, and
   whose id keeps the `:feat:` segment, so it counts as taken and is not offered
   twice.
+- Species features keep the player's answers to their choices as a snapshot
+  (`choiceAnswers`, by choice key) just like class features do, and a defence
+  «by the player's choice» (`modifiers.damage.defenseChoices`) looks the answer
+  up in its own feature first and then in the sibling features of the same
+  species, lineage or class record (`getRecordChoiceAnswer`): the dragonborn's
+  damage type is asked by «Наследие драконов» and used by the neighbouring
+  «Сопротивление урону». Feats never share answers — each feat is its own
+  record.
+- A feat picked through a feat choice asks its **own** choices right under its
+  field in all three wizards — species, class and level-up, including the feat
+  taken instead of an ability score improvement («Посвящённый в магию» wants a
+  spell list, cantrips and a spell). One code path: `usePickedFeatChoices` loads
+  the feat detail on pick and exposes its choices, `SheetPickedFeatChoices`
+  draws them, `collectPickedFeatGrants` turns the answers into the same record
+  fields the feat window writes. The wizard waits for these answers like for any
+  other choice; each feat is its own source for `useChoiceSpellPools`, because
+  its cantrip pool is narrowed by the answer to its own spell-list choice.
 - A class feature carries the same mechanics a feat does — grants, choices,
   counters, granted spells, a spellcasting ability — and both the class wizard and
   the level-up wizard ask **every** choice a feature declares, not one: expertise
