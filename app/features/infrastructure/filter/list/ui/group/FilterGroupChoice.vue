@@ -1,12 +1,13 @@
 <script setup lang="ts">
   import type { FilterGroup as FilterGroupType } from '../../../types';
-  import type { SingleChoiceState } from '../../../utils';
 
   import {
     getGroupItems,
-    getSingleChoiceExcludeLabel,
-    getSingleChoiceState,
-    setSingleChoiceState,
+    getSingleChoiceGroupExcludeLabel,
+    isSingleChoiceExcluded,
+    isSingleChoiceIncluded,
+    toggleSingleChoiceExclude,
+    toggleSingleChoiceInclude,
   } from '../../../utils';
   import { FilterTag } from '../tag';
 
@@ -19,29 +20,32 @@
     required: true,
   });
 
-  const choiceState = computed(() => getSingleChoiceState(group.value));
+  const isIncluded = computed(() => isSingleChoiceIncluded(group.value));
 
-  const isIncluded = computed(() => choiceState.value === 'include');
-
-  const isExcluded = computed(() => choiceState.value === 'exclude');
+  const isExcluded = computed(() => isSingleChoiceExcluded(group.value));
 
   const includeLabel = computed(() => getGroupItems(group.value)[0]?.name);
 
   const excludeLabel = computed(() =>
-    includeLabel.value ? getSingleChoiceExcludeLabel(includeLabel.value) : '',
+    getSingleChoiceGroupExcludeLabel(group.value),
   );
 
   /**
-   * Отмечает ответ или снимает его, если он уже отмечен.
+   * Нажатие на ответ «да».
    *
-   * @param answer ответ, по которому нажали.
    * @param selected отмечен ли ответ после нажатия.
    */
-  function handleAnswer(
-    answer: Exclude<SingleChoiceState, 'any'>,
-    selected: boolean | null,
-  ): void {
-    group.value = setSingleChoiceState(group.value, selected ? answer : 'any');
+  function handleInclude(selected: boolean | null): void {
+    group.value = toggleSingleChoiceInclude(group.value, selected);
+  }
+
+  /**
+   * Нажатие на ответ «нет».
+   *
+   * @param selected отмечен ли ответ после нажатия.
+   */
+  function handleExclude(selected: boolean | null): void {
+    group.value = toggleSingleChoiceExclude(group.value, selected);
   }
 </script>
 
@@ -53,7 +57,7 @@
   >
     <FilterTag
       :model-value="isIncluded"
-      @update:model-value="handleAnswer('include', $event)"
+      @update:model-value="handleInclude"
     >
       {{ includeLabel }}
     </FilterTag>
@@ -61,7 +65,7 @@
     <FilterTag
       :model-value="isExcluded"
       exclude
-      @update:model-value="handleAnswer('exclude', $event)"
+      @update:model-value="handleExclude"
     >
       {{ excludeLabel }}
     </FilterTag>
