@@ -207,7 +207,7 @@ export interface ItemCreate extends EditorBaseInfoState {
   description: string; // описание маркап
   cost: number | undefined; // стоимость
   coin: string | undefined; // номинал монеты в стоимости
-  weight: string | undefined; // вес
+  weight: number | null | undefined; // вес в фунтах; пусто — не указан
   image: string | undefined;
   /** Категория снаряжения VTTG; пусто — вывести из типов предмета. */
   equipmentCategory: ItemEquipmentCategory | undefined;

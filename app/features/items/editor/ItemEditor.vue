@@ -178,11 +178,17 @@
               <UFormField
                 class="md:col-span-8"
                 :label="ITEM_FORM_LABELS.weight"
+                :help="ITEM_FORM_LABELS.weightHint"
                 name="weight"
               >
-                <UInput
+                <UInputNumber
                   v-model="state.weight"
                   :placeholder="ITEM_FORM_LABELS.weightPlaceholder"
+                  :min="0"
+                  :step="0.25"
+                  :step-snapping="false"
+                  :format-options="{ maximumFractionDigits: 3 }"
+                  class="w-full"
                 />
               </UFormField>
 
