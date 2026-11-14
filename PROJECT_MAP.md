@@ -745,7 +745,10 @@ modals), so its capabilities are listed here rather than squeezed into the table
 - Prepared spells marked by clicking the spell icon in the row — the same
   gesture as equipping armour. Only the icon square lights up (the row itself
   keeps its usual look), the flag lives in `spell.prepared`, and marking more
-  than the allowed number warns instead. Cantrips are prepared the same way but
+  than the allowed number warns instead; when the cantrip allowance is taken by
+  class cantrips (always prepared, no toggle — `getClassCantripNamesTakingSpace`)
+  the warning names them and points to the class wizard instead of advising to
+  unmark something. Cantrips are prepared the same way but
   counted against their own tile; innate species spells are always available, so
   their icon toggles nothing. With no allowance known (the class gives none and
   no custom number is set) marking is unlimited.
