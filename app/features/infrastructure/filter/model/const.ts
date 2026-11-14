@@ -40,9 +40,6 @@ export const FILTER_SOURCES_PRESETS: ReadonlyArray<{
 /** Значок на месте обложки у источника без неё */
 export const FILTER_SOURCES_COVER_PLACEHOLDER_ICON = 'tabler:book';
 
-/** Отметка на обложке выбранного источника */
-export const FILTER_SOURCES_SELECTED_ICON = 'tabler:check';
-
 /** Значок поля поиска в панели источников */
 export const FILTER_SOURCES_SEARCH_ICON = 'tabler:search';
 
