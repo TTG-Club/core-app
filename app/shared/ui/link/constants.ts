@@ -5,7 +5,8 @@
  */
 export const CARD_LINK_LAYOUT_CLASSES = {
   card: {
-    link: '@max-md:flex',
+    // Блоком явно: в обёртке (не прямым ребёнком сетки) ссылка иначе строчная
+    link: 'block @max-md:flex',
     image: 'aspect-square w-full @max-md:size-25',
     gradient: '@max-md:bg-linear-to-l @md:group-hover:translate-y-full',
     content: 'gap-2 px-4 py-3 @max-md:gap-1 @max-md:px-3 @max-md:py-2',
