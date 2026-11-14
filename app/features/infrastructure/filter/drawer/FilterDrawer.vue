@@ -9,6 +9,8 @@
   import { FilterList } from '../list';
   import {
     FILTER_DRAWER_SEARCH_PLACEHOLDER,
+    FILTER_DRAWER_SIDE,
+    FILTER_DRAWER_UI,
     FILTER_SEARCH_EMPTY_SUBTITLE,
     FILTER_SEARCH_EMPTY_TITLE,
   } from '../model';
@@ -47,9 +49,8 @@
   <USlideover
     v-model:open="opened"
     :title
-    :ui="{
-      content: 'w-full max-w-192 min-w-80',
-    }"
+    :side="FILTER_DRAWER_SIDE"
+    :ui="FILTER_DRAWER_UI"
   >
     <template #body>
       <!-- Блок растянут на padding скроллящегося body во все стороны: иначе -->

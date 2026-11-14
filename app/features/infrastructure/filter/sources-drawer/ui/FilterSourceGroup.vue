@@ -102,6 +102,16 @@
       state === true,
     );
   }
+
+  /**
+   * Цвет акронима в строке: у отмеченного источника он подсвечен — вместе с
+   * рамкой обложки и яркостью названия это и есть отметка выбора.
+   *
+   * @param entry строка источника
+   */
+  function getAcronymColor(entry: SourceEntry): 'primary' | 'neutral' {
+    return entry.selected ? 'primary' : 'neutral';
+  }
 </script>
 
 <template>
@@ -147,7 +157,7 @@
       class="flex flex-col gap-0.5"
     >
       <!-- Строка — та же галочка, только без квадратика: с обложкой он -->
-      <!-- лишний. Выбор показывают рамка и отметка на обложке и яркость названия, а -->
+      <!-- лишний. Выбор показывают рамка обложки и яркость названия, а -->
       <!-- сама галочка скрыта от глаз, но остаётся для клавиатуры и -->
       <!-- скринридеров. Вариант card делает подписью всю строку целиком. -->
       <UCheckbox
@@ -189,7 +199,7 @@
             <UBadge
               v-if="entry.acronym"
               :label="entry.acronym"
-              color="neutral"
+              :color="getAcronymColor(entry)"
               variant="subtle"
               size="sm"
               class="min-w-14 shrink-0 justify-center font-mono"

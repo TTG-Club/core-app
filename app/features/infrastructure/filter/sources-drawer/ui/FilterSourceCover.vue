@@ -1,8 +1,5 @@
 <script setup lang="ts">
-  import {
-    FILTER_SOURCES_COVER_PLACEHOLDER_ICON,
-    FILTER_SOURCES_SELECTED_ICON,
-  } from '../../model';
+  import { FILTER_SOURCES_COVER_PLACEHOLDER_ICON } from '../../model';
 
   /**
    * Маленькая обложка книги в строке панели источников. Обложка есть не у
@@ -13,7 +10,7 @@
     /** Адрес обложки; у источника без обложки его нет. */
     image?: string;
 
-    /** Отмечен ли источник: тогда обложка обведена и на ней стоит отметка. */
+    /** Отмечен ли источник: тогда обложка обведена и не приглушена. */
     selected?: boolean;
   }>();
 
@@ -41,7 +38,7 @@
 </script>
 
 <template>
-  <span class="relative shrink-0">
+  <span class="shrink-0">
     <span
       class="flex h-10 w-7 items-center justify-center overflow-hidden rounded-sm bg-elevated text-dimmed"
       :class="frameClass"
@@ -60,16 +57,6 @@
         v-else
         :name="FILTER_SOURCES_COVER_PLACEHOLDER_ICON"
         class="size-4"
-      />
-    </span>
-
-    <span
-      v-if="selected"
-      class="absolute -right-1.5 -bottom-1 flex size-4 items-center justify-center rounded-full bg-primary text-inverted ring-2 ring-default"
-    >
-      <UIcon
-        :name="FILTER_SOURCES_SELECTED_ICON"
-        class="size-3"
       />
     </span>
   </span>
