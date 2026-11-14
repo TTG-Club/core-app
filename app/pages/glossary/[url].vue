@@ -15,6 +15,9 @@
       $fetch<GlossaryDetailResponse>(`/api/v2/glossary/${route.params.url}`),
   );
 
+  // Запись могла переехать на новый адрес: по прежнему сервис отдаёт её же
+  useEntityUrlRedirect(() => glossary.value?.url);
+
   const markdown = useEntityMarkdown(glossary, getGlossaryMarkdown);
 
   useSeoMeta({

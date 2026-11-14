@@ -17,6 +17,9 @@
       ),
   );
 
+  // Запись могла переехать на новый адрес: по прежнему сервис отдаёт её же
+  useEntityUrlRedirect(() => magicItem.value?.url);
+
   const markdown = useEntityMarkdown(magicItem, getMagicItemMarkdown);
 
   useSeoMeta({
