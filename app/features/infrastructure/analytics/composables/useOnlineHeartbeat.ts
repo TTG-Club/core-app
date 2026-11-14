@@ -1,7 +1,5 @@
 import type { OnlineDisplayPreferences, OnlineHeartbeatBody } from '../model';
 
-import { v7 as uuidv7 } from 'uuid';
-
 import {
   LAYOUT_WIDTH_STORE_KEY,
   THEME_STORE_KEY,
@@ -11,18 +9,16 @@ import {
   ONLINE_COUNTER_DATA_KEY,
   parseOnlineUsersTotal,
 } from '~home/counters/model';
+import { readStoredListView } from '~infrastructure/list-presentation/composable';
+import { useSectionLayout } from '~infrastructure/sidebar/display-settings';
 
 import {
   HEARTBEAT_COOLDOWN_MS,
   HEARTBEAT_INTERVAL_MS,
   HEARTBEAT_LOCK_NAME,
   HEARTBEAT_URL,
-  ONLINE_VISITOR_ID_COOKIE,
-  ONLINE_VISITOR_ID_COOKIE_MAX_AGE_SECONDS,
-  parseOnlineVisitorId,
-  REGISTERED_ONLINE_TYPE,
-  VISITOR_ONLINE_TYPE,
 } from '../model';
+import { useOnlineVisitor } from './useOnlineVisitor';
 
 /**
  * Собирает настройки отображения для статистики. Берём только заданные строкой:
@@ -48,17 +44,12 @@ export function useOnlineHeartbeat(): void {
     () => null,
   );
 
-  const storedVisitorId = useCookie<unknown>(ONLINE_VISITOR_ID_COOKIE, {
-    maxAge: ONLINE_VISITOR_ID_COOKIE_MAX_AGE_SECONDS,
-    path: '/',
-    sameSite: 'lax',
-  });
-
-  const visitorId = computed(() => parseOnlineVisitorId(storedVisitorId.value));
+  const { getVisitor } = useOnlineVisitor();
   const themeCookie = useCookie<unknown>(THEME_STORE_KEY);
   const layoutWidthCookie = useCookie<unknown>(LAYOUT_WIDTH_STORE_KEY);
+  const sectionLayout = useSectionLayout();
   const userTokenCookie = useCookie<string | null>(USER_TOKEN_COOKIE);
-  const { fetch: fetchUser, isLoggedIn, user } = useUser();
+  const { fetch: fetchUser, user } = useUser();
   const visibility = useDocumentVisibility();
 
   let session: AbortController | undefined;
@@ -73,26 +64,16 @@ export function useOnlineHeartbeat(): void {
     const preferences = createDisplayPreferences({
       theme: themeCookie.value,
       width: layoutWidthCookie.value,
+      layout: sectionLayout.value,
+      // Вид списка живёт в localStorage и читается композаблом только после
+      // монтирования, а первый heartbeat уходит раньше — читаем напрямую.
+      list: readStoredListView(),
     });
 
-    const preferencesField = Object.keys(preferences).length
-      ? { preferences }
-      : {};
-
-    if (isLoggedIn.value && user.value?.username) {
-      return {
-        key: user.value.username,
-        ...(visitorId.value ? { previousGuestKey: visitorId.value } : {}),
-        ...preferencesField,
-        type: REGISTERED_ONLINE_TYPE,
-      };
-    }
-
-    const guestId = visitorId.value ?? uuidv7();
-
-    storedVisitorId.value = guestId;
-
-    return { key: guestId, ...preferencesField, type: VISITOR_ONLINE_TYPE };
+    return {
+      ...getVisitor(),
+      ...(Object.keys(preferences).length ? { preferences } : {}),
+    };
   }
 
   /** Отправляет один запрос и отбрасывает результат отменённой операции. */

@@ -175,7 +175,7 @@
     v-else-if="size === 'compact'"
     :class="[
       'flex items-center gap-2 rounded-md px-2 py-1',
-      'bg-default/75 shadow-sm backdrop-blur-md',
+      'bg-default/75 shadow-sm backdrop-blur-md performance:bg-default',
     ]"
   >
     <StarsRow />

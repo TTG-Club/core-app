@@ -1,83 +1,83 @@
 <script setup lang="ts">
-  import type { DropdownMenuItem } from '@nuxt/ui';
+  import type { GraphicsMode } from '~/shared/consts';
+  import type { ListView } from '~infrastructure/list-presentation/composable';
 
-  import type { LayoutWidthName, ThemeName } from '~/shared/consts';
+  import { LayoutWidthName, ThemeName } from '~/shared/consts';
+  import { useListView } from '~infrastructure/list-presentation/composable';
+  import { LIST_VIEW_OPTIONS } from '~infrastructure/list-presentation/model';
 
+  import { DisplaySettingsChoice } from './choice';
+  import { useSectionLayout } from './composables';
   import {
+    APPEARANCE_GROUP_TITLE,
     DISPLAY_SETTINGS_ARIA,
-    LAYOUT_WIDTH_OPTIONS,
-    LAYOUT_WIDTH_SECTION_TITLE,
+    GRAPHICS_OPTIONS,
+    GRAPHICS_SETTING_TITLE,
+    LIST_VIEW_SETTING_TITLE,
+    SECTION_LAYOUT_OPTIONS,
+    SECTION_LAYOUT_SETTING_TITLE,
+    SECTION_LAYOUT_UNAVAILABLE_HINT,
+    SECTIONS_GROUP_TITLE,
     THEME_OPTIONS,
     THEME_SECTION_TITLE,
   } from './constants';
+  import { DisplaySettingsCustomTheme } from './custom-theme';
+  import { DisplaySettingsLayoutPreview } from './layout-preview';
+  import { DisplaySettingsListPreview } from './list-preview';
 
   const { name: themeName, change: changeTheme } = useTheme();
-  const { width: layoutWidth, change: changeLayoutWidth } = useLayoutWidth();
-  const { greaterOrEqual } = useBreakpoints();
+  const { view: listView, setView: setListView } = useListView();
+  const { mode: graphicsMode, setMode: setGraphicsMode } = useGraphicsMode();
+
+  const { greaterOrEqual, isLgOrGreater } = useBreakpoints();
+  const isMounted = useMounted();
 
   const isMenuOnLeft = greaterOrEqual(Breakpoint.MD);
 
   const side = computed(() => (isMenuOnLeft.value ? 'right' : 'top'));
 
-  /**
-   * Устанавливает тему оформления сайта.
-   * @param theme - Выбранная тема оформления.
-   */
-  function handleThemeChange(theme: ThemeName): void {
-    changeTheme(theme);
-  }
+  // Колонки рядом бывают только на широком экране: на узком такие раскладки
+  // гаснут, а не прячутся — видно, что они есть.
+  const isWideAvailable = computed(
+    () => isMounted.value && isLgOrGreater.value,
+  );
 
-  /**
-   * Устанавливает ширину макета сайта.
-   * @param width - Выбранная ширина макета.
-   */
-  function handleLayoutWidthChange(width: LayoutWidthName): void {
-    changeLayoutWidth(width);
-  }
+  const layoutHint = computed(() =>
+    isWideAvailable.value ? undefined : SECTION_LAYOUT_UNAVAILABLE_HINT,
+  );
 
-  const items = computed<DropdownMenuItem[][]>(() => [
-    [
-      {
-        label: THEME_SECTION_TITLE,
-        type: 'label' as const,
-      },
-      ...THEME_OPTIONS.map((option) => ({
-        label: option.label,
-        icon: option.icon,
-        type: 'checkbox' as const,
-        checked: themeName.value === option.value,
-        onSelect: (event: Event) => {
-          event.preventDefault();
-          handleThemeChange(option.value);
-        },
-      })),
-    ],
-    [
-      {
-        label: LAYOUT_WIDTH_SECTION_TITLE,
-        type: 'label' as const,
-      },
-      ...LAYOUT_WIDTH_OPTIONS.map((option) => ({
-        label: option.label,
-        icon: option.icon,
-        type: 'checkbox' as const,
-        checked: layoutWidth.value === option.value,
-        onSelect: (event: Event) => {
-          event.preventDefault();
-          handleLayoutWidthChange(option.value);
-        },
-      })),
-    ],
-  ]);
+  const layoutOptions = computed(() =>
+    SECTION_LAYOUT_OPTIONS.map((option) => ({
+      ...option,
+      disabled: option.width === LayoutWidthName.Wide && !isWideAvailable.value,
+    })),
+  );
+
+  const theme = computed({
+    get: () => themeName.value,
+    set: (value: ThemeName) => changeTheme(value),
+  });
+
+  const isCustomTheme = computed(() => themeName.value === ThemeName.Custom);
+
+  const graphics = computed({
+    get: () => graphicsMode.value,
+    set: (value: GraphicsMode) => setGraphicsMode(value),
+  });
+
+  const layout = useSectionLayout();
+
+  const view = computed({
+    get: () => listView.value,
+    set: (value: ListView) => setListView(value),
+  });
 </script>
 
 <template>
-  <UDropdownMenu
-    :items="items"
+  <!-- Свои отступы у панели: общие отступы всплывашек сайта (app.config) выталкивали её за край телефона -->
+  <UPopover
     :content="{ side, align: 'start', sideOffset: 8 }"
-    :ui="{
-      content: 'w-56',
-    }"
+    :ui="{ content: 'p-0' }"
   >
     <UButton
       variant="ghost"
@@ -86,5 +86,68 @@
       color="neutral"
       :aria-label="DISPLAY_SETTINGS_ARIA"
     />
-  </UDropdownMenu>
+
+    <template #content>
+      <!-- На телефоне панель не шире экрана, а высокая (своя тема) прокручивается -->
+      <div
+        class="flex max-h-(--reka-popover-content-available-height) w-104 max-w-[calc(100vw-1rem)] flex-col gap-4 overflow-y-auto p-3"
+      >
+        <section class="flex flex-col gap-3">
+          <h3 class="text-sm font-semibold text-highlighted">
+            {{ APPEARANCE_GROUP_TITLE }}
+          </h3>
+
+          <DisplaySettingsChoice
+            v-model="graphics"
+            :title="GRAPHICS_SETTING_TITLE"
+            :options="GRAPHICS_OPTIONS"
+            shape="pill"
+          />
+
+          <DisplaySettingsChoice
+            v-model="theme"
+            :title="THEME_SECTION_TITLE"
+            :options="THEME_OPTIONS"
+            shape="pill"
+          />
+
+          <DisplaySettingsCustomTheme v-if="isCustomTheme" />
+        </section>
+
+        <USeparator />
+
+        <section class="flex flex-col gap-3">
+          <h3 class="text-sm font-semibold text-highlighted">
+            {{ SECTIONS_GROUP_TITLE }}
+          </h3>
+
+          <DisplaySettingsChoice
+            v-model="layout"
+            :title="SECTION_LAYOUT_SETTING_TITLE"
+            :options="layoutOptions"
+            :hint="layoutHint"
+          >
+            <template #preview="{ option }">
+              <DisplaySettingsLayoutPreview
+                :filters="option.filters"
+                :detail="option.detail"
+                :overlay="option.width !== LayoutWidthName.Wide"
+                :centered="option.centered"
+              />
+            </template>
+          </DisplaySettingsChoice>
+
+          <DisplaySettingsChoice
+            v-model="view"
+            :title="LIST_VIEW_SETTING_TITLE"
+            :options="LIST_VIEW_OPTIONS"
+          >
+            <template #preview="{ option }">
+              <DisplaySettingsListPreview :columns="option.columns" />
+            </template>
+          </DisplaySettingsChoice>
+        </section>
+      </div>
+    </template>
+  </UPopover>
 </template>

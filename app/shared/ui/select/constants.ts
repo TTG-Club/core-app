@@ -2,13 +2,13 @@ import { MAGIC_ITEM_FILTER_RANGE_ORDERS } from '~magic-items/model';
 
 export const SELECT_DROPDOWN_DEBOUNCE_MS = 250;
 
-export const ITEMS_SEARCH_ENDPOINT = '/api/v2/item/search';
+export const ITEMS_SEARCH_ENDPOINT = '/api/v2/items/search';
 
 /**
  * База пути детали предмета: по ней догружается уже выбранный предмет, если
  * его нет в текущей выдаче поиска.
  */
-export const ITEM_DETAIL_ENDPOINT_PREFIX = '/api/v2/item';
+export const ITEM_DETAIL_ENDPOINT_PREFIX = '/api/v2/items';
 
 /** Ключ справочника типов урона: общий на все формы, список грузится однажды. */
 export const DAMAGE_TYPES_DATA_KEY = 'dictionaries-damage-types';
@@ -96,10 +96,10 @@ export const CATALOG_PICKER_SCROLL_THRESHOLD_PX = 200;
  */
 export const CATALOG_PICKER_SECTIONS = {
   items: {
-    searchPath: '/api/v2/item/search',
-    filtersPath: '/api/v2/item/filters',
+    searchPath: '/api/v2/items/search',
+    filtersPath: '/api/v2/items/filters',
     filtersKey: 'catalog-picker:item-filters',
-    detailPath: '/api/v2/item',
+    detailPath: '/api/v2/items',
     previewSection: 'items',
   },
   spells: {
@@ -133,6 +133,23 @@ export const CATALOG_PICKER_SECTIONS = {
     searchPath: '/api/v2/classes/search',
     filtersPath: '/api/v2/classes/filters',
     filtersKey: 'catalog-picker:class-filters',
+    namesPath: '/api/v2/classes/search',
+  },
+  // Фильтры подклассов — те же, что у классов: ключ общий, чтобы окно не
+  // запрашивало одно и то же дважды. Деталь подкласса так же тяжела, как
+  // деталь класса, поэтому названия берутся из короткого списка всех подклассов
+  subclasses: {
+    searchPath: '/api/v2/classes/subclasses/search',
+    filtersPath: '/api/v2/classes/filters',
+    filtersKey: 'catalog-picker:class-filters',
+    namesPath: '/api/v2/classes/subclasses',
+  },
+  // Происхождения — подвиды: фильтры и деталь у них те же, что у видов
+  lineages: {
+    searchPath: '/api/v2/species/lineages/search',
+    filtersPath: '/api/v2/species/filters',
+    filtersKey: 'catalog-picker:species-filters',
+    detailPath: '/api/v2/species',
   },
   magicItems: {
     searchPath: '/api/v2/magic-items/search',
@@ -156,6 +173,18 @@ export const SELECT_CLASS_PLACEHOLDERS = {
   multiple: 'Выбери классы',
 } as const;
 
+/** Подписи пустого поля выбора подклассов окном каталога. */
+export const SELECT_SUBCLASS_CATALOG_PLACEHOLDERS = {
+  single: 'Выбери подкласс',
+  multiple: 'Выбери подклассы',
+} as const;
+
+/** Подписи пустого поля выбора происхождений окном каталога. */
+export const SELECT_LINEAGE_CATALOG_PLACEHOLDERS = {
+  single: 'Выбери происхождение',
+  multiple: 'Выбери происхождения',
+} as const;
+
 /** Заголовки окна выбора по разделам. */
 export const CATALOG_PICKER_TITLES = {
   items: 'Предметы',
@@ -165,6 +194,8 @@ export const CATALOG_PICKER_TITLES = {
   backgrounds: 'Предыстории',
   magicItems: 'Магические предметы',
   classes: 'Классы',
+  subclasses: 'Подклассы',
+  lineages: 'Происхождения',
 } as const;
 
 /** Ключ группы фильтра черт с категориями: им сужается набор поля. */

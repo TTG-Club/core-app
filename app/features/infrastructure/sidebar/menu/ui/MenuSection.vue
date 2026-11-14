@@ -16,6 +16,13 @@
 
   const { user } = useUser();
 
+  const { oldSiteUrl } = useRuntimeConfig().public;
+
+  /** Пункту сайта другой редакции — origin из конфига, остальным свой адрес. */
+  function resolveHref(link: MenuItem) {
+    return link.legacySite ? `${oldSiteUrl}${link.href}` : link.href;
+  }
+
   function hasAnyRole(roles: Array<Role>) {
     return roles.some((role) => user.value?.roles.includes(role));
   }
@@ -37,7 +44,7 @@
           key: link.action || link.href,
           // У пункта-действия адреса нет: он остаётся кнопкой. Закрытый раздел
           // тоже без адреса, иначе его заглушка «/» подсвечивалась бы на главной.
-          to: link.action || disabled ? undefined : link.href,
+          to: link.action || disabled ? undefined : resolveHref(link),
           trailingIcon: link.external ? MENU_EXTERNAL_ICON : undefined,
         };
       }),

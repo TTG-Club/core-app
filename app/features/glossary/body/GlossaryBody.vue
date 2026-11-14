@@ -3,7 +3,7 @@
 
   import { UiDetailLayout } from '~ui/detail-layout';
 
-  import { DescriptionsBlock, TopBar } from './ui';
+  import { CategoryNote, DescriptionsBlock } from './ui';
 
   defineProps<{
     glossary: GlossaryDetailResponse;
@@ -12,10 +12,11 @@
 
 <template>
   <UiDetailLayout>
-    <template #aside>
-      <TopBar :tags="glossary.tagCategory" />
-    </template>
-
     <DescriptionsBlock :description="glossary.description" />
+
+    <CategoryNote
+      v-if="glossary.tagCategory"
+      :category="glossary.tagCategory"
+    />
   </UiDetailLayout>
 </template>

@@ -10,9 +10,6 @@ export const HOME_LATEST_GAME_ALL_LABEL = 'Все игры';
 /** Заглушка, если в каталоге нет ни одной игры */
 export const HOME_LATEST_GAME_EMPTY_TEXT = 'Игр в каталоге пока нет';
 
-/** Заглушка, если сервис игр не ответил */
-export const HOME_LATEST_GAME_ERROR_TEXT = 'Не удалось загрузить игры';
-
 /** Ключ `useAsyncData` выдачи каталога для блока */
 export const HOME_LATEST_GAME_DATA_KEY = 'home-latest-game';
 

@@ -18,6 +18,20 @@ const adminOnlinePreferencePeriodSchema = z.object({
   ),
 });
 
+const adminOnlineUsagePeriodSchema = z.object({
+  activeDays: z.number().int().nonnegative(),
+  activeMinutes: z.number().int().nonnegative(),
+  days: z.number().int().positive(),
+  returning: z.number().int().nonnegative(),
+  users: z.number().int().nonnegative(),
+  visitors: z.number().int().nonnegative(),
+});
+
+const adminOnlineFeatureUsageSchema = z.object({
+  feature: z.string().min(1),
+  periods: z.array(adminOnlineUsagePeriodSchema),
+});
+
 const adminOnlineStatsResponseSchema: z.ZodType<AdminOnlineStatsResponse> =
   z.object({
     sites: z.array(
@@ -25,6 +39,8 @@ const adminOnlineStatsResponseSchema: z.ZodType<AdminOnlineStatsResponse> =
         // Пока online-app не обновлён, срезов настроек в ответе нет — карточка покажет пустоту.
         preferences: z.array(adminOnlinePreferencePeriodSchema).optional(),
         siteId: z.string().min(1),
+        // Пока online-app не обновлён, статистики инструментов в ответе нет — панель покажет прочерки.
+        usage: z.array(adminOnlineFeatureUsageSchema).optional(),
       }),
     ),
     total: adminOnlineCountersSchema,

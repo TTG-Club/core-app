@@ -1,94 +1,104 @@
+/*
+ * svifty7 — тёмный вариант дизайн-системы Ember: тёплый графит (оттенок 75),
+ * бежевый текст вместо белого и мягкий оранжевый акцент.
+ *
+ * Исходные токены: фон oklch(0.3 0.006 75) → 0.315 → 0.335 → 0.375, рамки 0.36 /
+ * 0.33 / #8a857f, текст #d2ccc1 · #c0baaf · #b2aca1 · #ada69b · #a59f94, текст на
+ * заливках #22201d; primary #f19357, secondary #c9a77e, success #2ed47a,
+ * info #60afff, warning #f7c325, error #ff8688. Шкалы 50–950 достроены вокруг них
+ * (ступень 400 = исходный цвет). Контраст намеренно мягкий.
+ */
 html.svifty7 {
-  /* Primary - без изменений */
-  --color-primary-50: oklch(0.97 0.02 25);
-  --color-primary-100: oklch(0.89 0.04 25);
-  --color-primary-200: oklch(0.8 0.065 25);
-  --color-primary-300: oklch(0.72 0.095 25);
-  --color-primary-400: oklch(0.63 0.12 25);
-  --color-primary-500: oklch(0.55 0.14 25);
-  --color-primary-600: oklch(0.5 0.128 25);
-  --color-primary-700: oklch(0.45 0.118 25);
-  --color-primary-800: oklch(0.4 0.11 25);
-  --color-primary-900: oklch(0.35 0.103 25);
-  --color-primary-950: oklch(0.3 0.098 25);
+  /* Primary — ember: мягкий оранжевый */
+  --color-primary-50: #fff0e7;
+  --color-primary-100: #ffe3d3;
+  --color-primary-200: #fecdb1;
+  --color-primary-300: #f9b48a;
+  --color-primary-400: #f19357;
+  --color-primary-500: #ce7942;
+  --color-primary-600: #ac602c;
+  --color-primary-700: #8b4717;
+  --color-primary-800: #6b3000;
+  --color-primary-900: #491e00;
+  --color-primary-950: #2a0b00;
 
-  /* Red (Error) - более чистый красный */
-  --color-red-50: oklch(0.97 0.05 8);
-  --color-red-100: oklch(0.92 0.07 8);
-  --color-red-200: oklch(0.85 0.09 8);
-  --color-red-300: oklch(0.78 0.11 8);
-  --color-red-400: oklch(0.7 0.13 8);
-  --color-red-500: oklch(0.62 0.14 8);
-  --color-red-600: oklch(0.56 0.13 8);
-  --color-red-700: oklch(0.5 0.12 8);
-  --color-red-800: oklch(0.44 0.11 8);
-  --color-red-900: oklch(0.38 0.1 8);
-  --color-red-950: oklch(0.32 0.09 8);
+  /* Gray → secondary: песочный (#c9a77e) */
+  --color-gray-50: #f9f2ea;
+  --color-gray-100: #f2e7db;
+  --color-gray-200: #e7d6c2;
+  --color-gray-300: #dac1a3;
+  --color-gray-400: #c9a77e;
+  --color-gray-500: #aa8b66;
+  --color-gray-600: #8c714f;
+  --color-gray-700: #6f5739;
+  --color-gray-800: #543f24;
+  --color-gray-900: #3a2810;
+  --color-gray-950: #211201;
 
-  /* Yellow */
-  --color-yellow-50: oklch(0.95 0.02 80);
-  --color-yellow-100: oklch(0.9 0.04 80);
-  --color-yellow-200: oklch(0.8 0.06 80);
-  --color-yellow-300: oklch(0.7 0.07 80);
-  --color-yellow-400: oklch(0.65 0.115 80);
-  --color-yellow-500: oklch(0.6 0.12 80);
-  --color-yellow-600: oklch(0.55 0.085 80);
-  --color-yellow-700: oklch(0.5 0.09 80);
-  --color-yellow-800: oklch(0.45 0.08 80);
-  --color-yellow-900: oklch(0.4 0.07 80);
-  --color-yellow-950: oklch(0.35 0.06 80);
+  /* Green → success */
+  --color-green-50: #e2fbe9;
+  --color-green-100: #cff6d9;
+  --color-green-200: #adedc0;
+  --color-green-300: #80e2a1;
+  --color-green-400: #2ed47a;
+  --color-green-500: #03b362;
+  --color-green-600: #0a924f;
+  --color-green-700: #04723c;
+  --color-green-800: #00532a;
+  --color-green-900: #003719;
+  --color-green-950: #001d09;
 
-  /* Green */
-  --color-green-50: oklch(0.95 0.02 145);
-  --color-green-100: oklch(0.9 0.04 145);
-  --color-green-200: oklch(0.8 0.08 145);
-  --color-green-300: oklch(0.75 0.1 145);
-  --color-green-400: oklch(0.7 0.135 145);
-  --color-green-500: oklch(0.65 0.14 145);
-  --color-green-600: oklch(0.6 0.15 145);
-  --color-green-700: oklch(0.55 0.14 145);
-  --color-green-800: oklch(0.5 0.13 145);
-  --color-green-900: oklch(0.45 0.12 145);
-  --color-green-950: oklch(0.4 0.11 145);
+  /* Blue → info */
+  --color-blue-50: #eaf4ff;
+  --color-blue-100: #d9ebff;
+  --color-blue-200: #badbff;
+  --color-blue-300: #94c8ff;
+  --color-blue-400: #60afff;
+  --color-blue-500: #4a93db;
+  --color-blue-600: #3577b8;
+  --color-blue-700: #205d97;
+  --color-blue-800: #084476;
+  --color-blue-900: #002c53;
+  --color-blue-950: #001632;
 
-  /* Blue */
-  --color-blue-50: oklch(0.95 0.02 260);
-  --color-blue-100: oklch(0.9 0.04 260);
-  --color-blue-200: oklch(0.8 0.08 260);
-  --color-blue-300: oklch(0.7 0.1 260);
-  --color-blue-400: oklch(0.65 0.115 260);
-  --color-blue-500: oklch(0.6 0.12 260);
-  --color-blue-600: oklch(0.55 0.13 260);
-  --color-blue-700: oklch(0.5 0.14 260);
-  --color-blue-800: oklch(0.45 0.15 260);
-  --color-blue-900: oklch(0.4 0.14 260);
-  --color-blue-950: oklch(0.35 0.13 260);
+  /* Yellow → warning — honey */
+  --color-yellow-50: #fdf4dd;
+  --color-yellow-100: #fdeec9;
+  --color-yellow-200: #fbe3a7;
+  --color-yellow-300: #fad579;
+  --color-yellow-400: #f7c325;
+  --color-yellow-500: #d0a207;
+  --color-yellow-600: #a88309;
+  --color-yellow-700: #826400;
+  --color-yellow-800: #5f4800;
+  --color-yellow-900: #3d2d00;
+  --color-yellow-950: #1f1400;
 
-  /* Gray */
-  --color-gray-50: oklch(0.98 0.002 85);
-  --color-gray-100: oklch(0.92 0.005 85);
-  --color-gray-200: oklch(0.82 0.01 85);
-  --color-gray-300: oklch(0.72 0.012 85);
-  --color-gray-400: oklch(0.62 0.015 85);
-  --color-gray-500: oklch(0.57 0.015 85);
-  --color-gray-600: oklch(0.52 0.015 85);
-  --color-gray-700: oklch(0.47 0.015 85);
-  --color-gray-800: oklch(0.42 0.015 85);
-  --color-gray-900: oklch(0.37 0.015 85);
-  --color-gray-950: oklch(0.32 0.015 85);
+  /* Red → error */
+  --color-red-50: #ffefee;
+  --color-red-100: #ffe2e1;
+  --color-red-200: #fecbca;
+  --color-red-300: #feaead;
+  --color-red-400: #ff8688;
+  --color-red-500: #da6d6f;
+  --color-red-600: #b65457;
+  --color-red-700: #943d40;
+  --color-red-800: #72262b;
+  --color-red-900: #520f16;
+  --color-red-950: #340004;
 
-  /* Neutral */
-  --color-neutral-50: oklch(1 0 85);
-  --color-neutral-100: oklch(0.95 0.005 85);
-  --color-neutral-200: oklch(0.9 0.01 85);
-  --color-neutral-300: oklch(0.85 0.012 85);
-  --color-neutral-400: oklch(0.8 0.015 85);
-  --color-neutral-500: oklch(0.78 0.015 85);
-  --color-neutral-600: oklch(0.75 0.015 85);
-  --color-neutral-700: oklch(0.7 0.015 85);
-  --color-neutral-800: oklch(0.65 0.015 85);
-  --color-neutral-900: oklch(0.6 0.015 85);
-  --color-neutral-950: oklch(0.55 0.015 85);
+  /* Neutral — umber: тёплый графит и бежевый текст */
+  --color-neutral-50: #e6e1d8;
+  --color-neutral-100: #d2ccc1;
+  --color-neutral-200: #c0baaf;
+  --color-neutral-300: #b2aca1;
+  --color-neutral-400: #ada69b;
+  --color-neutral-500: #a59f94;
+  --color-neutral-600: #8a857f;
+  --color-neutral-700: oklch(0.375 0.006 75);
+  --color-neutral-800: oklch(0.335 0.006 75);
+  --color-neutral-900: oklch(0.3 0.006 75);
+  --color-neutral-950: oklch(0.25 0.006 75);
 
   /* UI Primary */
   --ui-color-primary-50: var(--color-primary-50);
@@ -182,50 +192,52 @@ html.svifty7 {
   --ui-color-neutral-950: var(--color-neutral-950);
 
   /* Nuxt UI variables */
-  --ui-text: oklch(0.72 0.023 75);
-  --ui-text-dimmed: oklch(0.7 0.012 75);
-  --ui-text-muted: oklch(0.75 0.013 75);
-  --ui-text-toned: oklch(0.8 0.014 75);
-  --ui-text-highlighted: oklch(0.85 0.016 75);
-  --ui-text-inverted: oklch(0.98 0.017 75);
-  --ui-bg: oklch(0.27 0.006 75);
-  --ui-bg-muted: oklch(0.3 0.006 75);
-  --ui-bg-elevated: oklch(0.33 0.006 75);
-  --ui-bg-accented: oklch(0.38 0.006 75);
-  --ui-bg-inverted: oklch(0.78 0.015 75);
-  --ui-border: oklch(0.42 0.015 85);
-  --ui-border-muted: oklch(0.45 0.015 85);
-  --ui-border-accented: oklch(0.48 0.015 85);
-  --ui-border-inverted: oklch(0.98 0.002 85);
+  --ui-text-dimmed: #a59f94;
+  --ui-text-muted: #ada69b;
+  --ui-text-toned: #b2aca1;
+  --ui-text: #c0baaf;
+  --ui-text-highlighted: #d2ccc1;
+  --ui-text-inverted: #22201d;
+  --ui-bg: oklch(0.3 0.006 75);
+  --ui-bg-muted: oklch(0.315 0.006 75);
+  --ui-bg-elevated: oklch(0.335 0.006 75);
+  --ui-bg-accented: oklch(0.375 0.006 75);
+  --ui-bg-inverted: #d2ccc1;
+  --ui-border: oklch(0.36 0.006 75);
+  --ui-border-muted: oklch(0.33 0.006 75);
+  --ui-border-accented: #8a857f;
+  --ui-border-inverted: #d2ccc1;
+
+  /* Nuxt UI берёт ступень 400 только под классом .dark, а у этой темы класс svifty7 —
+     без явного выбора кнопки и акценты взяли бы более тёмную ступень 500 */
+  --ui-primary: var(--ui-color-primary-400);
+  --ui-secondary: var(--ui-color-secondary-400);
+  --ui-success: var(--ui-color-success-400);
+  --ui-info: var(--ui-color-info-400);
+  --ui-warning: var(--ui-color-warning-400);
+  --ui-error: var(--ui-color-error-400);
 
   --color-bg-menu:
-    135deg, oklch(0.38 0.006 75 / 0.78), oklch(0.27 0.006 75 / 0.78);
-
-  --color-hover: oklch(0.976 0 89.876 / 0.09);
-  --color-link: var(--color-primary-400);
-
-  /* Клетка фона PageBackdrop. Цвет границ на 35%: бордюр у темы светлый и
-     непрозрачный, клетка его цвета выходила вдвое контрастнее, чем в тёмной
-     и светлой темах, и тянула внимание на себя */
-  --color-backdrop-grid: color-mix(in oklch, var(--ui-border) 35%, transparent);
+    135deg, oklch(0.335 0.006 75 / 0.85), oklch(0.3 0.006 75 / 0.88);
+  --color-hover: rgb(255 247 238 / 0.05);
+  --color-link: var(--color-primary-400); /* ссылки подсвечены акцентом */
+  /* Клетка фона PageBackdrop: граница у темы светлее фона, полная клетка отвлекала бы */
+  --color-backdrop-grid: color-mix(in oklch, var(--ui-border) 60%, transparent);
 
   /* Карта деревни в шапке главной — рисунок в палитре темы — и её бледность.
-     Растровые копии hero-map-svifty7.svg (scripts/render-hero-map.mjs): весь
-     холст и середина для экранов уже 768px */
+     Растровые копии hero-map-svifty7.svg (scripts/render-hero-map.mjs) */
   --hero-map-image: url('/img/home/hero-map-svifty7.webp');
   --hero-map-image-sm: url('/img/home/hero-map-svifty7-sm.webp');
   --hero-map-opacity: 0.6;
-
-  /* Бумага и тушь карты — ими нарисованы повозка и дым поверх неё
-     (HomeHeroMotion). Совпадают с --paper и --ink в hero-map-svifty7.svg */
+  /* Бумага и тушь карты — ими нарисованы повозка и дым поверх неё (HomeHeroMotion) */
   --hero-map-paper: oklch(0.5 0.01 75);
   --hero-map-ink: oklch(0.16 0.006 75);
 
-  // Logo — тема плоская: верх и низ каждого градиента совпадают
-  --color-logo-stroke-top: oklch(0.66 0.07 84.542);
-  --color-logo-stroke-bottom: oklch(0.66 0.07 84.542);
-  --color-logo-dice-top: oklch(0.66 0.07 84.542);
-  --color-logo-dice-bottom: oklch(0.66 0.07 84.542);
-  --color-logo-tree-top: oklch(0.529 0.119 28.939);
-  --color-logo-tree-bottom: oklch(0.529 0.119 28.939);
+  /* Логотип плоский, как в svifty7: обод и кость песочные, дерево — акцент */
+  --color-logo-stroke-top: #c9a77e;
+  --color-logo-stroke-bottom: #c9a77e;
+  --color-logo-dice-top: #c9a77e;
+  --color-logo-dice-bottom: #c9a77e;
+  --color-logo-tree-top: #f19357;
+  --color-logo-tree-bottom: #f19357;
 }

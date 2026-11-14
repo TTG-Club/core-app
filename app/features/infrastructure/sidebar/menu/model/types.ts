@@ -13,6 +13,11 @@ export interface MenuItem {
   action?: string;
   /** Пункт ведёт на другой сайт */
   external?: boolean;
+  /**
+   * `href` — путь на сайте другой редакции (D&D 2014); origin подставляется
+   * из `runtimeConfig.public.oldSiteUrl`, чтобы dev вёл на dev, а прод — на прод.
+   */
+  legacySite?: boolean;
   /** Пункт выделен золотой рамкой и цветом */
   highlighted?: boolean;
 }

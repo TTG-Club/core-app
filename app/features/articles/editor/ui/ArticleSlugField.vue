@@ -32,11 +32,17 @@
     },
   };
 
-  const { title, currentUrl = undefined } = defineProps<{
+  const {
+    title,
+    currentUrl = undefined,
+    apiPath = undefined,
+  } = defineProps<{
     /** Заголовок записи — источник авто-генерации slug. */
     title: string;
     /** Собственный url записи при редактировании (не считается занятым). */
     currentUrl?: string;
+    /** Базовый путь API, где проверять занятость (по умолчанию — статьи). */
+    apiPath?: string;
   }>();
 
   const model = defineModel<string>({ default: '' });
@@ -66,6 +72,7 @@
   const { availability } = useSlugAvailability(
     toRef(() => model.value),
     toRef(() => currentUrl),
+    apiPath,
   );
 
   const hint = computed(() => SLUG_AVAILABILITY_HINTS[availability.value]);

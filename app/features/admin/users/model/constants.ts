@@ -61,7 +61,7 @@ export const ADMIN_USERS_NO_ROLES_LABEL = 'Без ролей';
 export const ADMIN_USERS_DETAIL_EMPTY_ICON = 'tabler:user-search';
 export const ADMIN_USERS_DETAIL_EMPTY_TITLE = 'Пользователь не выбран';
 export const ADMIN_USERS_DETAIL_EMPTY_TEXT =
-  'Выберите пользователя из списка слева, чтобы просмотреть профиль и управлять ролями и подпиской.';
+  'Выберите пользователя из списка, чтобы просмотреть профиль и управлять ролями и подпиской.';
 
 /** Вкладки детальной панели пользователя. */
 export const ADMIN_USERS_DETAIL_TABS: Array<{
@@ -278,3 +278,23 @@ export const ADMIN_ROLES_API_PATH = '/api/auth/roles';
 /** Ключи `useAsyncData` дровера профиля; справочник ролей общий со страницей «Пользователи». */
 export const ADMIN_USERS_DRAWER_DATA_KEY_PREFIX = 'admin-user-drawer';
 export const ADMIN_ROLES_DATA_KEY = 'admin-roles';
+
+/** Плитка «Пользователи» на главной админки: сколько всего аккаунтов. */
+export const ADMIN_USERS_DASHBOARD_TILE_TITLE = ADMIN_USERS_PAGE_TITLE;
+
+export const ADMIN_USERS_DASHBOARD_TILE_HINT =
+  'Сколько аккаунтов зарегистрировано на сайте за всё время.';
+
+export const ADMIN_USERS_DASHBOARD_ERROR_TEXT =
+  'Не удалось получить число пользователей. Нажмите «Обновить».';
+
+/** Ключ кеша числа пользователей на дашборде. */
+export const ADMIN_USERS_DASHBOARD_DATA_KEY = 'admin-users-total';
+
+/**
+ * Число пользователей берём из итога первой страницы списка: сами записи не
+ * нужны, поэтому страница из одной записи. Страницы auth-service нумерует с нуля.
+ */
+export const ADMIN_USERS_DASHBOARD_PAGE_INDEX = 0;
+
+export const ADMIN_USERS_DASHBOARD_PAGE_SIZE = 1;

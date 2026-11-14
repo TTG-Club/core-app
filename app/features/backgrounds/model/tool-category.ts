@@ -27,35 +27,79 @@ export interface BackgroundToolCategory {
   toolUrls: Array<string>;
 }
 
+/**
+ * Инструменты раздела «Предметы» для блока владения: категории, которыми
+ * называется выбор, и русские названия карточек по адресу.
+ */
+export interface BackgroundToolCatalog {
+  categories: Array<BackgroundToolCategory>;
+
+  /**
+   * Название карточки по её адресу. Им подписывается ссылка, у которой нет
+   * снимка названия: бэк снимок не подставляет, а запись могла сохраниться
+   * без него.
+   */
+  names: Record<string, string>;
+}
+
 /** Тип предмета одной из категорий, которыми называется выбор. */
 const toolCategoryItemTypeSchema = z.custom<ItemType>((value) =>
   BACKGROUND_TOOL_CATEGORIES.some((category) => category.itemType === value),
 );
 
-/** Категории в том виде, в каком их отдаёт загрузчик. */
-const backgroundToolCategoriesSchema = z.array(
-  z.object({
-    itemType: toolCategoryItemTypeSchema,
-    label: z.string(),
-    allUrls: z.array(z.string()),
-    toolUrls: z.array(z.string()),
-  }),
-);
+/** Каталог в том виде, в каком его отдаёт загрузчик. */
+const backgroundToolCatalogSchema = z.object({
+  categories: z.array(
+    z.object({
+      itemType: toolCategoryItemTypeSchema,
+      label: z.string(),
+      allUrls: z.array(z.string()),
+      toolUrls: z.array(z.string()),
+    }),
+  ),
+  names: z.record(z.string(), z.string()),
+});
 
 /**
- * Разбирает категории из кэша страницы. Загрузчик кладёт их туда сам, но в
- * браузер они приезжают разметкой страницы, поэтому проверяются схемой, как
+ * Пустой каталог: пока он не загружен, не понадобился или не загрузился.
+ *
+ * @returns каталог без категорий и названий.
+ */
+export function createEmptyBackgroundToolCatalog(): BackgroundToolCatalog {
+  return { categories: [], names: {} };
+}
+
+/**
+ * Разбирает каталог из кэша страницы. Загрузчик кладёт его туда сам, но в
+ * браузер он приезжает разметкой страницы, поэтому проверяется схемой, как
  * любые внешние данные.
  *
  * @param input закэшированное значение.
- * @returns категории; `undefined` — кэша нет или он негоден, и нужна загрузка.
+ * @returns каталог; `undefined` — кэша нет или он негоден, и нужна загрузка.
  */
-export function parseBackgroundToolCategories(
+export function parseBackgroundToolCatalog(
   input: unknown,
-): Array<BackgroundToolCategory> | undefined {
-  const parsed = backgroundToolCategoriesSchema.safeParse(input);
+): BackgroundToolCatalog | undefined {
+  const parsed = backgroundToolCatalogSchema.safeParse(input);
 
   return parsed.success ? parsed.data : undefined;
+}
+
+/**
+ * Каталог инструментов из карточек раздела «Предметы».
+ *
+ * @param itemLinks все карточки типа «Инструменты».
+ * @returns категории и названия карточек.
+ */
+export function buildBackgroundToolCatalog(
+  itemLinks: Array<ItemLinkResponse>,
+): BackgroundToolCatalog {
+  return {
+    categories: buildBackgroundToolCategories(itemLinks),
+    names: Object.fromEntries(
+      itemLinks.map((itemLink) => [itemLink.url, itemLink.name.rus]),
+    ),
+  };
 }
 
 /**

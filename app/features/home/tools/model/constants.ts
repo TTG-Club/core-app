@@ -1,6 +1,11 @@
 import type { HomeTool } from './types';
 
 import { CHARACTER_SHEET_ROUTE } from '~character-sheet/model';
+import {
+  DM_SCREEN_ICON,
+  DM_SCREEN_ROUTE,
+  DM_SCREEN_TITLE,
+} from '~dm-screen/model';
 import { GAMES_CATALOG_NAVIGATION_LABEL, GAMES_ROUTE } from '~find-game/model';
 import {
   INITIATIVE_TOOL_ROUTE,
@@ -36,6 +41,11 @@ export const HOME_TOOLS: Array<HomeTool> = [
     label: 'Лист персонажа',
     icon: 'tabler:id',
     to: CHARACTER_SHEET_ROUTE,
+  },
+  {
+    label: DM_SCREEN_TITLE,
+    icon: DM_SCREEN_ICON,
+    to: DM_SCREEN_ROUTE,
   },
   {
     label: GAMES_CATALOG_NAVIGATION_LABEL,

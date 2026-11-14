@@ -7,7 +7,7 @@
   import Lightgallery from 'lightgallery/vue';
   import { computed } from 'vue';
 
-  import { GALLERY_LABELS } from './constants';
+  import { GALLERY_LABELS, GALLERY_OPENED_STATE_KEY } from './constants';
 
   const {
     preview,
@@ -27,7 +27,7 @@
     },
   } = useRuntimeConfig();
 
-  const opened = useState<boolean>('ui-gallery-opened', () => false);
+  const opened = useState<boolean>(GALLERY_OPENED_STATE_KEY, () => false);
 
   const items = computed(() => {
     if (!images.length) {

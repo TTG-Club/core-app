@@ -54,7 +54,7 @@
       <h3 class="text-lg font-semibold text-highlighted">Код не выбран</h3>
 
       <p class="text-sm text-secondary">
-        Выберите код из списка слева или создайте новый.
+        Выберите код из списка или создайте новый.
       </p>
     </div>
   </div>

@@ -12,7 +12,9 @@
     getArticlePreviewText,
     NEWS_ROUTE,
   } from '~articles/model';
+  import { ArticleReadingProgress } from '~articles/reading-progress';
   import { PageActions } from '~ui/page';
+  import { getVideoPoster } from '~ui/video';
 
   const route = useRoute();
   const { canEditEntities } = useUserRoles();
@@ -49,7 +51,9 @@
     description: getSeoDescription,
     ogTitle: () => article.value?.title ?? '',
     ogDescription: getSeoDescription,
-    ogImage: () => article.value?.previewImageUrl ?? undefined,
+    ogImage: () =>
+      getVideoPoster(article.value?.videoUrl, article.value?.previewImageUrl)
+      ?? undefined,
     titleTemplate: '%s | TTG Club',
   });
 
@@ -85,6 +89,8 @@
 
     <!-- Блок комментариев вставляет layout detail — общий для всех разделов -->
     <template #default>
+      <ArticleReadingProgress />
+
       <ArticleBody
         v-if="article"
         :article

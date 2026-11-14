@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { RenderNode } from '~ui/markup';
+
   import { MarkupRender } from '~ui/markup';
   import { InfoTooltip } from '~ui/tooltip';
 
@@ -7,11 +9,13 @@
   defineProps<{
     abilityScores: string;
     feat: string;
+    /** Черты на выбор ещё ждут своих названий. */
+    isFeatPending?: boolean;
     skillProficiencies: string;
     toolProficiency: string[];
     /** Владение ещё собирается: выбор ждёт категорий инструментов. */
     isToolProficiencyPending?: boolean;
-    equipment: string[];
+    equipment: RenderNode;
   }>();
 </script>
 
@@ -38,7 +42,12 @@
 
       <!-- Одиночная строка разметки рисуется без обёртки: без span ссылки и
         запятые встали бы отдельными строками флекс-колонки -->
-      <span>
+      <USkeleton
+        v-if="isFeatPending"
+        class="mt-1 h-4 w-3/4"
+      />
+
+      <span v-else>
         <MarkupRender :render-node="feat" />
       </span>
     </div>
@@ -78,7 +87,11 @@
     <div :class="[$style.item, $style.block]">
       <span :class="$style.name">Снаряжение:</span>
 
-      <MarkupRender :render-node="equipment" />
+      <!-- Строка вариантов рисуется без обёртки, как у черты; div, а не span:
+        прежний текст снаряжения приходит блоками -->
+      <div>
+        <MarkupRender :render-node="equipment" />
+      </div>
     </div>
   </div>
 </template>

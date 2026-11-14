@@ -36,6 +36,9 @@ export default defineConfig({
       ),
       '#shared': fileURLToPath(new URL('./shared', import.meta.url)),
       '#server': fileURLToPath(new URL('./server', import.meta.url)),
+      '~dm-screen': fileURLToPath(
+        new URL('./app/features/dm-screen', import.meta.url),
+      ),
       '~find-game': fileURLToPath(
         new URL('./app/features/find-game', import.meta.url),
       ),
@@ -49,6 +52,9 @@ export default defineConfig({
         new URL('./app/features/classes', import.meta.url),
       ),
       '~feats': fileURLToPath(new URL('./app/features/feats', import.meta.url)),
+      '~backgrounds': fileURLToPath(
+        new URL('./app/features/backgrounds', import.meta.url),
+      ),
       '~bastion-game': fileURLToPath(
         new URL('./app/features/bastion-game', import.meta.url),
       ),

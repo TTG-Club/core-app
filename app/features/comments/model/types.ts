@@ -190,6 +190,8 @@ export interface MyCommentReplyPreview {
  */
 export interface MyComment {
   id: string;
+  /** С какого сайта комментарий: раздел общий для всех сайтов сервиса. */
+  sourcePlatform: SourcePlatform | null;
   section: string | null;
   url: string | null;
   parentId: string | null;

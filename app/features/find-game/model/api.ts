@@ -4,9 +4,9 @@ import type {
   CreateGameRegistrationRequest,
   CreateGameReportRequest,
   CreateGameRequest,
+  CreateGameReviewRequest,
   CreateGameSessionRequest,
   CreateGameSessionSeriesRequest,
-  CreateSessionReviewRequest,
   FavoriteGame,
   FindGameNotification,
   FindGameProblemDetail,
@@ -18,17 +18,19 @@ import type {
   GamePersonalRole,
   GameRegistration,
   GameReport,
+  GameReview,
   GameSearchFilter,
   GameSession,
   GameStatus,
   GameSystemOption,
   MasterPublicProfile,
+  PendingReview,
   PlayerPublicProfile,
   RegistrationDecision,
   Reputation,
+  ReviewTarget,
   SessionAttendanceStatus,
   SessionParticipant,
-  SessionReview,
   SpringPage,
   UpdateFindGameProfileRequest,
   UpdateGameRequest,
@@ -55,6 +57,7 @@ import {
   MODERATION_GAMES_API_PATH,
   NOTIFICATIONS_API_PATH,
   OWN_REPUTATION_API_PATH,
+  PENDING_REVIEWS_API_PATH,
   PLAYER_BOOKMARK_API_PATH,
   PLAYER_PROFILE_API_PATH,
   RETRY_AFTER_PREFIX,
@@ -72,6 +75,8 @@ import {
   parseGameRegistration,
   parseGameRegistrations,
   parseGameReportsPage,
+  parseGameReview,
+  parseGameReviews,
   parseGameSession,
   parseGameSessions,
   parseGamesPage,
@@ -80,13 +85,13 @@ import {
   parseMasterProfile,
   parseNotification,
   parseNotificationsPage,
+  parsePendingReviews,
   parsePlayerProfile,
   parseProblemDetail,
   parseReputation,
+  parseReviewTargets,
   parseSessionParticipant,
   parseSessionParticipants,
-  parseSessionReview,
-  parseSessionReviews,
   parseUnreadNotifications,
 } from './schemas';
 import { getWaitLabel } from './utils';
@@ -378,6 +383,19 @@ export async function raiseGame(gameId: string): Promise<Game> {
 }
 
 /**
+ * Подтверждает, что своя игра ещё актуальна: снимает срок автоотмены.
+ * @param gameId Идентификатор игры.
+ */
+export async function keepGameActive(gameId: string): Promise<Game> {
+  const response = await $fetch(`${gamePath(gameId)}/keep-active`, {
+    method: 'PATCH',
+    retry: 0,
+  });
+
+  return parseGame(response);
+}
+
+/**
  * Публичный профиль мастера: рассказ о себе и счётчики его игр.
  * @param masterId Идентификатор мастера.
  */
@@ -415,7 +433,7 @@ export async function fetchPlayerProfile(
  */
 export async function fetchMasterReviews(
   masterId: string,
-): Promise<Array<SessionReview>> {
+): Promise<Array<GameReview>> {
   const response = await $fetch(
     `${MASTER_PROFILE_API_PATH}/${masterId}/reviews`,
     {
@@ -423,7 +441,7 @@ export async function fetchMasterReviews(
     },
   );
 
-  return parseSessionReviews(response);
+  return parseGameReviews(response);
 }
 
 /**
@@ -439,45 +457,49 @@ export async function fetchOwnReputation(): Promise<Reputation> {
 }
 
 /**
- * Ставит оценку участнику завершённой встречи; повторная правит свою же.
+ * Ставит оценку участнику игры; повторная правит свою же, пока та не
+ * раскрыта.
  *
  * Пока не ответила вторая сторона, оценка видна только автору — иначе
  * увидевший первым отвечал бы тем же.
  *
  * @param gameId Идентификатор игры.
- * @param sessionId Идентификатор встречи.
  * @param request Кого и как оценили.
  */
-export async function submitSessionReview(
+export async function submitGameReview(
   gameId: string,
-  sessionId: string,
-  request: CreateSessionReviewRequest,
-): Promise<SessionReview> {
-  const response = await $fetch(
-    `${GAMES_API_PATH}/${gameId}/sessions/${sessionId}/reviews`,
-    { method: 'POST', body: request, retry: 0 },
-  );
+  request: CreateGameReviewRequest,
+): Promise<GameReview> {
+  const response = await $fetch(`${GAMES_API_PATH}/${gameId}/reviews`, {
+    method: 'POST',
+    body: request,
+    retry: 0,
+  });
 
-  return parseSessionReview(response);
+  return parseGameReview(response);
 }
 
 /**
- * Оценки встречи глазами пользователя: свои — всегда, чужие о нём — как
- * только пара раскрыта.
+ * Кого пользователь вправе оценить в игре, со своими оценками. Пусто —
+ * оценивать пока некого.
  *
  * @param gameId Идентификатор игры.
- * @param sessionId Идентификатор встречи.
  */
-export async function fetchSessionReviews(
+export async function fetchReviewTargets(
   gameId: string,
-  sessionId: string,
-): Promise<Array<SessionReview>> {
-  const response = await $fetch(
-    `${GAMES_API_PATH}/${gameId}/sessions/${sessionId}/reviews`,
-    { retry: 0 },
-  );
+): Promise<Array<ReviewTarget>> {
+  const response = await $fetch(`${GAMES_API_PATH}/${gameId}/reviews`, {
+    retry: 0,
+  });
 
-  return parseSessionReviews(response);
+  return parseReviewTargets(response);
+}
+
+/** Игры, где пользователь ещё не оценил тех, с кем играл. */
+export async function fetchPendingReviews(): Promise<Array<PendingReview>> {
+  const response = await $fetch(PENDING_REVIEWS_API_PATH, { retry: 0 });
+
+  return parsePendingReviews(response);
 }
 
 /**
@@ -507,13 +529,13 @@ export async function fetchPlayerReputation(
 export async function fetchPlayerReviews(
   gameId: string,
   playerId: string,
-): Promise<Array<SessionReview>> {
+): Promise<Array<GameReview>> {
   const response = await $fetch(
     `${GAMES_API_PATH}/${gameId}/players/${playerId}/reviews`,
     { retry: 0 },
   );
 
-  return parseSessionReviews(response);
+  return parseGameReviews(response);
 }
 
 /**

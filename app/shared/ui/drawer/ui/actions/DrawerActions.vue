@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { DmScreenAddButton } from '~dm-screen/add-button';
   import { CopyButton, CopyMarkdownButton } from '~ui/copy-button';
 
   defineEmits<{
@@ -7,6 +8,8 @@
 
   defineProps<{
     url?: string;
+    /** Название открытой записи: с ним она встаёт на ширму Мастера. */
+    title?: string;
     editUrl?: string;
     /**
      * Геттер Markdown сущности; пока сущность не загружена — `undefined`, и
@@ -48,6 +51,13 @@
       size="sm"
     />
   </UTooltip>
+
+  <DmScreenAddButton
+    v-if="url"
+    :url
+    :title
+    size="sm"
+  />
 
   <CopyMarkdownButton
     v-if="markdown"

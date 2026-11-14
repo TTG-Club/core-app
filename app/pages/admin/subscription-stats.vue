@@ -12,6 +12,7 @@
   } from '~admin/dashboard/model';
   import { AdminDashboardPanel } from '~admin/dashboard/ui';
   import {
+    BULK_EXTENSION_TITLE,
     filterPayments,
     getListPage,
     getSubscriptionStatsSummary,
@@ -34,6 +35,7 @@
     SUBSCRIPTION_STATS_SUMMARY_TITLE,
   } from '~admin/subscription-stats/model';
   import {
+    BulkSubscriptionExtension,
     PaymentHistoryRow,
     SubscriptionHistoryRow,
     SubscriptionStatsList,
@@ -200,6 +202,14 @@
           :is-payments-pending="isPaymentsPending"
           :has-subscriptions-error="hasSubscriptionsError"
           :has-payments-error="hasPaymentsError"
+        />
+      </AdminDashboardPanel>
+
+      <AdminDashboardPanel :title="BULK_EXTENSION_TITLE">
+        <BulkSubscriptionExtension
+          :active-subscribers="subscriptionStats.activeSubscribers"
+          :is-subscribers-pending="isSubscriptionsPending"
+          @extended="refreshSubscriptions"
         />
       </AdminDashboardPanel>
 

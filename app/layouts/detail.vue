@@ -110,6 +110,8 @@
                 'transition-[bottom] duration-200 ease-in-out',
                 'max-md:rounded-md max-md:border max-md:border-default',
                 'max-md:bg-default/50 max-md:p-1 max-md:shadow-md max-md:backdrop-blur-lg',
+                // Без размытия текст под полупрозрачной плашкой мешал бы кнопкам
+                'performance:max-md:bg-default',
                 navbarHidden ? 'bottom-0' : undefined,
               ]"
             >

@@ -10,6 +10,31 @@
   const isScrollLocked = useScrollLock(window);
   const { close, open, toggle, isOpened } = useSidebarPopover(popoverKey);
 
+  // По кадрам открытия сайт понимает, тянет ли устройство размытие фона
+  const graphicsProbe = useGraphicsProbe();
+
+  /**
+   * Содержимое панели собрано. Сборка меню из десятков кнопок занимает
+   * десятки миллисекунд — если делать её по клику, анимация открытия
+   * начинается с рывка. Поэтому панель собирается один раз в простое после
+   * загрузки страницы и дальше только прячется и показывается.
+   */
+  const isRendered = ref(false);
+
+  onNuxtReady(() => {
+    isRendered.value = true;
+  });
+
+  /**
+   * При открытии возвращает панель к началу: она не пересоздаётся и помнит
+   * прокрутку с прошлого раза.
+   *
+   * @param element - панель
+   */
+  function resetScroll(element: Element): void {
+    element.scrollTop = 0;
+  }
+
   onKeyDown('Escape', (e: KeyboardEvent) => {
     if (!isOpened.value) {
       return;
@@ -24,6 +49,11 @@
   watch(
     isOpened,
     (value) => {
+      // Открыли раньше, чем страница дошла до простоя
+      if (value) {
+        isRendered.value = true;
+      }
+
       isScrollLocked.value = value;
     },
     {
@@ -53,9 +83,23 @@
       />
     </Transition>
 
-    <Transition name="nav-popover-animation">
+    <!--
+      Условие сборки стоит на самой анимации, а не на панели: иначе заранее
+      собранная скрытая панель «открывалась» бы для неё и портила замер
+      плавности.
+    -->
+    <Transition
+      v-if="isRendered"
+      name="nav-popover-animation"
+      @before-enter="graphicsProbe.start"
+      @enter="resetScroll"
+      @after-enter="graphicsProbe.finish"
+      @enter-cancelled="graphicsProbe.cancel"
+    >
+      <!-- Без размытия полупрозрачная панель нечитаема: в режиме
+        «производительность» под градиент ложится плотный фон -->
       <div
-        v-if="isOpened"
+        v-show="isOpened"
         :class="[
           $style.body,
           {
@@ -63,7 +107,7 @@
             [$style.bottom]: bottom,
           },
         ]"
-        class="flex flex-col border border-default bg-linear-(--color-bg-menu) shadow-2xl backdrop-blur-lg"
+        class="flex flex-col border border-default bg-linear-(--color-bg-menu) shadow-2xl backdrop-blur-lg performance:bg-default"
       >
         <slot
           :close="() => close()"

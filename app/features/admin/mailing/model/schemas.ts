@@ -6,7 +6,7 @@ import {
   MAILING_LABEL_MAX_LENGTH,
   MAILING_SUBJECT_MAX_LENGTH,
 } from '#shared/consts';
-import { REWARD_TIERS } from '~admin/subscriptions/model';
+import { codeContentSchemaShape } from '~admin/subscriptions/model';
 
 /**
  * Схема формы рассылки. Список получателей проверяется отдельно (разбор строки
@@ -27,7 +27,7 @@ export const mailingFormSchema = z.object({
       (value) => value.includes(MAILING_CODE_PLACEHOLDER),
       `Добавьте ${MAILING_CODE_PLACEHOLDER} — на это место подставится код`,
     ),
-  rewardTier: z.enum(REWARD_TIERS),
+  content: z.object(codeContentSchemaShape),
   label: z
     .string()
     .trim()

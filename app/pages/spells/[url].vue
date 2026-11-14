@@ -13,6 +13,9 @@
     $fetch<SpellDetailResponse>(`/api/v2/spells/${route.params.url}`),
   );
 
+  // Запись могла переехать на новый адрес: по прежнему сервис отдаёт её же
+  useEntityUrlRedirect(() => spell.value?.url);
+
   useSeoMeta({
     title: getSeoTitle,
     description: getSeoDescription,

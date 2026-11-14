@@ -2,7 +2,12 @@ import type { LocationQuery } from 'vue-router';
 
 import type { Filter, FilterRangeOrders } from '../types';
 
-import { isEqual } from 'es-toolkit';
+import { isEqual, isPlainObject } from 'es-toolkit';
+
+import {
+  ONE_YEAR_IN_SECONDS,
+  SECTION_FILTER_STORE_KEY_PREFIX,
+} from '#shared/consts';
 
 import { parseFilter } from '../schema';
 import {
@@ -15,13 +20,17 @@ import {
 } from '../utils';
 
 /**
- * Проверяет, задаёт ли адрес страницы условия отбора или источники.
+ * Оставляет из параметров адреса только те, что задают условия отбора или
+ * источники.
  *
  * @param pristine фильтр раздела в исходном виде — по нему известны ключи.
- * @param query параметры текущего адреса.
- * @returns `true`, если в адресе есть хотя бы один параметр фильтра.
+ * @param query параметры адреса.
+ * @returns параметры фильтра без поиска и посторонних параметров.
  */
-function hasFilterQuery(pristine: Filter, query: LocationQuery): boolean {
+function pickFilterQuery(
+  pristine: Filter,
+  query: LocationQuery,
+): LocationQuery {
   const filterKeys = collectGroupKeys([
     ...pristine.filters,
     ...(pristine.sources ?? []),
@@ -29,7 +38,42 @@ function hasFilterQuery(pristine: Filter, query: LocationQuery): boolean {
 
   filterKeys.add('source');
 
-  return Object.keys(query).some((queryKey) => filterKeys.has(queryKey));
+  return Object.fromEntries(
+    Object.entries(query).filter(([queryKey]) => filterKeys.has(queryKey)),
+  );
+}
+
+/**
+ * Проверяет, задаёт ли адрес страницы условия отбора или источники.
+ *
+ * @param pristine фильтр раздела в исходном виде — по нему известны ключи.
+ * @param query параметры текущего адреса.
+ * @returns `true`, если в адресе есть хотя бы один параметр фильтра.
+ */
+function hasFilterQuery(pristine: Filter, query: LocationQuery): boolean {
+  return Object.keys(pickFilterQuery(pristine, query)).length > 0;
+}
+
+/**
+ * Читает запомненный фильтр из куки. В куку может попасть что угодно,
+ * поэтому берутся только строки и списки строк.
+ *
+ * @param value содержимое куки.
+ * @returns параметры фильтра в виде параметров адреса.
+ */
+function parseSavedQuery(value: unknown): LocationQuery {
+  if (!isPlainObject(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      (entry): entry is [string, string | Array<string>] =>
+        typeof entry[1] === 'string'
+        || (Array.isArray(entry[1])
+          && entry[1].every((item) => typeof item === 'string')),
+    ),
+  );
 }
 
 /**
@@ -51,6 +95,12 @@ export async function useFilter(
 
   const filterKey = getFilterKey(key);
   const filter = useState<Filter | undefined>(filterKey, () => undefined);
+
+  // Выбор раздела ещё и в куке: он переживает перезагрузку и новый заход
+  const savedCookie = useCookie<unknown>(
+    `${SECTION_FILTER_STORE_KEY_PREFIX}${filterKey}`,
+    { maxAge: ONE_YEAR_IN_SECONDS, default: () => undefined },
+  );
 
   const search = useState<string | undefined>(`${filterKey}_search`, () => {
     const searchVal = route.query.search;
@@ -107,16 +157,24 @@ export async function useFilter(
       route.query,
     );
 
+    if (validatedDefaults.value) {
+      const saved = pickFilterQuery(validatedDefaults.value, finalQuery);
+
+      savedCookie.value = Object.keys(saved).length > 0 ? saved : undefined;
+    }
+
     if (!isEqual(route.query, finalQuery)) {
       // Якорь раздела страницы (например, умения класса) фильтры не трогают.
       router.replace({ query: finalQuery, hash: route.hash });
     }
   }
 
-  // Выбор раздела живёт в `useState` и переживает уход на другую страницу.
-  // При возвращении по ссылке без параметров он остаётся в силе; адрес с
-  // параметрами (ссылкой поделились) всегда важнее запомненного.
+  // Выбор раздела живёт в `useState` и переживает уход на другую страницу,
+  // а в куке — перезагрузку и новый заход. При возвращении по ссылке без
+  // параметров он остаётся в силе; адрес с параметрами (ссылкой поделились)
+  // всегда важнее запомненного.
   let isRememberedFilterKept = false;
+  let isSavedFilterRestored = false;
   let isFirstDefaultsRun = true;
 
   watch(
@@ -133,13 +191,24 @@ export async function useFilter(
         && !!filter.value
         && !hasFilterQuery(value, route.query);
 
+      const savedQuery =
+        isFirstDefaultsRun
+        && !filter.value
+        && !hasFilterQuery(value, route.query)
+          ? pickFilterQuery(value, parseSavedQuery(savedCookie.value))
+          : {};
+
+      isSavedFilterRestored = Object.keys(savedQuery).length > 0;
       isFirstDefaultsRun = false;
 
       if (isRememberedFilterKept) {
         return;
       }
 
-      const nextFilter = applyQueryToFilters(value, route.query);
+      const nextFilter = applyQueryToFilters(value, {
+        ...route.query,
+        ...savedQuery,
+      });
 
       filter.value = {
         ...nextFilter,
@@ -181,8 +250,10 @@ export async function useFilter(
   );
 
   // Запомненный выбор в адресе ещё не отражён, а вотчер выше не сработает:
-  // сам фильтр не менялся. Возвращаем параметры в адрес вручную.
-  if (isRememberedFilterKept) {
+  // сам фильтр не менялся. Возвращаем параметры в адрес вручную. Выбор из
+  // куки на сервере адрес не трогает: в браузере он придёт в `useState`
+  // и попадёт в адрес веткой запомненного выбора.
+  if (isRememberedFilterKept || (isSavedFilterRestored && import.meta.client)) {
     syncUrlWithFilter();
   }
 

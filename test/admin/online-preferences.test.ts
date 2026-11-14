@@ -68,6 +68,13 @@ describe('createPreferenceSummary', () => {
     expect(summary.total).toBe('4');
   });
 
+  it('передаёт пояснение настройки в сводку', () => {
+    const hint = 'Пояснение к теме';
+
+    expect(createPreferenceSummary({ ...section, hint }, null).hint).toBe(hint);
+    expect(createPreferenceSummary(section, null).hint).toBeUndefined();
+  });
+
   it('без данных ставит прочерки', () => {
     const summary = createPreferenceSummary(section, null);
 

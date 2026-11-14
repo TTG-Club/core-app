@@ -1,11 +1,23 @@
 <script setup lang="ts">
   import type { ClassDetailResponse, ClassLinkResponse } from '~classes/model';
 
+  import {
+    SECTION_COMPACT_LIST_SIZE,
+    SECTION_COMPACT_SPLIT_ID,
+  } from '~/shared/consts';
   import { ClassBody } from '~classes/body';
   import { ClassLink } from '~classes/link';
-  import { getClassMarkdown } from '~classes/model';
+  import {
+    CLASS_LIST_GROUP_FIELD,
+    CLASS_LIST_GROUP_SORT,
+    getClassGroupLabel,
+    getClassMarkdown,
+    sortClassesByGroup,
+  } from '~classes/model';
   import { FilterControls, useFilter } from '~infrastructure/filter';
-  import { UiDetailPane } from '~ui/detail-pane';
+  import { useListView } from '~infrastructure/list-presentation/composable';
+  import { UiDetailPane, UiDetailPaneEmpty } from '~ui/detail-pane';
+  import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkBig } from '~ui/skeleton';
 
@@ -45,26 +57,34 @@
     },
   );
 
+  // Классы в порядке экрана — по группам: по нему панель листает соседние
+  const orderedClasses = computed(() =>
+    classes.value ? sortClassesByGroup(classes.value) : undefined,
+  );
+
+  const listResetKey = computed(() =>
+    JSON.stringify({
+      filter: filterQuery.value,
+      search: search.value ?? '',
+    }),
+  );
+
   const {
     detailUrl,
     detailData: detailClass,
     isDetailLoading,
     isDetailError,
-    isDetailDismissed,
     detailUrlForCopy,
     detailEditUrl,
     handleCloseDetail,
+    detailNeighbours,
+    openDetail,
   } = useSectionDetail<ClassDetailResponse>({
     sectionPath: '/classes',
     apiBasePath: '/api/v2/classes',
-    items: classes,
+    items: orderedClasses,
     getParentUrl: (detail) => detail.parent?.url,
   });
-
-  // На телефоне страница класса листает соседние классы списка
-  useSectionNeighbours('/classes', () =>
-    classes.value?.map((link) => link.url),
-  );
 
   const markdown = useEntityMarkdown(detailClass, getClassMarkdown);
 
@@ -76,11 +96,18 @@
       ? { query: { ...route.query, detail: parentUrl } }
       : undefined;
   });
+
+  const { columns: listColumns } = useListView();
 </script>
 
 <template>
   <NuxtLayout
     name="section"
+    collapsible-controls
+    :list-default-size="SECTION_COMPACT_LIST_SIZE.default"
+    :list-min-size="SECTION_COMPACT_LIST_SIZE.min"
+    :list-max-size="SECTION_COMPACT_LIST_SIZE.max"
+    :split-id="SECTION_COMPACT_SPLIT_ID"
     title="Классы"
   >
     <template #controls>
@@ -105,13 +132,20 @@
           />
         </PageGrid>
 
-        <PageGrid v-else-if="status === 'success' && classes?.length">
-          <ClassLink
-            v-for="link in classes"
-            :key="link.url"
-            :character-class="link"
-          />
-        </PageGrid>
+        <GroupedList
+          v-else-if="status === 'success' && orderedClasses?.length"
+          :columns="listColumns"
+          :items="orderedClasses"
+          :reset-key="listResetKey"
+          :field="CLASS_LIST_GROUP_FIELD"
+          :separator-label="getClassGroupLabel"
+          :group-sort="CLASS_LIST_GROUP_SORT"
+          :active-item-key="detailUrl"
+        >
+          <template #default="{ item: characterClass }">
+            <ClassLink :character-class />
+          </template>
+        </GroupedList>
 
         <PageResult
           v-else
@@ -136,7 +170,9 @@
         :is-error="isDetailError"
         :back-to="backTo"
         copy-title
+        :neighbours="detailNeighbours"
         @close="handleCloseDetail"
+        @navigate="openDetail"
       >
         <ClassBody
           v-if="detailClass"
@@ -145,31 +181,10 @@
         />
       </UiDetailPane>
 
-      <div
-        v-else-if="isDetailDismissed"
-        class="flex h-full w-full flex-col items-center justify-center p-6 text-center select-none"
-      >
-        <div class="flex max-w-xs flex-col items-center gap-3">
-          <UIcon
-            name="tabler:click"
-            class="size-10 text-muted"
-          />
-
-          <h3 class="text-lg font-semibold text-highlighted">
-            Класс не выбран
-          </h3>
-
-          <p class="text-sm text-secondary">
-            Выберите класс из списка слева, чтобы просмотреть подробную
-            информацию
-          </p>
-        </div>
-      </div>
-
-      <UiDetailPane
+      <UiDetailPaneEmpty
         v-else
-        title=""
-        :is-loading="true"
+        title="Класс не выбран"
+        description="Выберите класс из списка, чтобы просмотреть подробную информацию"
       />
     </template>
   </NuxtLayout>

@@ -1,5 +1,9 @@
 import type { ComputedRef } from 'vue';
 
+import type { SourcePlatform } from '#shared/consts';
+
+import { OLD_SITE_SOURCE_PLATFORM, SOURCE_PLATFORM } from '#shared/consts';
+
 import {
   COMMENT_SECTION_LABELS,
   COMMENT_UNKNOWN_SECTION_LABEL,
@@ -13,6 +17,8 @@ import {
  */
 export interface CommentLocationSource {
   id: string;
+  /** С какого сайта комментарий; `null` — старая запись, она с этого сайта. */
+  sourcePlatform: SourcePlatform | null;
   section: string | null;
   url: string | null;
 }
@@ -21,6 +27,9 @@ export interface CommentLocationSource {
 export interface UseCommentLocationReturn {
   /** Русское название раздела; незнакомый показывается как есть. */
   sectionLabel: ComputedRef<string>;
+
+  /** Ссылка на страницу обсуждения; `undefined` — перейти некуда. */
+  pageLink: ComputedRef<string | undefined>;
 
   /** Ссылка на сам комментарий; `undefined` — адрес страницы неизвестен. */
   commentLink: ComputedRef<string | undefined>;
@@ -40,6 +49,12 @@ export interface UseCommentLocationReturn {
  * старые сборки сервиса его не присылали, — тогда ссылки нет, и вызывающий
  * код прячет переход.
  *
+ * `url` в записи — путь внутри того сайта, где оставлен комментарий. Комментарий
+ * с сайта 2014 открывается абсолютной ссылкой на него (база из
+ * `runtimeConfig.public.oldSiteUrl`): тем же роутером путь ведёт в 404 или в
+ * чужую сущность с совпавшим слагом. У других платформ (VTTG) страниц на сайте
+ * нет — ссылки тоже нет.
+ *
  * @param getComment Геттер комментария (сохраняет реактивность пропсов).
  */
 export function useCommentLocation(
@@ -55,16 +70,37 @@ export function useCommentLocation(
     return COMMENT_SECTION_LABELS[section] ?? section;
   });
 
-  function linkToComment(commentId: string): string | undefined {
-    const { url } = getComment();
+  const { oldSiteUrl } = useRuntimeConfig().public;
 
-    return url ? `${url}#${getCommentAnchorId(commentId)}` : undefined;
+  const pageLink = computed(() => {
+    const { sourcePlatform, url } = getComment();
+
+    if (!url) {
+      return undefined;
+    }
+
+    if (!sourcePlatform || sourcePlatform === SOURCE_PLATFORM) {
+      return url;
+    }
+
+    if (sourcePlatform === OLD_SITE_SOURCE_PLATFORM && oldSiteUrl) {
+      return `${oldSiteUrl}${url}`;
+    }
+
+    return undefined;
+  });
+
+  function linkToComment(commentId: string): string | undefined {
+    return pageLink.value
+      ? `${pageLink.value}#${getCommentAnchorId(commentId)}`
+      : undefined;
   }
 
   const commentLink = computed(() => linkToComment(getComment().id));
 
   return {
     sectionLabel,
+    pageLink,
     commentLink,
     linkToComment,
   };

@@ -10,8 +10,11 @@
   const sectionPath = useSectionDetailRedirect('items');
 
   const { data: item } = await useAsyncData(`item-${route.params.url}`, () =>
-    $fetch<ItemDetailResponse>(`/api/v2/item/${route.params.url}`),
+    $fetch<ItemDetailResponse>(`/api/v2/items/${route.params.url}`),
   );
+
+  // Запись могла переехать на новый адрес: по прежнему сервис отдаёт её же
+  useEntityUrlRedirect(() => item.value?.url);
 
   const markdown = useEntityMarkdown(item, getItemMarkdown);
 

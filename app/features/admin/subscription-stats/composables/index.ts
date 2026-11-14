@@ -1,0 +1,1 @@
+export { useBulkSubscriptionExtension } from './useBulkSubscriptionExtension';

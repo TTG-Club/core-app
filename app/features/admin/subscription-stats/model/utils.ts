@@ -1,6 +1,7 @@
 import type {
   AdminPayment,
   AdminSubscription,
+  BulkSubscriptionExtension,
   PaymentFilterValue,
   SubscriptionStatsSummary,
 } from './types';
@@ -8,7 +9,14 @@ import type {
 import { compact, sumBy, uniq } from 'es-toolkit';
 
 import {
+  BULK_EXTENSION_CONFIRM_SUFFIX,
+  BULK_EXTENSION_CONFIRM_VERB,
+  BULK_EXTENSION_DAY_FORMS,
+  BULK_EXTENSION_DAYS_PREFIX,
+  BULK_EXTENSION_DETAILS_SEPARATOR,
+  BULK_EXTENSION_USER_FORMS,
   PAYMENT_FILTER_ALL,
+  SUBSCRIPTION_STATS_NUMBER_FORMAT,
   SUBSCRIPTION_STATS_PERIOD_SEPARATOR,
 } from './constants';
 
@@ -108,4 +116,57 @@ export function getListPage<T>(
   const start = (page - 1) * pageSize;
 
   return items.slice(start, start + pageSize);
+}
+
+/**
+ * Склоняет число дней: «1 день», «3 дня», «20 дней».
+ */
+export function formatBulkExtensionDays(days: number): string {
+  return `${days} ${getPlural(days, BULK_EXTENSION_DAY_FORMS)}`;
+}
+
+/**
+ * Склоняет число пользователей: «1 пользователь», «5 пользователей».
+ */
+export function formatBulkExtensionUsers(count: number): string {
+  return `${SUBSCRIPTION_STATS_NUMBER_FORMAT.format(count)} ${getPlural(count, BULK_EXTENSION_USER_FORMS)}`;
+}
+
+/**
+ * Итог продления: «+7 дней · 132 пользователя».
+ */
+export function formatBulkExtensionSummary(
+  extension: Pick<BulkSubscriptionExtension, 'days' | 'extendedCount'>,
+): string {
+  return [
+    `${BULK_EXTENSION_DAYS_PREFIX}${formatBulkExtensionDays(extension.days)}`,
+    formatBulkExtensionUsers(extension.extendedCount),
+  ].join(BULK_EXTENSION_DETAILS_SEPARATOR);
+}
+
+/**
+ * Текст подтверждения: «132 пользователя получат +7 дней к окончанию подписки.».
+ */
+export function getBulkExtensionConfirmText(
+  activeSubscribers: number,
+  days: number,
+): string {
+  return [
+    formatBulkExtensionUsers(activeSubscribers),
+    BULK_EXTENSION_CONFIRM_VERB,
+    `${BULK_EXTENSION_DAYS_PREFIX}${formatBulkExtensionDays(days)}`,
+    BULK_EXTENSION_CONFIRM_SUFFIX,
+  ].join(' ');
+}
+
+/**
+ * Подробности строки журнала: дата продления и кто его сделал.
+ */
+export function formatBulkExtensionDetails(
+  formattedDate: string,
+  actorUsername: string | null,
+): string {
+  return compact([formattedDate, actorUsername]).join(
+    BULK_EXTENSION_DETAILS_SEPARATOR,
+  );
 }

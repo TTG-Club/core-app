@@ -39,6 +39,12 @@
         );
       }
 
+      if (event.days) {
+        details.push(
+          `+${event.days} ${ADMIN_SUBSCRIPTION_HISTORY_TEXT.daysSuffix}`,
+        );
+      }
+
       if (event.amount !== null && event.amount !== undefined) {
         details.push(
           `${event.amount} ${ADMIN_SUBSCRIPTION_HISTORY_TEXT.currency}`,

@@ -75,7 +75,7 @@ export function parseMagicItemBaseItemUrls(
  * Урон основы из «сырого» ответа предмета. Основной урон оружия — первая часть
  * урона; без неё показывать нечего.
  *
- * @param baseItemRawResponse «сырой» ответ `GET /api/v2/item/{url}/raw`.
+ * @param baseItemRawResponse «сырой» ответ `GET /api/v2/items/{url}/raw`.
  * @returns урон основы; `undefined` — предмет не оружие или урон не задан.
  */
 export function parseMagicItemBaseWeapon(

@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { RouteLocationRaw } from 'vue-router';
 
+  import { DmScreenAddButton } from '~dm-screen/add-button';
+
   import { CopyButton, CopyMarkdownButton } from '../copy-button';
 
   const {
@@ -75,6 +77,8 @@
       no-rel
     />
   </UTooltip>
+
+  <DmScreenAddButton :url="route.path" />
 
   <CopyMarkdownButton
     v-if="markdown"

@@ -1,94 +1,96 @@
+/*
+ * Тёмная тема: графитовые поверхности и уровни текста — по дизайн-системе
+ * perplexity.ai (odin) как есть; акцент — золото
+ * прежней тёмной темы, осветлённое до Lc 62 по APCA, чтобы читалось на графите.
+ *
+ * Текст намеренно приглушён для долгого чтения: основной Lc 66, заголовки 78.
+ * Цвета состояний подняты до той же яркости, что и акцент (Lc ~60);
+ * предупреждение — оранжевое, чтобы не путалось с золотом.
+ */
 html.dark {
-  /* Primary — золото на тёмно-синей подложке */
-  --color-primary-50: oklch(0.95 0.02 80);
-  --color-primary-100: oklch(0.9 0.04 80);
-  --color-primary-200: oklch(0.8 0.06 80);
-  --color-primary-300: oklch(0.7 0.07 80);
-  --color-primary-400: oklch(0.65 0.1 80);
-  --color-primary-500: oklch(0.6 0.12 80);
-  --color-primary-600: oklch(0.55 0.11 80);
-  --color-primary-700: oklch(0.5 0.1 80);
-  --color-primary-800: oklch(0.45 0.09 80);
-  --color-primary-900: oklch(0.4 0.08 80);
-  --color-primary-950: oklch(0.35 0.07 80);
+  --color-primary-50: #fbf2e3;
+  --color-primary-100: #f6e9d5;
+  --color-primary-200: #eedaba;
+  --color-primary-300: #e4c798;
+  --color-primary-400: #d7b06c; /* золото прежней тёмной темы: осветлено до Lc 62 (прежнее #af8842 — Lc 41), насыщенность −15% */
+  --color-primary-500: #a57710;
+  --color-primary-600: #93690d;
+  --color-primary-700: #815c0a;
+  --color-primary-800: #6f4f07;
+  --color-primary-900: #5e4205;
+  --color-primary-950: #4d3603;
 
-  /* Red */
-  --color-red-50: oklch(0.95 0.02 25);
-  --color-red-100: oklch(0.9 0.04 25);
-  --color-red-200: oklch(0.8 0.08 25);
-  --color-red-300: oklch(0.7 0.1 25);
-  --color-red-400: oklch(0.65 0.13 25);
-  --color-red-500: oklch(0.6 0.14 25);
-  --color-red-600: oklch(0.55 0.135 25);
-  --color-red-700: oklch(0.5 0.15 25);
-  --color-red-800: oklch(0.45 0.16 25);
-  --color-red-900: oklch(0.4 0.14 25);
-  --color-red-950: oklch(0.35 0.12 25);
+  --color-red-50: #fff2f2;
+  --color-red-100: #ffe4e5;
+  --color-red-200: #ffd1d2;
+  --color-red-300: #ffb8ba;
+  --color-red-400: #fd989e; /* Lc 62 на фоне, вровень с акцентом; у Perplexity #dc6973 */
+  --color-red-500: #c34a58;
+  --color-red-600: #a63143;
+  --color-red-700: #792b34;
+  --color-red-800: #5c1420;
+  --color-red-900: #330f13;
+  --color-red-950: #1f0a0c;
 
-  /* Yellow */
-  --color-yellow-50: oklch(0.95 0.02 80);
-  --color-yellow-100: oklch(0.9 0.04 80);
-  --color-yellow-200: oklch(0.8 0.06 80);
-  --color-yellow-300: oklch(0.7 0.07 80);
-  --color-yellow-400: oklch(0.65 0.1 80);
-  --color-yellow-500: oklch(0.6 0.12 80);
-  --color-yellow-600: oklch(0.55 0.11 80);
-  --color-yellow-700: oklch(0.5 0.1 80);
-  --color-yellow-800: oklch(0.45 0.09 80);
-  --color-yellow-900: oklch(0.4 0.08 80);
-  --color-yellow-950: oklch(0.35 0.07 80);
+  --color-yellow-50: #fff0e7;
+  --color-yellow-100: #ffe5d5;
+  --color-yellow-200: #fed2b5;
+  --color-yellow-300: #ffba8a;
+  --color-yellow-400: #fe9a4e; /* предупреждение увели в оранжевый, чтобы не путалось с золотым акцентом */
+  --color-yellow-500: #d87d36;
+  --color-yellow-600: #b2621d;
+  --color-yellow-700: #8d4804;
+  --color-yellow-800: #673200;
+  --color-yellow-900: #421d00;
+  --color-yellow-950: #230900;
 
-  /* Green */
-  --color-green-50: oklch(0.95 0.02 145);
-  --color-green-100: oklch(0.9 0.04 145);
-  --color-green-200: oklch(0.8 0.08 145);
-  --color-green-300: oklch(0.75 0.1 145);
-  --color-green-400: oklch(0.7 0.12 145);
-  --color-green-500: oklch(0.65 0.13 145);
-  --color-green-600: oklch(0.6 0.14 145);
-  --color-green-700: oklch(0.55 0.13 145);
-  --color-green-800: oklch(0.5 0.12 145);
-  --color-green-900: oklch(0.45 0.11 145);
-  --color-green-950: oklch(0.4 0.1 145);
+  --color-green-50: #eaf9e8;
+  --color-green-100: #d9f2d9;
+  --color-green-200: #bce8bb;
+  --color-green-300: #98da98;
+  --color-green-400: #6ec870; /* Lc 62 на фоне, вровень с акцентом; у Perplexity #539e55 */
+  --color-green-500: #328439;
+  --color-green-600: #136a22;
+  --color-green-700: #0c5218;
+  --color-green-800: #02390c;
+  --color-green-900: #0a2007;
+  --color-green-950: #061404;
 
-  /* Blue */
-  --color-blue-50: oklch(0.95 0.02 235);
-  --color-blue-100: oklch(0.9 0.04 235);
-  --color-blue-200: oklch(0.8 0.07 235);
-  --color-blue-300: oklch(0.7 0.09 235);
-  --color-blue-400: oklch(0.64 0.11 235);
-  --color-blue-500: oklch(0.58 0.12 235);
-  --color-blue-600: oklch(0.52 0.12 235);
-  --color-blue-700: oklch(0.46 0.11 235);
-  --color-blue-800: oklch(0.4 0.1 235);
-  --color-blue-900: oklch(0.34 0.09 235);
-  --color-blue-950: oklch(0.28 0.08 235);
+  --color-blue-50: #eef4fc;
+  --color-blue-100: #dbedff;
+  --color-blue-200: #c0e0fe;
+  --color-blue-300: #9dcfff;
+  --color-blue-400: #73bafb; /* Lc 62 на фоне, вровень с акцентом; у Perplexity #5691c7 */
+  --color-blue-500: #3778ac;
+  --color-blue-600: #1e608f;
+  --color-blue-700: #004c73;
+  --color-blue-800: #09334f;
+  --color-blue-900: #091d2e;
+  --color-blue-950: #06121c;
 
-  /* Gray */
-  --color-gray-50: oklch(0.96 0.002 220);
-  --color-gray-100: oklch(0.86 0.005 220);
-  --color-gray-200: oklch(0.76 0.008 220);
-  --color-gray-300: oklch(0.66 0.01 220);
-  --color-gray-400: oklch(0.6 0.01 220);
-  --color-gray-500: oklch(0.54 0.01 220);
-  --color-gray-600: oklch(0.48 0.01 220);
-  --color-gray-700: oklch(0.42 0.01 220);
-  --color-gray-800: oklch(0.38 0.01 220);
-  --color-gray-900: oklch(0.34 0.01 220);
-  --color-gray-950: oklch(0.28 0.01 220);
-
-  /* Neutral */
-  --color-neutral-50: oklch(0.88 0.005 95);
-  --color-neutral-100: oklch(0.79 0.006 95);
-  --color-neutral-200: oklch(0.74 0.006 95);
-  --color-neutral-300: oklch(0.69 0.006 95);
-  --color-neutral-400: oklch(0.64 0.006 95);
-  --color-neutral-500: oklch(0.6 0.006 95);
-  --color-neutral-600: oklch(0.56 0.006 95);
-  --color-neutral-700: oklch(0.51 0.006 95);
-  --color-neutral-800: oklch(0.46 0.006 95);
-  --color-neutral-900: oklch(0.41 0.006 95);
-  --color-neutral-950: oklch(0.36 0.006 95);
+  /* Нейтральная шкала: светлые ступени — уровни текста, тёмные — поверхности */
+  --color-gray-50: #d0d3d8; /* = text-highlighted */
+  --color-gray-100: #bcbfc4; /* = text */
+  --color-gray-200: #a7aaaf; /* = text-toned */
+  --color-gray-300: #9ea1a6;
+  --color-gray-400: #96989d;
+  --color-gray-500: #787b7f;
+  --color-gray-600: #5a5d61;
+  --color-gray-700: #393b40;
+  --color-gray-800: #2d2f33;
+  --color-gray-900: #212327;
+  --color-gray-950: #15171b;
+  --color-neutral-50: #d0d3d8; /* = text-highlighted */
+  --color-neutral-100: #bcbfc4; /* = text */
+  --color-neutral-200: #a7aaaf; /* = text-toned */
+  --color-neutral-300: #9ea1a6;
+  --color-neutral-400: #96989d;
+  --color-neutral-500: #787b7f;
+  --color-neutral-600: #5a5d61;
+  --color-neutral-700: #393b40;
+  --color-neutral-800: #2d2f33;
+  --color-neutral-900: #212327;
+  --color-neutral-950: #15171b;
 
   /* UI Primary */
   --ui-color-primary-50: var(--color-primary-50);
@@ -182,40 +184,34 @@ html.dark {
   --ui-color-neutral-950: var(--color-neutral-950);
 
   /* Nuxt UI variables */
-  --ui-text-dimmed: var(--color-gray-400); /* #a4a4a4 */
-  --ui-text-muted: var(--color-neutral-600); /* #d9d9d9 */
-  --ui-text-toned: var(--color-neutral-500); /* #d9d9d9 */
-  --ui-text: var(--color-neutral-100); /* #f8f8f8 */
-  --ui-text-highlighted: var(--color-neutral-50); /* #ffffff */
-  --ui-text-inverted: oklch(
-    0.98 0.008 235
-  ); /* #ffffff with subtle theme tint */
-  --ui-bg: oklch(0.18 0.025 235); /* #0d1a22 */
-  --ui-bg-muted: oklch(0.22 0.028 235); /* #19222A */
-  --ui-bg-elevated: oklch(0.24 0.03 235); /* #19222A */
-  --ui-bg-accented: oklch(0.28 0.035 235); /* #12212c */
-  --ui-bg-inverted: var(--color-neutral-50); /* #ffffff */
-  --ui-border: var(--color-gray-950); /* rgba(255, 255, 255, 0.08) */
-  --ui-border-muted: oklch(0.25 0.01 220); /* мягче обычной рамки, а не белая */
-  --ui-border-accented: var(--color-gray-900); /* rgba(255, 255, 255, 0.05) */
-  --ui-border-inverted: var(--color-neutral-50); /* #ffffff */
+  --ui-text-dimmed: #787b7f; /* Lc 46 — плейсхолдеры */
+  --ui-text-muted: #96989d; /* Lc 46 — вторичный текст */
+  --ui-text-toned: #a7aaaf; /* Lc 54 — подзаголовки */
+  --ui-text: #bcbfc4; /* Lc 66 — приглушён для долгого чтения (у Perplexity #dbdee3, Lc 85) */
+  --ui-text-highlighted: #d0d3d8; /* Lc 78 — заголовки */
+  --ui-text-inverted: #15171b; /* --fg-inverse */
+  --ui-bg: #1b1d21; /* --bg-raised: карточки, меню, модалки */
+  --ui-bg-muted: #15171b; /* --bg-base: страница */
+  --ui-bg-elevated: #212327; /* odin-300 */
+  --ui-bg-accented: #27292d; /* odin-400: поля ввода */
+  --ui-bg-inverted: #dbdee3; /* --bg-inverse */
+  --ui-border: #313337; /* --border-base, 14% */
+  --ui-border-muted: #232529; /* --border-soft, 7% */
+  --ui-border-accented: #3d3f43; /* --border-focus, 20% */
+  --ui-border-inverted: #dbdee3;
 
-  --color-bg-menu:
-    135deg, oklch(0.308 0.026 235.045 / 0.78), oklch(0.226 0.036 240.705 / 0.87);
-
-  --color-hover: oklch(1 0 89.876 / 0.05);
-  --color-link: var(--color-primary-300);
-
-  /* Клетка фона PageBackdrop */
-  --color-backdrop-grid: var(--ui-border);
+  --color-bg-main-gradient: to top, #15171b 0%, #15171b 100%;
+  --color-bg-menu: 135deg, rgb(27 29 33 / 0.88), rgb(21 23 27 / 0.92);
+  --color-hover: rgb(219 222 227 / 0.05);
+  --color-link: var(--color-primary-400); /* ссылки = акцент */
+  --color-backdrop-grid: var(--ui-border-muted);
 
   /* Карта деревни в шапке главной — рисунок в ночной палитре — и её бледность.
      Растровые копии hero-map-dark.svg (scripts/render-hero-map.mjs): весь
      холст и середина для экранов уже 768px */
   --hero-map-image: url('/img/home/hero-map-dark.webp');
   --hero-map-image-sm: url('/img/home/hero-map-dark-sm.webp');
-  --hero-map-opacity: 0.6;
-
+  --hero-map-opacity: 0.45;
   /* Бумага и тушь карты — ими нарисованы повозка и дым поверх неё
      (HomeHeroMotion). Совпадают с --paper и --ink в hero-map-dark.svg */
   --hero-map-paper: oklch(0.42 0.03 230);
@@ -232,11 +228,12 @@ html.dark {
   --color-searchanel-800: #304a66;
   --color-searchanel-900: #212e3d;
 
-  /* Logo — палитра VTTG (logo-dark.svg): три вертикальных градиента */
-  --color-logo-stroke-top: #83bdc8;
-  --color-logo-stroke-bottom: #21596a;
-  --color-logo-dice-top: #bfebea;
-  --color-logo-dice-bottom: #296f7b;
-  --color-logo-tree-top: #d9efee;
-  --color-logo-tree-bottom: #6ca8a9;
+  /* Logo — всё в золоте акцента; кость темнее обода и дерева, чтобы читалась
+     отдельной фигурой (серая кость рядом с золотом смотрелась холодной) */
+  --color-logo-stroke-top: #ecd3a2;
+  --color-logo-stroke-bottom: #a57710;
+  --color-logo-dice-top: #d7b06c;
+  --color-logo-dice-bottom: #6f4f07;
+  --color-logo-tree-top: #f3e2bd;
+  --color-logo-tree-bottom: #d7b06c;
 }

@@ -151,7 +151,16 @@
     load: loadToolCatalog,
   } = useToolCatalog();
 
-  void loadToolCatalog();
+  /**
+   * Ошибка каталога мастер не роняет: предыстория разберётся и без названий.
+   *
+   * @param error причина сбоя загрузки каталога.
+   */
+  function logToolCatalogError(error: unknown) {
+    consola.error(BACKGROUND_WIZARD_LABELS.toolCatalogErrorLog, error);
+  }
+
+  const toolCatalogLoading = loadToolCatalog().catch(logToolCatalogError);
 
   // Источники берутся из глобальной настройки профиля — визард не показывает
   // предыстории из отключённых книг. Запрос ждём до списка: иначе первая выдача
@@ -570,6 +579,7 @@
         || detail.skillsText
         || detail.toolChoice
         || detail.toolFixed.length
+        || detail.hasUnnamedTools
         || grantChoices.value.length,
       ),
       feat: Boolean(detail.featUrl || detail.featChoices.length),
@@ -713,6 +723,25 @@
     const choice = backgroundDetail.value?.toolChoice;
 
     return choice ? choiceControl(choice, backgroundOrigin.value) : null;
+  });
+
+  /**
+   * Приписка к фиксированным инструментам: «нет» — предыстория их не даёт;
+   * подсказка — даёт, но лист не нашёл карточку и владение не выдаст. Пусто —
+   * все инструменты показаны бейджами.
+   */
+  const toolNote = computed(() => {
+    const detail = backgroundDetail.value;
+
+    if (!detail) {
+      return '';
+    }
+
+    if (detail.hasUnnamedTools) {
+      return BACKGROUND_WIZARD_LABELS.toolUnavailable;
+    }
+
+    return detail.toolFixed.length ? '' : BACKGROUND_WIZARD_LABELS.toolEmpty;
   });
 
   /** Собственные выборы предыстории единым пикером. */
@@ -874,7 +903,15 @@
       { method: 'GET', retry: 0 },
     );
 
-    return parseBackgroundDetail(response, skillNames.value);
+    // Ссылки на инструменты бывают без названия — его даёт каталог, поэтому
+    // разбор ждёт фоновую загрузку.
+    await toolCatalogLoading;
+
+    return parseBackgroundDetail(
+      response,
+      skillNames.value,
+      toolCatalogItems.value,
+    );
   }
 
   async function fetchFeatDetail(url: string) {
@@ -1407,10 +1444,10 @@
                   </UBadge>
 
                   <span
-                    v-if="!backgroundDetail.toolFixed.length"
+                    v-if="toolNote"
                     class="text-sm text-dimmed italic"
                   >
-                    {{ BACKGROUND_WIZARD_LABELS.toolEmpty }}
+                    {{ toolNote }}
                   </span>
                 </div>
               </div>

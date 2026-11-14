@@ -41,7 +41,7 @@
     feat: 'feats',
     background: 'backgrounds',
     magicItem: 'magic-items',
-    item: 'item',
+    item: 'items',
     glossary: 'glossary',
   };
 

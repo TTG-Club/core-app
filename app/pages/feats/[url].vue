@@ -13,6 +13,9 @@
     $fetch<FeatDetailResponse>(`/api/v2/feats/${route.params.url}`),
   );
 
+  // Запись могла переехать на новый адрес: по прежнему сервис отдаёт её же
+  useEntityUrlRedirect(() => feat.value?.url);
+
   const markdown = useEntityMarkdown(feat, getFeatMarkdown);
 
   useSeoMeta({

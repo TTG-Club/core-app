@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { CreateGameReportRequest } from '~find-game/model';
 
+  import { omit } from 'es-toolkit';
   import { StatusCodes } from 'http-status-codes';
 
   import { ACTION_LABELS } from '~/shared/consts';
@@ -9,13 +10,16 @@
   import {
     useFindGameToast,
     useGameDetail,
+    useGameReviewTargets,
     useParticipantNames,
   } from '~find-game/composables';
   import { GameApplyModal } from '~find-game/form';
   import {
     GameActions,
+    GameInactivityAlert,
     GameInviteCard,
     GameOverview,
+    GameReviewModal,
     GameSummaryCard,
   } from '~find-game/game';
   import {
@@ -36,6 +40,7 @@
     GAME_DETAIL_TABS,
     GAME_GUEST_NOTICE_DESCRIPTION,
     GAME_GUEST_NOTICE_TITLE,
+    GAME_KEPT_ACTIVE_TOAST,
     GAME_LEFT_TOAST,
     GAME_RAISE_ERROR_TITLE,
     GAME_RAISE_LIMIT_HINT,
@@ -55,6 +60,10 @@
     INVITE_CODE_QUERY_KEY,
     REGISTRATION_REJECTED_REASON_TITLE,
     reportGame,
+    REVIEW_OPEN_MASTER_LABEL,
+    REVIEW_OPEN_PLAYERS_LABEL,
+    REVIEW_OPEN_QUERY_KEY,
+    REVIEW_OPEN_QUERY_VALUE,
     SESSION_REGISTRATION_STATUS_COLORS,
     SESSION_REGISTRATION_STATUS_LABELS,
   } from '~find-game/model';
@@ -110,6 +119,7 @@
     areSessionsLoading,
     isApplicationProfileLoading,
     isGameLoading,
+    keepActive,
     openRecruitment,
     ownParticipationBySession,
     ownRegistration,
@@ -126,11 +136,86 @@
 
   const isBusy = ref(false);
 
+  /**
+   * Оценки за игру. Гостю оценивать некого, поэтому список целей грузится
+   * только вошедшему: игроку — мастер, мастеру — сыгравшие игроки.
+   */
+  const reviewGameId = computed(() =>
+    abilities.value.needsSignIn ? null : (game.value?.id ?? null),
+  );
+
+  const {
+    targets: reviewTargets,
+    hasTargets: hasReviewTargets,
+    hasUnreviewed: hasUnreviewedTargets,
+    isMasterReview,
+    refresh: refreshReviewTargets,
+  } = useGameReviewTargets(reviewGameId);
+
+  const isReviewOpen = ref(false);
+
+  const reviewButtonLabel = computed(() =>
+    isMasterReview.value ? REVIEW_OPEN_MASTER_LABEL : REVIEW_OPEN_PLAYERS_LABEL,
+  );
+
+  // Кнопка зовёт, пока кто-то не оценён, и уходит в тень, когда оценки
+  // поставлены: поправить их можно, но это уже не главное действие.
+  const reviewButtonVariant = computed(() =>
+    hasUnreviewedTargets.value ? 'solid' : 'outline',
+  );
+
+  /** Пришли из напоминания об оценке: окно открывается само. */
+  const isReviewRequested = computed(
+    () => route.query[REVIEW_OPEN_QUERY_KEY] === REVIEW_OPEN_QUERY_VALUE,
+  );
+
+  // Окно открывается один раз: параметр тут же убирается из адреса, поэтому
+  // повторного срабатывания после закрытия окна нет.
+  watch(
+    [isReviewRequested, hasReviewTargets],
+    ([requested, hasTargets]) => {
+      if (!requested || !hasTargets) {
+        return;
+      }
+
+      isReviewOpen.value = true;
+
+      void navigateTo(
+        { query: omit(route.query, [REVIEW_OPEN_QUERY_KEY]) },
+        { replace: true },
+      );
+    },
+    { immediate: true },
+  );
+
+  /** Открывает окно оценки за игру. */
+  function openReview(): void {
+    isReviewOpen.value = true;
+  }
+
   const isNotFound = computed(
     () => getFindGameStatus(gameError.value) === StatusCodes.NOT_FOUND,
   );
 
   const isError = computed(() => gameStatus.value === 'error');
+
+  /**
+   * Срок автоотмены брошенной игры. Сервис отдаёт его только мастеру, но
+   * вопрос уместен лишь у открытой игры — у закрытой отменять уже нечего.
+   */
+  const autoCancelAt = computed(() =>
+    abilities.value.isMaster && game.value?.status === 'OPEN'
+      ? game.value.autoCancelAt
+      : null,
+  );
+
+  /**
+   * Строка столбцов страницы: вопрос об актуальности занимает первую во всю
+   * ширину, чтобы и на телефоне мастер увидел его раньше сводки.
+   */
+  const columnRowClass = computed(() =>
+    autoCancelAt.value ? 'lg:row-start-2' : 'lg:row-start-1',
+  );
 
   const detailTabs = computed(() => {
     const showFinance =
@@ -257,6 +342,11 @@
     runAction(GAME_REPORT_SENT_TOAST, () =>
       reportGame(reportedGame.id, request),
     );
+  }
+
+  /** Подтверждает, что игра ещё актуальна: автоотмена снимается. */
+  function handleKeepActive(): void {
+    runAction(GAME_KEPT_ACTIVE_TOAST, keepActive);
   }
 
   /** Закрывает набор: объявление уходит из поиска, игра у своих остаётся. */
@@ -471,7 +561,18 @@
         v-else
         class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start"
       >
-        <div class="flex flex-col gap-4 lg:col-start-2 lg:row-start-1">
+        <GameInactivityAlert
+          v-if="autoCancelAt"
+          class="lg:col-span-2"
+          :auto-cancel-at="autoCancelAt"
+          :busy="isBusy"
+          @keep-active="handleKeepActive"
+        />
+
+        <div
+          class="flex flex-col gap-4 lg:col-start-2"
+          :class="columnRowClass"
+        >
           <GameSummaryCard
             :game="game"
             :next-session-at="nextSessionAt"
@@ -482,6 +583,15 @@
                 v-if="!abilities.needsSignIn"
                 class="flex flex-col gap-2 border-t border-default pt-4"
               >
+                <UButton
+                  v-if="hasReviewTargets"
+                  block
+                  icon="tabler:thumb-up"
+                  :variant="reviewButtonVariant"
+                  :label="reviewButtonLabel"
+                  @click.left.exact.prevent="openReview"
+                />
+
                 <UButton
                   v-if="abilities.canApply"
                   block
@@ -551,7 +661,10 @@
           />
         </div>
 
-        <div class="flex flex-col gap-4 lg:col-start-1 lg:row-start-1">
+        <div
+          class="flex flex-col gap-4 lg:col-start-1"
+          :class="columnRowClass"
+        >
           <GameOverview :game="game" />
 
           <!-- Гостю расписание не отдаётся сервисом, поэтому на его месте
@@ -635,6 +748,13 @@
               :game="game"
               :loading="isBusy"
               @submit="handleApply"
+            />
+
+            <GameReviewModal
+              v-model:open="isReviewOpen"
+              :game="game"
+              :targets="reviewTargets"
+              @saved="refreshReviewTargets"
             />
           </template>
         </div>

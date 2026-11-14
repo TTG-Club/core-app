@@ -8,6 +8,7 @@ import { chunk } from 'es-toolkit';
 import { FetchError } from 'ofetch';
 
 import { MAILING_CHUNK_SIZE } from '#shared/consts';
+import { toCodeContentRequest } from '~admin/subscriptions/model';
 
 import {
   getEmptyMailingCampaign,
@@ -65,6 +66,8 @@ export function useMailingCampaign() {
   const campaign = useLocalStorage<MailingCampaign>(
     MAILING_CAMPAIGN_STORAGE_KEY,
     getEmptyMailingCampaign(),
+    // Отчёт, сохранённый до появления новых полей, дополняется значениями по умолчанию.
+    { mergeDefaults: true },
   );
 
   const isSending = ref(false);
@@ -102,7 +105,7 @@ export function useMailingCampaign() {
         body: {
           subject: letter.subject,
           bodyText: letter.bodyText,
-          rewardTier: letter.rewardTier,
+          ...letter.content,
           label: letter.label || undefined,
           recipients,
         },
@@ -201,7 +204,7 @@ export function useMailingCampaign() {
       {
         subject: form.subject,
         bodyText: form.bodyText,
-        rewardTier: form.rewardTier,
+        content: toCodeContentRequest(form.content),
         label: form.label,
       },
       emails.map((email) => ({ email })),
@@ -229,7 +232,7 @@ export function useMailingCampaign() {
       {
         subject: campaign.value.subject,
         bodyText: campaign.value.bodyText,
-        rewardTier: campaign.value.rewardTier,
+        content: campaign.value.content,
         label: campaign.value.label,
       },
       failed.map((result) => ({

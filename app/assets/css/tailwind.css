@@ -25,9 +25,50 @@
     'Liberation Mono', 'Courier New', monospace;
 
   --color-hover: var(--color-hover);
+
+  /* Плавное появление содержимого на месте прежнего (`animate-appear`):
+     только прозрачность, вёрстка не пересчитывается */
+  --animate-appear: appear 0.25s ease-out both;
+
+  @keyframes appear {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
 }
 
 @variant svifty7 (&:where(.svifty7, .svifty7 *));
+
+/*
+ * Режим «производительность» (настройки отображения): размытие фона под
+ * элементом видеокарта пересчитывает на каждом кадре, пока рядом что-то
+ * движется, — на слабой графике от этого дёргаются меню и прокрутка.
+ * Отключается разом у всего сайта, в том числе у компонентов Nuxt UI.
+ */
+html[data-graphics='performance'] *,
+html[data-graphics='performance'] *::before,
+html[data-graphics='performance'] *::after {
+  /* stylelint-disable-next-line property-no-vendor-prefix */
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Вариант для замены полупрозрачного фона плотным, когда размытия нет. */
+@custom-variant performance (html[data-graphics='performance'] &);
+
+/*
+ * Плитка длинного списка: пока она за экраном, браузер не раскладывает и не
+ * рисует её содержимое, а место держит по запомненной высоте (до первого
+ * показа — по высоте обычной плитки). Поиск по странице такие плитки находит.
+ */
+@utility lazy-render-tile {
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 4rem;
+}
 
 @utility hidden-scrollbar {
   @apply overflow-auto;

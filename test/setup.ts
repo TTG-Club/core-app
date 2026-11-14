@@ -2,8 +2,10 @@ import { consola } from 'consola';
 import { createError } from 'h3';
 
 import { getErrorResponse, getPlural, getSlug } from '#shared/utils';
+import { convertKeyboardLayout } from '~/utils/convertKeyboardLayout';
 import { createEntityId } from '~/utils/createEntityId';
 import { getModifier } from '~/utils/modifier';
+import { withLayoutFallback } from '~/utils/withLayoutFallback';
 import { z } from '~/utils/zod';
 
 /**
@@ -18,6 +20,7 @@ const TEST_ORIGIN = 'https://ttg.club';
 
 Object.assign(globalThis, {
   consola,
+  convertKeyboardLayout,
   createEntityId,
   createError,
   getErrorResponse,
@@ -25,6 +28,7 @@ Object.assign(globalThis, {
   getPlural,
   getSlug,
   getOrigin: () => TEST_ORIGIN,
+  withLayoutFallback,
   z,
 });
 

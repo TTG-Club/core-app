@@ -1,7 +1,10 @@
 import type { Level, NameResponse, SourceResponse } from '~/shared/types';
 import type { RenderNode } from '~ui/markup';
+import type { StartingEquipmentOptionResponse } from '~ui/starting-equipment';
 
 import type { ClassLinkResponse } from './link';
+
+import { getStartingEquipmentNode } from '~ui/starting-equipment';
 
 export interface ClassDetailResponse {
   url: string;
@@ -16,7 +19,8 @@ export interface ClassDetailResponse {
   primaryCharacteristics: string;
   username: string;
   proficiency: ClassProficiency;
-  equipment: RenderNode;
+  equipment: RenderNode; // снаряжение текстом (легаси)
+  startingEquipment?: Array<StartingEquipmentOptionResponse> | null; // снаряжение вариантами
   savingThrows: string;
   table: Array<ClassTable>;
   features: Array<ClassFeature>;
@@ -197,4 +201,18 @@ export enum CasterType {
   FULL = 'FULL',
   PACT = 'PACT',
   MULTICLASS = 'MULTICLASS',
+}
+
+/**
+ * Стартовое снаряжение класса для страницы. Варианты «А или Б» главнее
+ * прежнего свободного текста: текст — легаси, у переведённых записей он пуст,
+ * а где остался — повторил бы варианты.
+ *
+ * @param detail деталь класса.
+ * @returns разметка снаряжения; пусто — снаряжения нет (у подкласса).
+ */
+export function getClassEquipmentNode(
+  detail: Pick<ClassDetailResponse, 'equipment' | 'startingEquipment'>,
+): RenderNode {
+  return getStartingEquipmentNode(detail.startingEquipment) || detail.equipment;
 }

@@ -46,6 +46,7 @@ import type {
   SpellDamageFormulas,
   StartingEquipmentItem,
   StartingEquipmentOption,
+  ToolCatalogEntry,
 } from './types';
 
 import { clamp, uniq, uniqBy } from 'es-toolkit';
@@ -1905,7 +1906,7 @@ const itemSearchResponseSchema = z
   .catch([]);
 
 /**
- * Валидация ответа `GET /api/v2/item/search` и приведение к списку каталога.
+ * Валидация ответа `GET /api/v2/items/search` и приведение к списку каталога.
  * Битый ответ даёт пустой список, а не исключение.
  *
  * @param input сырой ответ поиска предметов.
@@ -2162,7 +2163,7 @@ const itemDetailSchema = z.object({
 });
 
 /**
- * Валидация детального ответа `GET /api/v2/item/{url}`.
+ * Валидация детального ответа `GET /api/v2/items/{url}`.
  *
  * @param input сырой детальный ответ предмета.
  * @returns деталь предмета или null при неожиданном ответе.
@@ -2200,7 +2201,7 @@ const ARMOR_DEXTERITY_MOD_MAP: Record<ArmorRawDexterityMod, ArmorDexterityMod> =
   };
 
 /**
- * Схема «сырого» ответа предмета `GET /api/v2/item/{url}/raw` в части доспеха.
+ * Схема «сырого» ответа предмета `GET /api/v2/items/{url}/raw` в части доспеха.
  * Форма — как у формы редактора предметов (`ArmorCreate`): объект `armor` с
  * числовым КД, правилом Ловкости и пометкой помехи Скрытности; у не-доспехов
  * приходит null.
@@ -2235,7 +2236,7 @@ function isShieldArmor(category: string, item: ItemSummary): boolean {
 /**
  * Разбор параметров доспеха из «сырого» ответа предмета для подсчёта КД.
  *
- * @param input сырой ответ `GET /api/v2/item/{url}/raw`.
+ * @param input сырой ответ `GET /api/v2/items/{url}/raw`.
  * @param item уже разобранная деталь предмета (имя, типы — для признака щита).
  * @returns параметры доспеха или null (не доспех либо нет данных).
  */
@@ -2462,7 +2463,7 @@ function parseWeaponDamageParts(
  * Урон берётся из частей-формул, а без них — из прежней связки «кости + тип»,
  * как у записей, сохранённых до перехода на формулы.
  *
- * @param input сырой ответ `GET /api/v2/item/{url}/raw`.
+ * @param input сырой ответ `GET /api/v2/items/{url}/raw`.
  * @returns параметры оружия или null (не оружие либо нет данных).
  */
 export function parseItemWeapon(input: unknown): InventoryWeapon | null {
@@ -3539,15 +3540,40 @@ interface BackgroundRef {
 }
 
 /**
+ * Ссылки на инструменты с названиями из каталога. Снимок названия в ссылке
+ * необязателен: записи, сохранённые без него, иначе выпали бы из листа, и
+ * предыстория показывала бы «инструмент: нет». Снимок, если он есть, главнее.
+ *
+ * @param toolRefs ссылки на карточки инструментов.
+ * @param toolEntries инструменты каталога сайта.
+ * @returns те же ссылки; ненайденная в каталоге остаётся без названия.
+ */
+function nameToolRefs(
+  toolRefs: BackgroundRef[],
+  toolEntries: ToolCatalogEntry[],
+): BackgroundRef[] {
+  const toolNamesByUrl = new Map(
+    toolEntries.map((toolEntry) => [toolEntry.url, toolEntry.name]),
+  );
+
+  return toolRefs.map((reference) => ({
+    url: reference.url,
+    name: reference.name || toolNamesByUrl.get(reference.url) || null,
+  }));
+}
+
+/**
  * Владения инструментами из ссылок мастерской.
  *
- * @param refs ссылки на карточки инструментов.
+ * @param toolRefs ссылки на карточки инструментов.
+ * @param toolEntries инструменты каталога — названия ссылкам без снимка.
  * @returns владения с подписью и адресом карточки.
  */
 function toToolProficiencies(
-  refs: BackgroundRef[],
+  toolRefs: BackgroundRef[],
+  toolEntries: ToolCatalogEntry[],
 ): CharacterToolProficiency[] {
-  return refs
+  return nameToolRefs(toolRefs, toolEntries)
     .filter((reference) => reference.name)
     .map((reference) => ({ name: reference.name ?? '', url: reference.url }));
 }
@@ -3558,10 +3584,12 @@ function toToolProficiencies(
  * выбор»).
  *
  * @param choice блок выбора из ответа.
+ * @param toolEntries инструменты каталога — названия ссылкам без снимка.
  * @returns выбор для мастера; null — выбора у предыстории нет.
  */
 function toBackgroundToolChoice(
   choice: { count: number | null; from: BackgroundRef[] } | null,
+  toolEntries: ToolCatalogEntry[],
 ): ClassChoice | null {
   if (!choice?.count || choice.count < 1) {
     return null;
@@ -3572,7 +3600,7 @@ function toBackgroundToolChoice(
     kind: 'tool',
     label: BACKGROUND_TOOL_CHOICE_LABEL,
     count: choice.count,
-    listed: choice.from
+    listed: nameToolRefs(choice.from, toolEntries)
       .filter((reference) => reference.name)
       .map((reference) => reference.name ?? ''),
   };
@@ -3601,11 +3629,13 @@ function hasOwnBackgroundGrants(grants: FeatSummary): boolean {
  *
  * @param input сырой детальный ответ предыстории.
  * @param skillNames имена всех навыков персонажа (для распознавания навыков).
+ * @param toolEntries инструменты каталога — названия ссылкам без снимка.
  * @returns деталь предыстории или null при неожиданном ответе.
  */
 export function parseBackgroundDetail(
   input: unknown,
   skillNames: string[],
+  toolEntries: ToolCatalogEntry[],
 ): BackgroundSummary | null {
   const result = backgroundDetailSchema.safeParse(input);
 
@@ -3615,12 +3645,16 @@ export function parseBackgroundDetail(
 
   const detail = result.data;
 
-  const toolFixed: CharacterToolProficiency[] = toToolProficiencies(
+  const linkedTools = toToolProficiencies(
     detail.toolProficiencies,
+    toolEntries,
   );
+
+  const toolFixed: CharacterToolProficiency[] = [...linkedTools];
 
   let toolChoice: ClassChoice | null = toBackgroundToolChoice(
     detail.toolChoice,
+    toolEntries,
   );
 
   // Текст читается, только пока владение не задано ссылками: у переведённых
@@ -3641,6 +3675,12 @@ export function parseBackgroundDetail(
       }
     }
   }
+
+  // Ссылка есть, а названия ей не нашлось ни в каталоге, ни в тексте: владение
+  // предыстория даёт, но выдать его лист не может.
+  const hasUnnamedTools =
+    detail.toolProficiencies.length > linkedTools.length
+    && toolFixed.length === linkedTools.length;
 
   const feat = parseFeatMarker(detail.feat);
 
@@ -3665,6 +3705,7 @@ export function parseBackgroundDetail(
     ),
     skillsText: detail.skillProficiencies,
     toolFixed,
+    hasUnnamedTools,
     toolChoice,
     featUrl: feat.url,
     featName: feat.name,

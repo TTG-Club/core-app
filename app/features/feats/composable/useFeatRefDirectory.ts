@@ -76,7 +76,7 @@ const REF_SOURCES: Record<FeatRefKind, FeatRefSource> = {
   },
   ITEM: {
     list: undefined,
-    detail: '/api/v2/item',
+    detail: '/api/v2/items',
     route: '/items',
   },
 };

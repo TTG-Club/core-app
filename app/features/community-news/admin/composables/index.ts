@@ -1,0 +1,1 @@
+export { useCommunityNewsAdmin } from './useCommunityNewsAdmin';

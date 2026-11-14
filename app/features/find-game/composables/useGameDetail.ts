@@ -28,6 +28,7 @@ import {
   fetchOwnGameRegistration,
   fetchOwnSessionParticipation,
   hasCompletePlayerProfile,
+  keepGameActive,
   openGameRecruitment,
   raiseGame,
   resolveGameViewerAbilities,
@@ -438,6 +439,13 @@ export function useGameDetail(
     await refreshGame();
   }
 
+  /** Подтверждает, что игра ещё актуальна: снимает срок автоотмены. */
+  async function keepActive(): Promise<void> {
+    await keepGameActive(currentGameId.value);
+
+    await refreshGame();
+  }
+
   /**
    * Мягко удаляет игру (администратор или модератор).
    * @param reason Причина для административного аудита.
@@ -475,6 +483,7 @@ export function useGameDetail(
     completeSession,
     duplicateSession,
     duplicateGame,
+    keepActive,
     openRecruitment,
     raise,
     refreshAll,

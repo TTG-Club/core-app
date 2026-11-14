@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { CODE_ACHIEVEMENT_MAX_LENGTH } from '#shared/consts';
+
 import {
   CODES_BATCH_MAX,
   CODES_BATCH_MIN,
@@ -10,12 +12,8 @@ import {
   SUBSCRIPTION_TYPES,
 } from './constants';
 
-/**
- * Схема формы выпуска кодов. Только поле-уровневые правила (count 1..1000, срок >= 1).
- * Тир необязателен. Правило «код должен нести хотя бы что-то» проверяется отдельно
- * в onSubmit (тостом) и на бэкенде — чтобы не помечать поле тира как обязательное.
- */
-export const createCodesSchema = z.object({
+/** Поля содержимого кода — общие для выпуска пачки и рассылки. */
+export const codeContentSchemaShape = {
   rewardTier: z.enum(REWARD_TIERS).nullable(),
   includeSubscription: z.boolean(),
   subscriptionType: z.enum(SUBSCRIPTION_TYPES),
@@ -25,7 +23,16 @@ export const createCodesSchema = z.object({
     .min(SUBSCRIPTION_MONTHS_MIN, `Минимум ${SUBSCRIPTION_MONTHS_MIN} мес.`)
     .max(SUBSCRIPTION_MONTHS_MAX, `Максимум ${SUBSCRIPTION_MONTHS_MAX} мес.`),
   perks: z.array(z.enum(REWARD_PERKS)),
-  achievements: z.array(z.string()),
+  achievements: z.array(z.string().max(CODE_ACHIEVEMENT_MAX_LENGTH)),
+};
+
+/**
+ * Схема формы выпуска кодов. Только поле-уровневые правила (count 1..1000, срок >= 1).
+ * Тир необязателен. Правило «код должен нести хотя бы что-то» проверяется отдельно
+ * в onSubmit (тостом) и на бэкенде — чтобы не помечать поле тира как обязательное.
+ */
+export const createCodesSchema = z.object({
+  ...codeContentSchemaShape,
   count: z
     .number()
     .int()

@@ -71,6 +71,15 @@
     );
   });
 
+  // Короткие настройки стоят парой колонок, длинные — строками под ними
+  const compactSummaries = computed(() =>
+    preferenceSummaries.value.filter(({ wide }) => !wide),
+  );
+
+  const wideSummaries = computed(() =>
+    preferenceSummaries.value.filter(({ wide }) => wide),
+  );
+
   /**
    * Переключает период, за который показаны настройки отображения.
    */
@@ -101,11 +110,20 @@
       />
     </template>
 
-    <div
-      class="grid h-full divide-y divide-default sm:grid-cols-2 sm:divide-x sm:divide-y-0"
-    >
+    <div class="flex h-full flex-col divide-y divide-default">
+      <div
+        class="grid divide-y divide-default sm:grid-cols-2 sm:divide-x sm:divide-y-0"
+      >
+        <AdminOnlinePreferenceBreakdown
+          v-for="preferenceSummary in compactSummaries"
+          :key="preferenceSummary.name"
+          :preference-summary="preferenceSummary"
+          :is-pending="isPending"
+        />
+      </div>
+
       <AdminOnlinePreferenceBreakdown
-        v-for="preferenceSummary in preferenceSummaries"
+        v-for="preferenceSummary in wideSummaries"
         :key="preferenceSummary.name"
         :preference-summary="preferenceSummary"
         :is-pending="isPending"

@@ -53,8 +53,8 @@
       'group/panel relative flex min-w-0 flex-col overflow-hidden',
       // Матовое стекло: фоновая анимация частиц просвечивает сквозь панель, но
       // размыто — так она читается как глубина под содержимым, а не как рябь
-      // под текстом
-      'rounded-xl border border-default bg-muted/55 backdrop-blur-sm',
+      // под текстом. В режиме «производительность» размытия нет — фон плотный
+      'rounded-xl border border-default bg-muted/55 backdrop-blur-sm performance:bg-muted',
       'transition-colors duration-200 hover:border-accented',
     ]"
   >
@@ -92,17 +92,33 @@
       <slot v-else />
     </div>
 
-    <NuxtLink
+    <!-- Подвал — одна строка: ссылка «смотреть всё» и, если панель их дала,
+      свои органы управления справа (слот `aside`). Они лежат рядом со
+      ссылкой, а не внутри неё: кнопка внутри ссылки — невалидная разметка.
+      Без соседей стрелка ссылки уходит к правому краю, с соседями
+      (`has-[+div]`) остаётся у подписи — иначе повисла бы посреди строки -->
+    <footer
       v-if="hasFooter"
-      :to
-      class="mt-auto flex shrink-0 items-center justify-between gap-2 border-t border-default px-3 py-2.5 font-mono text-[11px] tracking-[0.14em] text-muted uppercase no-underline transition-colors hover:bg-elevated hover:text-primary"
+      class="@container mt-auto flex shrink-0 items-stretch border-t border-default"
     >
-      {{ linkLabel }}
+      <NuxtLink
+        :to
+        class="flex min-w-0 flex-auto items-center justify-between gap-2 px-3 py-2.5 font-mono text-[11px] tracking-[0.14em] text-muted uppercase no-underline transition-colors hover:bg-elevated hover:text-primary has-[+div]:justify-start"
+      >
+        <span class="truncate">{{ linkLabel }}</span>
 
-      <UIcon
-        name="tabler:arrow-right"
-        class="size-4 transition-transform duration-200 group-hover/panel:translate-x-0.5"
-      />
-    </NuxtLink>
+        <UIcon
+          name="tabler:arrow-right"
+          class="size-4 shrink-0 transition-transform duration-200 group-hover/panel:translate-x-0.5"
+        />
+      </NuxtLink>
+
+      <div
+        v-if="$slots.aside"
+        class="flex shrink-0 items-center gap-2 px-2"
+      >
+        <slot name="aside" />
+      </div>
+    </footer>
   </section>
 </template>

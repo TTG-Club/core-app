@@ -1,8 +1,6 @@
 <script setup lang="ts">
   import type { MailingHistoryEntry } from '../model';
 
-  import { REWARD_TIER_LABELS } from '~admin/subscriptions/model';
-
   import { MAILING_DATE_FORMAT } from '../model';
 
   const props = defineProps<{
@@ -164,8 +162,8 @@
               {{ getStatusLabel(entry) }}
             </UBadge>
 
-            <span v-if="entry.rewardTier">
-              {{ REWARD_TIER_LABELS[entry.rewardTier] }}
+            <span v-if="entry.contentSummary">
+              {{ entry.contentSummary }}
             </span>
 
             <span v-if="entry.campaign">{{ entry.campaign }}</span>

@@ -1,5 +1,6 @@
 import type { NavigationGroup, NavigationItem } from './types';
 
+import { VK_VIDEO_ADMIN_ROUTE } from '#shared/consts';
 import {
   PUBLICATION_ICON,
   PUBLICATION_ROUTE,
@@ -16,6 +17,11 @@ import {
   MAILING_ROUTE,
 } from '~admin/mailing/model';
 import {
+  MAINTENANCE_ADMIN_NAVIGATION_ICON,
+  MAINTENANCE_ADMIN_PAGE_TITLE,
+  MAINTENANCE_ADMIN_ROUTE,
+} from '~admin/maintenance/model';
+import {
   SUBSCRIPTION_STATS_NAVIGATION_ICON,
   SUBSCRIPTION_STATS_PAGE_TITLE,
   SUBSCRIPTION_STATS_ROUTE,
@@ -30,6 +36,10 @@ import {
   ADMIN_USERS_NAVIGATION_LABEL,
 } from '~admin/users/model';
 import {
+  VK_VIDEO_ADMIN_NAVIGATION_ICON,
+  VK_VIDEO_ADMIN_PAGE_TITLE,
+} from '~admin/vk-video/model';
+import {
   VTTG_COMPENDIUM_ADMIN_ROUTE,
   VTTG_COMPENDIUM_NAVIGATION_ICON,
   VTTG_COMPENDIUM_PAGE_TITLE,
@@ -38,6 +48,12 @@ import {
   ARTICLES_ADMIN_CREATE_ROUTE,
   ARTICLES_ADMIN_ROUTE,
 } from '~articles/model';
+import {
+  COMMUNITY_NEWS_ADMIN_CREATE_ROUTE,
+  COMMUNITY_NEWS_ADMIN_ROUTE,
+  COMMUNITY_NEWS_ADMIN_TITLE,
+  COMMUNITY_NEWS_ICON,
+} from '~community-news/model';
 
 /** Маршрут главной страницы админ-панели (дашборд со статистикой) */
 export const ADMIN_DASHBOARD_ROUTE = '/admin';
@@ -91,10 +107,29 @@ const ADMIN_ARTICLES_ITEM: NavigationItem = {
   createRoute: ARTICLES_ADMIN_CREATE_ROUTE,
 };
 
+const ADMIN_COMMUNITY_NEWS_ITEM: NavigationItem = {
+  label: COMMUNITY_NEWS_ADMIN_TITLE,
+  icon: COMMUNITY_NEWS_ICON,
+  to: COMMUNITY_NEWS_ADMIN_ROUTE,
+  createRoute: COMMUNITY_NEWS_ADMIN_CREATE_ROUTE,
+};
+
 const ADMIN_HOME_HERO_ITEM: NavigationItem = {
   label: HOME_HERO_ADMIN_PAGE_TITLE,
   icon: HOME_HERO_ADMIN_NAVIGATION_ICON,
   to: HOME_HERO_ADMIN_ROUTE,
+};
+
+const ADMIN_MAINTENANCE_ITEM: NavigationItem = {
+  label: MAINTENANCE_ADMIN_PAGE_TITLE,
+  icon: MAINTENANCE_ADMIN_NAVIGATION_ICON,
+  to: MAINTENANCE_ADMIN_ROUTE,
+};
+
+const ADMIN_VK_VIDEO_ITEM: NavigationItem = {
+  label: VK_VIDEO_ADMIN_PAGE_TITLE,
+  icon: VK_VIDEO_ADMIN_NAVIGATION_ICON,
+  to: VK_VIDEO_ADMIN_ROUTE,
 };
 
 const ADMIN_MAILING_ITEM: NavigationItem = {
@@ -121,7 +156,10 @@ export const ADMIN_NAVIGATION_ITEMS: NavigationItem[] = [
   ADMIN_CODES_ITEM,
   ADMIN_SUBSCRIPTION_STATS_ITEM,
   ADMIN_ARTICLES_ITEM,
+  ADMIN_COMMUNITY_NEWS_ITEM,
   ADMIN_HOME_HERO_ITEM,
+  ADMIN_MAINTENANCE_ITEM,
+  ADMIN_VK_VIDEO_ITEM,
   ADMIN_MAILING_ITEM,
   ADMIN_VTTG_COMPENDIUM_ITEM,
 ];
@@ -141,7 +179,14 @@ export const ADMIN_USERS_SECTION_GROUP: NavigationGroup = {
 export const ADMIN_CONTENT_SECTION_GROUP: NavigationGroup = {
   title: 'Контент сайта',
   icon: 'tabler:layout-dashboard',
-  items: [ADMIN_ARTICLES_ITEM, ADMIN_HOME_HERO_ITEM, ADMIN_PERSONAS_ITEM],
+  items: [
+    ADMIN_ARTICLES_ITEM,
+    ADMIN_COMMUNITY_NEWS_ITEM,
+    ADMIN_HOME_HERO_ITEM,
+    ADMIN_MAINTENANCE_ITEM,
+    ADMIN_VK_VIDEO_ITEM,
+    ADMIN_PERSONAS_ITEM,
+  ],
 };
 
 export const ADMIN_VTTG_SECTION_GROUP: NavigationGroup = {

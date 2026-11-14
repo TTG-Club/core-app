@@ -7,11 +7,7 @@ import type {
 
 import { MIN_GROUPS_FOR_SEARCH, MIN_VALUES_FOR_SEARCH } from '../model';
 import { getGroupItems } from './getGroupItems';
-
-/** Приводит строку к виду, пригодному для регистронезависимого сравнения. */
-function normalizeForSearch(text: string): string {
-  return text.trim().toLowerCase();
-}
+import { normalizeForSearch } from './normalizeForSearch';
 
 /**
  * Определяет, нужно ли показывать поиск для набора групп.

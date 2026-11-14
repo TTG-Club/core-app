@@ -101,8 +101,10 @@ function getGroupTitle(
 
 /**
  * Раскладка предметов раздела по группам инструментов. Категория `TOOL` —
- * надмножество ремесленных инструментов, поэтому «прочие» получаются
- * вычитанием: иначе инструменты ремесленника попали бы в обе группы.
+ * надмножество остальных: её носят и ремесленные инструменты, и игровые
+ * наборы, и музыкальные инструменты. Поэтому «прочие» получаются вычитанием
+ * всех трёх групп: иначе их инструменты попали бы в список дважды, а наборы
+ * вроде воровских инструментов затерялись бы среди повторов.
  *
  * @param responses предметы каталога по группам.
  * @param filterGroups группы фильтров раздела (источник подписей).
@@ -112,11 +114,12 @@ function buildCatalogGroups(
   responses: ToolCatalogResponse[],
   filterGroups: FilterGroups,
 ): ToolCatalogGroup[] {
-  const artisanItems =
-    responses.find((response) => response.key === 'artisan')?.items ?? [];
-
-  const artisanUrls = new Set(
-    artisanItems.map((catalogItem) => catalogItem.url),
+  const groupedUrls = new Set(
+    responses
+      .filter((response) => response.key !== 'other')
+      .flatMap((response) =>
+        response.items.map((catalogItem) => catalogItem.url),
+      ),
   );
 
   return TOOL_CATALOG_GROUP_ORDER.map((groupKey) => {
@@ -126,7 +129,7 @@ function buildCatalogGroups(
     const groupItems =
       groupKey === 'other'
         ? catalogItems.filter(
-            (catalogItem) => !artisanUrls.has(catalogItem.url),
+            (catalogItem) => !groupedUrls.has(catalogItem.url),
           )
         : catalogItems;
 

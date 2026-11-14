@@ -33,7 +33,7 @@
       под курсором.
     -->
     <div
-      class="overflow-hidden rounded-xl border border-default bg-muted/55 backdrop-blur-sm xl:col-span-5 xl:row-span-2"
+      class="overflow-hidden rounded-xl border border-default bg-muted/55 backdrop-blur-sm xl:col-span-5 xl:row-span-2 performance:bg-muted"
     >
       <!--
         Линии рисуют сами плитки верхней и левой гранью, а сетка сдвинута на

@@ -207,7 +207,7 @@
   async function loadMissingNames(): Promise<void> {
     const detailPath = section.detailPath;
 
-    if (!detailPath) {
+    if (!detailPath && !section.namesPath) {
       return;
     }
 
@@ -221,6 +221,12 @@
 
     for (const url of missing) {
       requestedUrls.add(url);
+    }
+
+    if (!detailPath) {
+      await loadNamesFromList(missing);
+
+      return;
     }
 
     const loaded = await Promise.all(
@@ -252,6 +258,51 @@
       ...names.value,
       ...Object.fromEntries(resolved.map((entry) => [entry.url, entry.name])),
     };
+  }
+
+  /** Короткий список всех записей раздела: из него берутся названия. */
+  const namesListSchema = z.array(detailSchema);
+
+  /**
+   * Догружает названия выбранного одним запросом всего списка раздела.
+   *
+   * Путь разделов без `detailPath`: деталь класса и подкласса слишком тяжела,
+   * а короткий список отдаёт все названия разом.
+   *
+   * @param missing слаги, названий которых поле ещё не знает.
+   */
+  async function loadNamesFromList(missing: Array<string>): Promise<void> {
+    const namesPath = section.namesPath;
+
+    if (!namesPath) {
+      return;
+    }
+
+    try {
+      const response = await $fetch<unknown>(namesPath, {
+        method: 'get',
+        retry: 0,
+      });
+
+      const parsed = namesListSchema.safeParse(response);
+
+      if (!parsed.success) {
+        return;
+      }
+
+      const wanted = new Set(missing);
+
+      const resolved = parsed.data.filter((entry) => wanted.has(entry.url));
+
+      names.value = {
+        ...names.value,
+        ...Object.fromEntries(
+          resolved.map((entry) => [entry.url, entry.name.rus]),
+        ),
+      };
+    } catch {
+      // Названия не пришли — чипы покажут слаги, выбор от этого не страдает
+    }
   }
 
   // Догрузка нужна и на первом показе, и когда в поле пришло чужое значение:

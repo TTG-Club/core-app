@@ -689,6 +689,30 @@
     },
   );
 
+  // Запись открыли не кликом по списку, а стрелками или кнопками ‹ › панели —
+  // список докручивается к ней, если она ушла из видимой области. Видимую
+  // запись `nearest` не сдвигает, поэтому клик по списку ничего не дёргает.
+  watch(
+    () => activeItemKey,
+    (itemKey) => {
+      if (!itemKey || !isSplitActive.value) {
+        return;
+      }
+
+      nextTick(() => {
+        const element = getSavedItemElement(itemKey);
+
+        if (element) {
+          element.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+
+          return;
+        }
+
+        scrollToItem(itemKey);
+      });
+    },
+  );
+
   onBeforeRouteLeave(() => {
     rememberCurrentPosition();
   });

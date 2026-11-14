@@ -33,6 +33,7 @@
     ADMIN_VTTG_SECTION_GROUP,
   } from '~admin/navigation/model';
   import {
+    ADMIN_ONLINE_DM_SCREEN_USAGE,
     ADMIN_ONLINE_STATS_API_URL,
     ADMIN_ONLINE_STATS_DATA_KEY,
     parseAdminOnlineStats,
@@ -41,6 +42,7 @@
     AdminOnlinePreferencesPanel,
     AdminOnlineSitesPanel,
     AdminOnlineSummary,
+    AdminOnlineUsagePanel,
     AdminOnlineVttgPanel,
   } from '~admin/online/ui';
   import {
@@ -50,6 +52,14 @@
   } from '~admin/subscription-stats/model';
   import { AdminSubscribersTile } from '~admin/subscription-stats/ui';
   import { SubscriptionSalesSwitch } from '~admin/subscriptions/ui';
+  import {
+    ADMIN_USERS_API_PATH,
+    ADMIN_USERS_DASHBOARD_DATA_KEY,
+    ADMIN_USERS_DASHBOARD_PAGE_INDEX,
+    ADMIN_USERS_DASHBOARD_PAGE_SIZE,
+    parseAdminUsersTotal,
+  } from '~admin/users/model';
+  import { AdminUsersTotalTile } from '~admin/users/ui';
 
   const {
     data: onlineStats,
@@ -160,9 +170,38 @@
 
   const hasSubscriptionsError = computed(() => !!subscriptionsError.value);
 
+  // Число пользователей — итог первой страницы списка из auth-service.
+  const {
+    data: usersTotal,
+    error: usersTotalError,
+    refresh: refreshUsersTotal,
+    status: usersTotalStatus,
+  } = await useAsyncData<number>(
+    ADMIN_USERS_DASHBOARD_DATA_KEY,
+    async () =>
+      parseAdminUsersTotal(
+        await requestFetch<unknown>(ADMIN_USERS_API_PATH, {
+          query: {
+            page: ADMIN_USERS_DASHBOARD_PAGE_INDEX,
+            size: ADMIN_USERS_DASHBOARD_PAGE_SIZE,
+          },
+        }),
+      ),
+    { server: false, lazy: true },
+  );
+
+  const isUsersTotalLoading = computed(
+    () => usersTotalStatus.value === FetchStatus.Pending,
+  );
+
+  const hasUsersTotalError = computed(() => !!usersTotalError.value);
+
+  const resolvedUsersTotal = computed(() => usersTotal.value ?? null);
+
   const isStatsLoading = computed(
     () =>
       isOnlineStatsLoading.value
+      || isUsersTotalLoading.value
       || isSheetStatsLoading.value
       || isGameStatisticsLoading.value
       || isSubscriptionsLoading.value,
@@ -177,6 +216,7 @@
       refreshSheetStats(),
       refreshGameStatistics(),
       refreshSubscriptions(),
+      refreshUsersTotal(),
     ]);
   }
 </script>
@@ -211,49 +251,69 @@
           </UButton>
         </div>
 
+        <!-- Короткие панели стопкой слева, высокая панель настроек — справа:
+             иначе соседи по ряду тянутся до её высоты и пустеют -->
         <div class="grid gap-3 lg:grid-cols-2">
-          <AdminOnlineSitesPanel
-            :stats="resolvedOnlineStats"
-            :is-pending="isOnlineStatsPending"
-            :has-error="hasOnlineStatsError"
-          />
+          <div class="flex flex-col gap-3">
+            <AdminOnlineSitesPanel
+              :stats="resolvedOnlineStats"
+              :is-pending="isOnlineStatsPending"
+              :has-error="hasOnlineStatsError"
+            />
 
-          <AdminDashboardPanel :title="ADMIN_DASHBOARD_TOTALS_TITLE">
-            <div class="grid h-full grid-cols-3 divide-x divide-default">
-              <ClientOnly>
-                <AdminCharacterSheetStatsTile
-                  :stats="resolvedSheetStats"
-                  :is-loading="isSheetStatsLoading"
-                  :has-error="hasSheetStatsError"
+            <AdminDashboardPanel :title="ADMIN_DASHBOARD_TOTALS_TITLE">
+              <!-- Две плитки в ряд: вчетвером подписи обрезались («Листы персо…») -->
+              <div
+                class="grid h-full grid-cols-2 [&>*]:border-default [&>:nth-child(-n+2)]:border-b [&>:nth-child(odd)]:border-r"
+              >
+                <AdminUsersTotalTile
+                  :total="resolvedUsersTotal"
+                  :is-loading="isUsersTotalLoading"
+                  :has-error="hasUsersTotalError"
                 />
 
-                <template #fallback>
+                <ClientOnly>
                   <AdminCharacterSheetStatsTile
-                    :stats="null"
-                    is-loading
-                    :has-error="false"
+                    :stats="resolvedSheetStats"
+                    :is-loading="isSheetStatsLoading"
+                    :has-error="hasSheetStatsError"
                   />
-                </template>
-              </ClientOnly>
 
-              <AdminGameStatisticsTile
-                :statistics="resolvedGameStatistics"
-                :is-loading="isGameStatisticsLoading"
-                :has-error="hasGameStatisticsError"
-              />
+                  <template #fallback>
+                    <AdminCharacterSheetStatsTile
+                      :stats="null"
+                      is-loading
+                      :has-error="false"
+                    />
+                  </template>
+                </ClientOnly>
 
-              <AdminSubscribersTile
-                :subscriptions="subscriptions"
-                :is-pending="isSubscriptionsPending"
-                :has-error="hasSubscriptionsError"
-              />
-            </div>
-          </AdminDashboardPanel>
+                <AdminGameStatisticsTile
+                  :statistics="resolvedGameStatistics"
+                  :is-loading="isGameStatisticsLoading"
+                  :has-error="hasGameStatisticsError"
+                />
 
-          <AdminOnlineVttgPanel
-            :stats="resolvedOnlineStats"
-            :is-pending="isOnlineStatsPending"
-          />
+                <AdminSubscribersTile
+                  :subscriptions="subscriptions"
+                  :is-pending="isSubscriptionsPending"
+                  :has-error="hasSubscriptionsError"
+                />
+              </div>
+            </AdminDashboardPanel>
+
+            <AdminOnlineVttgPanel
+              :stats="resolvedOnlineStats"
+              :is-pending="isOnlineStatsPending"
+              class="flex-1"
+            />
+
+            <AdminOnlineUsagePanel
+              :section="ADMIN_ONLINE_DM_SCREEN_USAGE"
+              :stats="resolvedOnlineStats"
+              :is-pending="isOnlineStatsPending"
+            />
+          </div>
 
           <AdminOnlinePreferencesPanel
             :stats="resolvedOnlineStats"

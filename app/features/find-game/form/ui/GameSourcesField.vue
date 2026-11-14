@@ -1,8 +1,7 @@
 <script setup lang="ts">
   import type { FilterGroups } from '~infrastructure/filter';
 
-  import { FilterDrawer } from '~infrastructure/filter';
-  import { FILTER_SOURCES_SEARCH_PLACEHOLDER } from '~infrastructure/filter/model';
+  import { FilterSourcesDrawer } from '~infrastructure/filter';
 
   import { useSourceDictionary } from '../../composables';
   import {
@@ -136,11 +135,10 @@
     панели получали бы его же — тогда нажатие на любую из подписей отмечало бы
     первую группу вместо своей.
   -->
-  <FilterDrawer
+  <FilterSourcesDrawer
     v-model="isOpen"
     :groups="groups"
     :title="GAME_SOURCES_TITLE"
-    :search-placeholder="FILTER_SOURCES_SEARCH_PLACEHOLDER"
     @save="save"
     @reset="reset"
   />

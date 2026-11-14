@@ -3,14 +3,20 @@
 
   import { MAILING_RECIPIENTS_MAX, MAILING_SAMPLE_CODE } from '#shared/consts';
   import { applyMailingPlaceholders } from '#shared/utils';
-  import { REWARD_TIER_LABELS } from '~admin/subscriptions/model';
+  import {
+    describeCodeContent,
+    hasCodeContent,
+    toCodeContentRequest,
+  } from '~admin/subscriptions/model';
+  import { CodeContentFields } from '~admin/subscriptions/ui';
 
   import {
     getInitialMailingForm,
     MAILING_CODE_PLACEHOLDER,
     MAILING_DRAFT_STORAGE_KEY,
     MAILING_EMAIL_PLACEHOLDER,
-    MAILING_TIER_OPTIONS,
+    MAILING_EMPTY_CONTENT_SUMMARY,
+    MAILING_TIER_HELP,
     mailingFormSchema,
     parseMailingRecipients,
   } from '../model';
@@ -56,8 +62,17 @@
     () => parsedRecipients.value.valid.length > MAILING_RECIPIENTS_MAX,
   );
 
+  const hasContent = computed(() => hasCodeContent(state.value.content));
+
+  const contentSummary = computed(() =>
+    describeCodeContent(toCodeContentRequest(state.value.content)),
+  );
+
   const canSubmit = computed(
-    () => parsedRecipients.value.valid.length > 0 && !isOverLimit.value,
+    () =>
+      parsedRecipients.value.valid.length > 0
+      && !isOverLimit.value
+      && hasContent.value,
   );
 
   // Превью письма показываем на образцовом коде и первом адресе списка —
@@ -74,9 +89,13 @@
     ),
   );
 
-  // Итог перед отправкой: сколько писем уйдёт и с каким тиром.
+  // Итог перед отправкой: сколько писем уйдёт и что несёт каждый код.
   const submitSummary = computed(() => {
     const count = parsedRecipients.value.valid.length;
+
+    if (!hasContent.value) {
+      return MAILING_EMPTY_CONTENT_SUMMARY;
+    }
 
     if (!count) {
       return 'Добавьте адреса — и рассылку можно отправлять';
@@ -84,7 +103,7 @@
 
     const letters = getPlural(count, ['письмо', 'письма', 'писем']);
 
-    return `К отправке: ${count} ${letters} · ${REWARD_TIER_LABELS[state.value.rewardTier]}`;
+    return `К отправке: ${count} ${letters} · ${contentSummary.value}`;
   });
 
   const recipientsSummary = computed(() => {
@@ -117,8 +136,8 @@
   }
 
   /**
-   * Возвращает тему и текст письма к образцу. Тир, название рассылки и список
-   * адресов остаются: их админ заполнял отдельно.
+   * Возвращает тему и текст письма к образцу. Содержимое кода, название
+   * рассылки и список адресов остаются: их админ заполнял отдельно.
    */
   function resetLetter(): void {
     const { subject, bodyText } = getInitialMailingForm();
@@ -210,6 +229,26 @@
       </div>
     </UCard>
 
+    <!-- Содержимое кода -->
+    <UCard variant="subtle">
+      <template #header>
+        <div class="flex items-center gap-2">
+          <UIcon
+            name="tabler:gift"
+            class="size-5 text-primary"
+          />
+
+          <h2 class="font-semibold text-highlighted">Что получит адресат</h2>
+        </div>
+      </template>
+
+      <CodeContentFields
+        v-model="state.content"
+        name-prefix="content"
+        :tier-help="MAILING_TIER_HELP"
+      />
+    </UCard>
+
     <!-- Получатели -->
     <UCard variant="subtle">
       <template #header>
@@ -219,38 +258,22 @@
             class="size-5 text-primary"
           />
 
-          <h2 class="font-semibold text-highlighted">Кому и что отправляем</h2>
+          <h2 class="font-semibold text-highlighted">Кому отправляем</h2>
         </div>
       </template>
 
       <div class="space-y-4">
-        <div class="grid gap-4 sm:grid-cols-2">
-          <UFormField
-            label="Тир награды"
-            name="rewardTier"
-            help="Один тир на всю рассылку: каждому адресу выпустится свой код с этим тиром."
-          >
-            <USelectMenu
-              v-model="state.rewardTier"
-              :items="MAILING_TIER_OPTIONS"
-              value-key="value"
-              label-key="label"
-              class="w-full"
-            />
-          </UFormField>
-
-          <UFormField
-            label="Название рассылки"
-            name="label"
-            help="Попадёт в метку кодов вместе с адресом — по ней рассылка видна в разделе промокодов."
-          >
-            <UInput
-              v-model="state.label"
-              placeholder="Рассылка"
-              class="w-full"
-            />
-          </UFormField>
-        </div>
+        <UFormField
+          label="Название рассылки"
+          name="label"
+          help="Попадёт в метку кодов вместе с адресом — по ней рассылка видна в разделе промокодов."
+        >
+          <UInput
+            v-model="state.label"
+            placeholder="Рассылка"
+            class="w-full"
+          />
+        </UFormField>
 
         <UFormField
           label="Почтовые ящики"

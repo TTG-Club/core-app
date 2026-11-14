@@ -2,10 +2,21 @@ import type { MenuSection } from './types';
 
 import { Role } from '~/shared/types';
 import {
+  DICE_CALCULATOR_ICON,
   DICE_CALCULATOR_ROUTE,
   DICE_CALCULATOR_TITLE,
 } from '~calculator/dice/model';
 import { RECENT_COMMENTS_ROUTE, RECENT_COMMENTS_TITLE } from '~comments/model';
+import {
+  COMMUNITY_NEWS_ICON,
+  COMMUNITY_NEWS_ROUTE,
+  COMMUNITY_NEWS_TITLE,
+} from '~community-news/model/constants';
+import {
+  DM_SCREEN_ICON,
+  DM_SCREEN_ROUTE,
+  DM_SCREEN_TITLE,
+} from '~dm-screen/model';
 import {
   FIND_GAME_PROFILE_NAVIGATION_LABEL,
   FIND_GAME_PROFILE_ROUTE,
@@ -156,6 +167,7 @@ export const MENU_SECTIONS: Array<MenuSection> = [
       {
         href: DICE_CALCULATOR_ROUTE,
         label: DICE_CALCULATOR_TITLE,
+        icon: DICE_CALCULATOR_ICON,
       },
       {
         href: '/tools/initiative',
@@ -166,6 +178,11 @@ export const MENU_SECTIONS: Array<MenuSection> = [
         href: '/tools/character-sheet',
         label: 'Лист персонажа',
         icon: 'tabler:id',
+      },
+      {
+        href: DM_SCREEN_ROUTE,
+        label: DM_SCREEN_TITLE,
+        icon: DM_SCREEN_ICON,
       },
       {
         href: '/tools/bastion',
@@ -238,13 +255,19 @@ export const MENU_SECTIONS: Array<MenuSection> = [
         icon: 'tabler:article',
       },
       {
+        href: COMMUNITY_NEWS_ROUTE,
+        label: COMMUNITY_NEWS_TITLE,
+        icon: COMMUNITY_NEWS_ICON,
+      },
+      {
         href: RECENT_COMMENTS_ROUTE,
         label: RECENT_COMMENTS_TITLE,
         icon: 'tabler:message-circle',
       },
       {
-        href: 'https://5e14.ttg.club/',
+        href: '/',
         external: true,
+        legacySite: true,
         label: 'Редакция D&D 2014',
         icon: 'tabler:history',
         disabled: false,

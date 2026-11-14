@@ -56,3 +56,14 @@ export interface SubscriptionStatsSummary {
   /** Разные пользователи, оплатившие хотя бы раз. */
   payingUsers: number;
 }
+
+/** Массовое продление подписки всем активным подписчикам. */
+export interface BulkSubscriptionExtension {
+  /** Идентификатор операции: по нему повторная отправка не продлит второй раз. */
+  id: string;
+  days: number;
+  /** Сколько пользователей продлено. */
+  extendedCount: number;
+  actorUsername: string | null;
+  createdAt: string;
+}

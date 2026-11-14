@@ -30,6 +30,9 @@
     $fetch<ClassDetailResponse>(`/api/v2/classes/${url}`),
   );
 
+  // Запись могла переехать на новый адрес: по прежнему сервис отдаёт её же
+  useEntityUrlRedirect(() => detail.value?.url);
+
   const markdown = useEntityMarkdown(detail, getClassMarkdown);
 
   /** Возврат от подкласса к странице его класса. */

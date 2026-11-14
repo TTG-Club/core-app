@@ -155,7 +155,7 @@ export const MAGIC_ITEM_DAMAGE_EMPTY_LABEL =
 export const MAGIC_ITEM_API_PATH = '/api/v2/magic-items';
 
 /** Адрес раздела предметов в API: оттуда приходит немагическая основа. */
-export const MAGIC_ITEM_BASE_ITEM_API_PATH = '/api/v2/item';
+export const MAGIC_ITEM_BASE_ITEM_API_PATH = '/api/v2/items';
 
 /** Хвост адреса «сырого» ответа раздела. */
 export const MAGIC_ITEM_RAW_PATH_SUFFIX = 'raw';

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { SessionReview } from '../model';
+  import type { GameReview } from '../model';
 
   import { UiDrawer } from '~ui/drawer';
   import { UiResult } from '~ui/result';
@@ -183,7 +183,7 @@
    * словесный вердикт, иначе строка держалась бы на одном значке.
    * @param review Отзыв игрока.
    */
-  function toReviewEntry(review: SessionReview): ReviewEntry {
+  function toReviewEntry(review: GameReview): ReviewEntry {
     const verdictLabel = review.recommended
       ? MASTER_PROFILE_REVIEW_VERDICT_LABELS.positive
       : MASTER_PROFILE_REVIEW_VERDICT_LABELS.negative;

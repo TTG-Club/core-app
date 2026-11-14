@@ -3354,6 +3354,25 @@ export const CLASSES_MODAL_LABELS = {
 } as const;
 
 /**
+ * Части предупреждения о достигнутом пределе подготовленных. Отдельные фразы —
+ * для заговоров, чьи места заняты заговорами класса: те готовы всегда, значок у
+ * них не нажимается, и совет снять подготовку выполнить нечем. Кнопка замены
+ * названа подписью окна классов — переименуют её, подсказка не разойдётся.
+ */
+export const PREPARED_LIMIT_PHRASES = {
+  prepared: 'Подготовлено',
+  countSeparator: 'из',
+  unprepareRecord: 'снимите подготовку с другой записи',
+  unprepareBookCantrip: 'снимите подготовку с другого заговора книги',
+  changeNumber: 'измените число в блоке',
+  allTakenByClass: 'Все места заняты заговорами, выбранными в умениях класса',
+  replaceHint: `Чтобы взять другой заговор, замените один из них — нажмите на класс в шапке листа и выберите «${CLASSES_MODAL_LABELS.edit}» —`,
+  someTakenByClass: 'Заговоры, выбранные в умениях класса',
+  alwaysPrepared: 'подготовлены всегда и тоже занимают место',
+  namesSeparator: ', ',
+};
+
+/**
  * Подписи плашки текущего выбора в мастерах вида и предыстории: что уже взято
  * и как это снять, не выбирая ничего взамен.
  */
@@ -3598,6 +3617,10 @@ export const BACKGROUND_WIZARD_LABELS = {
   skillsUnknown: 'не распознаны',
   tool: 'Инструмент',
   toolEmpty: 'нет',
+  toolUnavailable:
+    'Предыстория даёт инструмент, но его нет среди доступных — возможно, книга '
+    + 'с ним отключена в профиле. Владение можно добавить на листе вручную.',
+  toolCatalogErrorLog: 'Ошибка загрузки каталога инструментов:',
   featPreview: 'Открыть описание черты',
   featPreviewAria: 'Описание черты',
   featNoChoices: 'Черта ни о чём не спрашивает — она добавится как есть.',
@@ -3847,13 +3870,13 @@ export const TOOL_MATCH_KEYWORDS: Record<ToolProficiencyGroupKey, string[]> = {
 };
 
 /** Эндпоинт поиска предметов (раздел «Предметы»). */
-export const ITEMS_SEARCH_PATH = '/api/v2/item/search';
+export const ITEMS_SEARCH_PATH = '/api/v2/items/search';
 
 /** Эндпоинт фильтров предметов — источник списка категорий для чипов. */
-export const ITEMS_FILTERS_PATH = '/api/v2/item/filters';
+export const ITEMS_FILTERS_PATH = '/api/v2/items/filters';
 
 /** Базовый путь деталей предмета (`/{url}`). */
-export const ITEMS_DETAIL_BASE_PATH = '/api/v2/item';
+export const ITEMS_DETAIL_BASE_PATH = '/api/v2/items';
 
 /**
  * Хвост пути «сырого» ответа раздела: у предмета в нём числовой КД доспеха и

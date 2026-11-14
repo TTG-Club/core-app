@@ -113,7 +113,7 @@
     ctx.fill();
   }
 
-  useRafFn(() => {
+  const { pause, resume } = useRafFn(() => {
     const ctx = canvasRef.value?.getContext('2d');
 
     if (!ctx) {
@@ -127,6 +127,20 @@
       drawParticle(ctx, particle);
     }
   });
+
+  // В режиме «производительность» частиц нет: холст перерисовывался бы на
+  // каждом кадре
+  const { isPerformance: isHidden } = useGraphicsMode();
+
+  watchImmediate(isHidden, (isCanvasHidden) => {
+    if (isCanvasHidden) {
+      pause();
+
+      return;
+    }
+
+    resume();
+  });
 </script>
 
 <template>
@@ -135,6 +149,7 @@
     class="pointer-events-none absolute inset-0 -z-1 size-full"
   >
     <canvas
+      v-show="!isHidden"
       ref="canvas"
       :width
       :height

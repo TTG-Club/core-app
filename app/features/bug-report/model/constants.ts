@@ -173,7 +173,7 @@ export const ADMIN_BUGS_DETAIL_EMPTY_TITLE = 'Баг-репорт не выбр�
 
 /** Текст заглушки, когда баг-репорт не выбран */
 export const ADMIN_BUGS_DETAIL_EMPTY_TEXT =
-  'Выберите сообщение об ошибке из списка слева, чтобы просмотреть подробную информацию';
+  'Выберите сообщение об ошибке из списка, чтобы просмотреть подробную информацию';
 
 /** Ключ кеша сводки количества баг-репортов по статусам в админке */
 export const ADMIN_BUGS_STATUS_COUNTS_DATA_KEY = 'admin-bugs-status-counts';
@@ -492,7 +492,7 @@ export const BUG_REPORT_STATUS_COMMENT_PUBLIC_HINT =
 export const MY_BUGS_TITLE = 'Мои баг-репорты';
 
 /** Подпись вкладки в навигации профиля */
-export const MY_BUGS_NAVIGATION_LABEL = 'Баг-репорты';
+export const MY_BUGS_NAVIGATION_LABEL = 'Баг-репорты / предложения';
 
 /** Путь раздела в профиле */
 export const MY_BUGS_ROUTE = '/user/profile/bugs';

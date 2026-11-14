@@ -1,104 +1,96 @@
 /*
- * Светлая тема «пергамент и бордо» — по мотивам светлой темы ruleholder.com.
+ * Светлая тема — по claudemax.shop: тёплая бумага, белые карточки,
+ * терракотовый акцент.
  *
- * Опорные цвета оригинала: страница #f1ebe8, карточка #f8f4f1,
- * приподнятая поверхность #fffaf4, бежевая подложка #efe6d8, чернила #191813,
- * приглушённый текст #6d6257, бордюр #dfd5c7 и золотистый бордюр #c9b891,
- * бордовый акцент #5a0507 (ссылки, заголовки, кнопки), золото #e6bd6b.
+ * Опорные цвета оригинала: страница #faf7f4, карточка #fff, подложка #f2ece3,
+ * бордюр #e8e2d9 и #d6cec0, чернила #2d2a26, приглушённый текст #6f6a62,
+ * бледный #a69f95, акцент #c96442 (наведение #b55839, мягкая подложка #f3dccf),
+ * ошибка #b04a3a, успех #3f7a4d, предупреждение #b27a1b.
  */
 html.light {
-  /* Primary — бордо страницы правил (акцент, ссылки, кнопки) */
-  --color-primary-50: oklch(0.965 0.015 30);
-  --color-primary-100: oklch(0.92 0.035 29);
-  --color-primary-200: oklch(0.85 0.065 28);
-  --color-primary-300: oklch(0.72 0.11 28);
-  --color-primary-400: oklch(0.52 0.16 28);
-  --color-primary-500: oklch(0.36 0.13 27);
-  --color-primary-600: oklch(0.3 0.116 27); /* #5a0507 */
-  --color-primary-700: oklch(0.26 0.1 27);
-  --color-primary-800: oklch(0.22 0.085 27);
-  --color-primary-900: oklch(0.19 0.07 27);
-  --color-primary-950: oklch(0.16 0.055 27);
+  --color-primary-50: oklch(0.975 0.012 45);
+  --color-primary-100: #f3dccf;
+  --color-primary-200: oklch(0.86 0.06 43);
+  --color-primary-300: oklch(0.78 0.09 41);
+  --color-primary-400: oklch(0.7 0.115 40);
+  --color-primary-500: #c96442;
+  --color-primary-600: #b55839;
+  --color-primary-700: oklch(0.5 0.11 37);
+  --color-primary-800: oklch(0.43 0.095 36);
+  --color-primary-900: oklch(0.36 0.08 35);
+  --color-primary-950: oklch(0.29 0.06 35);
 
-  /* Red — чистый красный ошибок и чудовищ, чтобы не путался с бордовым акцентом */
-  --color-red-50: oklch(0.965 0.02 25);
-  --color-red-100: oklch(0.92 0.045 26);
-  --color-red-200: oklch(0.85 0.08 27);
-  --color-red-300: oklch(0.74 0.13 28);
-  --color-red-400: oklch(0.62 0.17 29);
-  --color-red-500: oklch(0.52 0.18 29); /* #b42318 */
-  --color-red-600: oklch(0.46 0.175 28); /* #a50d0d */
-  --color-red-700: oklch(0.41 0.16 27);
-  --color-red-800: oklch(0.36 0.14 26);
-  --color-red-900: oklch(0.31 0.12 25);
-  --color-red-950: oklch(0.26 0.1 25);
+  --color-red-50: oklch(0.97 0.012 30);
+  --color-red-100: oklch(0.93 0.03 30);
+  --color-red-200: oklch(0.86 0.06 30);
+  --color-red-300: oklch(0.77 0.09 31);
+  --color-red-400: oklch(0.65 0.12 32);
+  --color-red-500: #b04a3a;
+  --color-red-600: oklch(0.47 0.12 31);
+  --color-red-700: oklch(0.41 0.11 30);
+  --color-red-800: oklch(0.35 0.095 29);
+  --color-red-900: oklch(0.3 0.08 28);
+  --color-red-950: oklch(0.24 0.06 28);
 
-  /* Yellow — золото обреза страницы */
-  --color-yellow-50: oklch(0.97 0.02 85);
-  --color-yellow-100: oklch(0.93 0.045 85);
-  --color-yellow-200: oklch(0.88 0.08 84);
-  --color-yellow-300: oklch(0.82 0.11 83); /* #e6bd6b */
-  --color-yellow-400: oklch(0.71 0.115 84);
-  --color-yellow-500: oklch(
-    0.62 0.105 85
-  ); /* чуть темнее #ad8f4e ради контраста текста */
-  --color-yellow-600: oklch(0.58 0.1 86);
-  --color-yellow-700: oklch(0.51 0.095 86);
-  --color-yellow-800: oklch(0.45 0.09 86);
-  --color-yellow-900: oklch(0.39 0.08 86);
-  --color-yellow-950: oklch(0.33 0.07 86);
+  --color-yellow-50: oklch(0.975 0.015 80);
+  --color-yellow-100: oklch(0.94 0.04 80);
+  --color-yellow-200: oklch(0.88 0.07 78);
+  --color-yellow-300: oklch(0.8 0.1 77);
+  --color-yellow-400: oklch(0.71 0.115 76);
+  --color-yellow-500: #b27a1b;
+  --color-yellow-600: oklch(0.56 0.11 74);
+  --color-yellow-700: oklch(0.49 0.1 72);
+  --color-yellow-800: oklch(0.42 0.085 70);
+  --color-yellow-900: oklch(0.35 0.07 68);
+  --color-yellow-950: oklch(0.28 0.055 66);
 
-  /* Green — глубокая зелень действий и навыков */
-  --color-green-50: oklch(0.965 0.02 150);
-  --color-green-100: oklch(0.92 0.04 150);
-  --color-green-200: oklch(0.85 0.07 151);
-  --color-green-300: oklch(0.76 0.095 152);
-  --color-green-400: oklch(0.66 0.11 153);
-  --color-green-500: oklch(0.53 0.115 154);
-  --color-green-600: oklch(0.49 0.11 155);
-  --color-green-700: oklch(0.42 0.1 155); /* #075c33 */
-  --color-green-800: oklch(0.37 0.09 155);
-  --color-green-900: oklch(0.32 0.08 155);
-  --color-green-950: oklch(0.27 0.07 155);
+  --color-green-50: oklch(0.97 0.012 150);
+  --color-green-100: oklch(0.93 0.03 150);
+  --color-green-200: oklch(0.86 0.05 150);
+  --color-green-300: oklch(0.76 0.07 150);
+  --color-green-400: oklch(0.64 0.085 150);
+  --color-green-500: #3f7a4d;
+  --color-green-600: oklch(0.47 0.085 150);
+  --color-green-700: oklch(0.41 0.075 150);
+  --color-green-800: oklch(0.35 0.065 150);
+  --color-green-900: oklch(0.29 0.055 150);
+  --color-green-950: oklch(0.23 0.04 150);
 
-  /* Blue — синие чернила ссылок на общие термины */
-  --color-blue-50: oklch(0.965 0.015 255);
-  --color-blue-100: oklch(0.92 0.035 255);
-  --color-blue-200: oklch(0.85 0.065 256);
-  --color-blue-300: oklch(0.75 0.1 257);
-  --color-blue-400: oklch(0.62 0.14 258);
-  --color-blue-500: oklch(0.5 0.16 259); /* #1d5fbf */
-  --color-blue-600: oklch(0.44 0.145 257); /* #0b4f9f */
-  --color-blue-700: oklch(0.39 0.12 255);
-  --color-blue-800: oklch(0.34 0.1 254);
-  --color-blue-900: oklch(0.3 0.085 253);
-  --color-blue-950: oklch(0.26 0.07 253);
+  --color-blue-50: oklch(0.97 0.012 240);
+  --color-blue-100: oklch(0.93 0.03 240);
+  --color-blue-200: oklch(0.86 0.06 240);
+  --color-blue-300: oklch(0.76 0.09 240);
+  --color-blue-400: oklch(0.64 0.11 240);
+  --color-blue-500: oklch(0.54 0.11 242);
+  --color-blue-600: oklch(0.48 0.1 243);
+  --color-blue-700: oklch(0.42 0.09 244);
+  --color-blue-800: oklch(0.36 0.08 245);
+  --color-blue-900: oklch(0.3 0.065 245);
+  --color-blue-950: oklch(0.24 0.05 245);
 
-  /* Gray — песочно-золотистый каркас (бордюры, вторичный текст) */
-  --color-gray-50: oklch(0.965 0.012 78);
-  --color-gray-100: oklch(0.877 0.022 76); /* #dfd5c7 */
-  --color-gray-200: oklch(0.83 0.04 82);
-  --color-gray-300: oklch(0.787 0.056 87); /* #c9b891 */
-  --color-gray-400: oklch(0.62 0.04 76);
-  --color-gray-500: oklch(0.56 0.035 74);
-  --color-gray-600: oklch(0.5 0.03 70);
-  --color-gray-700: oklch(0.44 0.028 68);
-  --color-gray-800: oklch(0.38 0.024 66);
-  --color-gray-900: oklch(0.32 0.02 64);
-  --color-gray-950: oklch(0.26 0.016 62);
-
-  /* Neutral — тёплые чернила (текст) */
-  --color-neutral-50: oklch(0.975 0.008 75);
-  --color-neutral-100: oklch(0.94 0.012 75);
-  --color-neutral-200: oklch(0.87 0.018 74);
-  --color-neutral-300: oklch(0.78 0.022 73);
-  --color-neutral-400: oklch(0.66 0.028 71);
-  --color-neutral-500: oklch(0.59 0.033 70); /* #8a7a68 */
-  --color-neutral-600: oklch(0.5 0.024 67); /* #6d6257 */
-  --color-neutral-700: oklch(0.42 0.026 60);
-  --color-neutral-800: oklch(0.33 0.028 50);
-  --color-neutral-900: oklch(0.24 0.02 50);
-  --color-neutral-950: oklch(0.2 0.012 80); /* #191813 */
+  /* Тёплые «чернила» claudemax — и каркас, и текст */
+  --color-gray-50: #faf7f4;
+  --color-gray-100: #f2ece3;
+  --color-gray-200: #e8e2d9;
+  --color-gray-300: #d6cec0;
+  --color-gray-400: #a69f95;
+  --color-gray-500: #8a847b;
+  --color-gray-600: #6f6a62;
+  --color-gray-700: #565049;
+  --color-gray-800: #3f3a35;
+  --color-gray-900: #2d2a26;
+  --color-gray-950: #1d1b18;
+  --color-neutral-50: #faf7f4;
+  --color-neutral-100: #f2ece3;
+  --color-neutral-200: #e8e2d9;
+  --color-neutral-300: #d6cec0;
+  --color-neutral-400: #a69f95;
+  --color-neutral-500: #8a847b;
+  --color-neutral-600: #6f6a62;
+  --color-neutral-700: #565049;
+  --color-neutral-800: #3f3a35;
+  --color-neutral-900: #2d2a26;
+  --color-neutral-950: #1d1b18;
 
   /* UI Primary */
   --ui-color-primary-50: var(--color-primary-50);
@@ -192,68 +184,44 @@ html.light {
   --ui-color-neutral-950: var(--color-neutral-950);
 
   /* Nuxt UI variables */
-  --ui-text-dimmed: var(--color-gray-400); /* выцветшие чернила */
-  --ui-text-muted: var(--color-neutral-600); /* приглушённый текст #6d6257 */
-  --ui-text-toned: var(--color-neutral-700); /* вторичный текст */
-  --ui-text: var(--color-neutral-900); /* основные чернила */
-  --ui-text-highlighted: var(
-    --color-neutral-950
-  ); /* чернила заголовков #191813 */
-  --ui-text-inverted: oklch(
-    0.964 0.015 90
-  ); /* тёплый белый на бордовом и чернильном #f7f3e8 */
-  --ui-bg: oklch(
-    0.987 0.01 73
-  ); /* приподнятая поверхность: модалки, выпадашки, мелкие карточки #fffaf4 */
-  --ui-bg-muted: oklch(0.969 0.006 60); /* карточка и сайдбар #f8f4f1 */
-  --ui-bg-elevated: oklch(0.93 0.02 79); /* бежевая подложка панелей #efe6d8 */
-  --ui-bg-accented: oklch(0.89 0.04 84); /* песочные поля ввода #eadbbd */
-  --ui-bg-inverted: var(
-    --color-neutral-950
-  ); /* чернильная плашка, как шапка ruleholder */
-  --ui-border: var(--color-gray-100); /* бордюр карточек #dfd5c7 */
-  --ui-border-muted: var(--color-gray-50);
-  --ui-border-accented: var(--color-gray-300); /* золотистый бордюр #c9b891 */
-  --ui-border-inverted: var(--color-neutral-800);
+  --ui-text-dimmed: #a69f95; /* --ink-faint */
+  --ui-text-muted: #6f6a62; /* --ink-muted */
+  --ui-text-toned: #565049;
+  --ui-text: #2d2a26; /* --ink */
+  --ui-text-highlighted: #1d1b18;
+  --ui-text-inverted: #ffffff;
+  --ui-bg: #ffffff; /* --bg-card */
+  --ui-bg-muted: #faf7f4; /* --bg, страница */
+  --ui-bg-elevated: #f2ece3; /* --bg-subtle */
+  --ui-bg-accented: #ece5da; /* поля ввода — на полтона темнее подложки */
+  --ui-bg-inverted: #2d2a26; /* тёмные кнопки claudemax */
+  --ui-border: #e8e2d9; /* --border */
+  --ui-border-muted: #f2ece3;
+  --ui-border-accented: #d6cec0; /* --border-strong */
+  --ui-border-inverted: #2d2a26;
 
-  /* Страница: пергамент #f1ebe8 с едва заметным высветлением кверху; от `--ui-bg` отвязана,
-   * потому что поверхности модалок и меню светлее самой страницы */
-  --color-bg-main-gradient:
-    to top, oklch(0.944 0.008 49) 0%, oklch(0.944 0.008 49) 40%,
-    oklch(0.955 0.009 55) 100%;
-
-  /* Фактура бумаги поверх градиента (ruleholder кладёт parchment.jpg; здесь тот же
-   * эффект даёт плитка облачного шума без картинки). Как она накладывается —
-   * в правиле `body` в tailwind.css. */
-  --paper-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='720' height='720'%3E%3Cfilter id='p' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.008' numOctaves='3' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.16 0 0 0 0 0.12 0 0 0 0 0.07 0.06 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E");
-
-  /* Всплывающие меню — приподнятая поверхность #fffaf4 */
-  --color-bg-menu:
-    135deg, oklch(0.987 0.01 73 / 0.85), oklch(0.965 0.012 68 / 0.85);
-
-  --color-hover: oklch(0.3 0.116 27 / 0.08); /* бордовая дымка при наведении */
-  --color-link: var(--color-primary-500); /* ссылки бордовые, как и акцент */
-
-  /* Клетка фона PageBackdrop */
+  /* Страница — тёплая бумага #faf7f4 без градиента и без фактуры: карточки на ней белые */
+  --color-bg-main-gradient: to top, #faf7f4 0%, #faf7f4 100%;
+  --paper-texture: none; /* правило `body` в tailwind.css кладёт её поверх градиента */
+  --color-bg-menu: 135deg, rgb(255 255 255 / 0.88), rgb(250 247 244 / 0.88);
+  --color-hover: rgb(45 42 38 / 0.05);
+  --color-link: #c96442; /* ссылки на claudemax — цвет акцента */
   --color-backdrop-grid: var(--ui-border);
 
-  /* Карта деревни в шапке главной — чернила на пергаменте — и её бледность.
-     Растровые копии hero-map-light.svg (scripts/render-hero-map.mjs): весь
-     холст и середина для экранов уже 768px */
+  /* Карта деревни в шапке главной — чернила на бумаге — и её бледность.
+     Растровые копии hero-map-light.svg (scripts/render-hero-map.mjs) */
   --hero-map-image: url('/img/home/hero-map-light.webp');
   --hero-map-image-sm: url('/img/home/hero-map-light-sm.webp');
-  --hero-map-opacity: 0.55;
-
-  /* Бумага и тушь карты — ими нарисованы повозка и дым поверх неё
-     (HomeHeroMotion). Совпадают с --paper и --ink в hero-map-light.svg */
+  --hero-map-opacity: 0.45;
+  /* Бумага и тушь карты — ими нарисованы повозка и дым поверх неё (HomeHeroMotion) */
   --hero-map-paper: oklch(0.985 0.008 75);
   --hero-map-ink: oklch(0.26 0.02 60);
 
-  /* Logo — тема плоская: верх и низ каждого градиента совпадают */
-  --color-logo-stroke-top: var(--color-neutral-900);
-  --color-logo-stroke-bottom: var(--color-neutral-900);
-  --color-logo-dice-top: var(--color-neutral-900);
-  --color-logo-dice-bottom: var(--color-neutral-900);
-  --color-logo-tree-top: var(--color-primary-500);
-  --color-logo-tree-bottom: var(--color-primary-500);
+  /* Logo — тема плоская: чернила и терракотовое дерево */
+  --color-logo-stroke-top: #2d2a26;
+  --color-logo-stroke-bottom: #2d2a26;
+  --color-logo-dice-top: #2d2a26;
+  --color-logo-dice-bottom: #2d2a26;
+  --color-logo-tree-top: #c96442;
+  --color-logo-tree-bottom: #c96442;
 }

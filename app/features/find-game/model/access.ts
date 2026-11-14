@@ -9,7 +9,7 @@ import type {
 
 import { Role } from '~/shared/types';
 
-import { isGameRecruitmentClosed, isSessionReviewable } from './utils';
+import { isGameRecruitmentClosed } from './utils';
 
 /** Что определяет права текущего пользователя на странице игры. */
 export interface GameViewerContext {
@@ -43,12 +43,6 @@ export interface SessionAbilities {
   canEdit: boolean;
   /** Мастер может перевести сессию в «идёт». */
   canStart: boolean;
-
-  /**
-   * Можно оценить участников встречи: она закрыта, окно ещё не вышло, и
-   * пользователь в ней участвовал.
-   */
-  canReview: boolean;
 }
 
 /**
@@ -210,10 +204,5 @@ export function resolveSessionAbilities(
       abilities.isMaster
       && session.status === 'SCHEDULED'
       && session.confirmedPlayerIds.length > 0,
-    // Мастеру пустой стол оценивать некого, игроку — оценивать нечего, если
-    // его во встрече не было.
-    canReview:
-      isSessionReviewable(session)
-      && (abilities.isMaster ? participantCount > 0 : isParticipant),
   };
 }

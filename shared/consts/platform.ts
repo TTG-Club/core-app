@@ -14,6 +14,13 @@ export type SourcePlatform = (typeof SOURCE_PLATFORMS)[number];
  */
 export const SOURCE_PLATFORM: SourcePlatform = 'SITE_5E24';
 
+/**
+ * Платформа сайта другой редакции (D&D 2014). Его страницы открываются по базе
+ * из `runtimeConfig.public.oldSiteUrl` — например, переход к своему комментарию,
+ * оставленному там.
+ */
+export const OLD_SITE_SOURCE_PLATFORM: SourcePlatform = 'SITE_5E14';
+
 /** Русские названия платформ — для админок баг-репортов и комментариев. */
 export const SOURCE_PLATFORM_LABELS: Record<SourcePlatform, string> = {
   SITE_5E24: 'Сайт 2024',

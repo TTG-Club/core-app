@@ -101,6 +101,7 @@ import {
   getCharacterProficiencyBonus,
   getClampedClassLevels,
   getClampedInteger,
+  getClassCantripNamesTakingSpace,
   getClassLevelHitPoints,
   getEffectConditionImmunities,
   getEffectDamageDefences,
@@ -2646,7 +2647,11 @@ export function useCharacterSheet() {
       color: 'warning',
       icon: 'tabler:wand',
       title: PREPARED_KIND_LABELS[kind].limitToastTitle,
-      description: getPreparedSpellsLimitDescription(limit, kind),
+      description: getPreparedSpellsLimitDescription(
+        limit,
+        kind,
+        getClassCantripNamesTakingSpace(character.value),
+      ),
     });
 
     return false;

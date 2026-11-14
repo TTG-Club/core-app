@@ -4,7 +4,7 @@
   import type { CommunityRatingPeriod } from './model';
 
   import { BUG_REPORT_STATS_API_URL } from '~bug-report/model';
-  import { HomePanel } from '~home/ui-kit';
+  import { HomeLoadError, HomePanel, useHomeLoadRetry } from '~home/ui-kit';
 
   import {
     COMMUNITY_BUG_STATS_DATA_KEY,
@@ -24,7 +24,11 @@
   // Ту же статистику по тому же ключу читает строка счётчиков в шапке
   // (HomeCounters). dedupe: 'defer' — иначе второй потребитель ключа отменяет
   // запрос первого вместо того, чтобы дождаться общего.
-  const { data: bugStats } = await useAsyncData(
+  const {
+    data: bugStats,
+    status,
+    refresh,
+  } = await useAsyncData(
     COMMUNITY_BUG_STATS_DATA_KEY,
     () => $fetch<BugReportStatsResponse>(BUG_REPORT_STATS_API_URL),
     { dedupe: 'defer' },
@@ -50,6 +54,14 @@
   const hasAnyFixers = computed(
     () => topFixers.value.length > 0 || topFixersThisMonth.value.length > 0,
   );
+
+  // Статистика так и не пришла — заглушка ошибки с повтором вместо «пока нет»,
+  // иначе сбой выглядит как пустой рейтинг.
+  const isError = computed(
+    () => status.value === 'error' && !hasAnyFixers.value,
+  );
+
+  const { retryNow } = useHomeLoadRetry(status, refresh);
 
   /** Максимальное кол-во исправленных у первого в списке — для масштабирования полосок */
   const maxFixed = computed(() => activeFixers.value[0]?.fixed ?? 1);
@@ -258,8 +270,14 @@
       </p>
     </template>
 
-    <!-- Рейтинга нет ни за один период (или статистика не пришла) — панель без
-      тэглайна осталась бы пустой, поэтому показываем заглушку -->
+    <HomeLoadError
+      v-else-if="isError"
+      :retrying="status === 'pending'"
+      @retry="retryNow"
+    />
+
+    <!-- Рейтинга нет ни за один период — панель без тэглайна осталась бы
+      пустой, поэтому показываем заглушку -->
     <p
       v-else
       class="rounded-lg border border-dashed border-default px-3 py-4 text-center text-xs text-muted"

@@ -19,6 +19,24 @@ export const MULTICLASS_REQUIREMENT_HINT = `Чтобы взять уровень
  */
 export const PACT_MAGIC_LABEL = 'Магия договора';
 
+/**
+ * Группы списка классов в порядке вывода. Ключ — метка группы источника
+ * (`source.group.label`) в нижнем регистре.
+ */
+export const CLASS_LIST_GROUPS: ReadonlyArray<{ key: string; label: string }> =
+  [
+    { key: 'basic', label: 'Официальные классы' },
+    { key: 'ua', label: 'Классы из UA' },
+    { key: '3rd', label: 'Классы от третьих лиц' },
+    { key: 'hb', label: 'Классы Homebrew' },
+  ];
+
+/** Поле класса, по которому список делится на группы. */
+export const CLASS_LIST_GROUP_FIELD = 'source.group.label';
+
+/** Начало подписи группы, которой нет в `CLASS_LIST_GROUPS`. */
+export const CLASS_LIST_UNKNOWN_GROUP_LABEL_PREFIX = 'Классы: ';
+
 /** Категория черт боевого стиля в справочнике черт. */
 export const FIGHTING_STYLE_FEAT_CATEGORY = 'FIGHTING_STYLE';
 

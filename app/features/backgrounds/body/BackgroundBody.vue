@@ -1,10 +1,16 @@
 <script setup lang="ts">
+  import type { RenderNode } from '~ui/markup';
+
   import type { BackgroundDetailResponse } from '../model';
 
   import { UiDetailLayout } from '~ui/detail-layout';
 
-  import { useBackgroundToolCategories } from '../composable';
   import {
+    useBackgroundFeatNames,
+    useBackgroundToolCatalog,
+  } from '../composable';
+  import {
+    getBackgroundEquipmentNode,
     getBackgroundFeatNode,
     getBackgroundSkillNode,
     getBackgroundToolNodes,
@@ -15,19 +21,34 @@
     background: BackgroundDetailResponse;
   }>();
 
+  /** Названия черт на выбор, сохранённых без снимка названия. */
+  const { featNames, isPending: isFeatNamesPending } = useBackgroundFeatNames(
+    () => background,
+  );
+
   /** Черта: названная предысторией либо список на выбор игрока. */
-  const featNode = computed<string>(() => getBackgroundFeatNode(background));
+  const featNode = computed<string>(() =>
+    getBackgroundFeatNode(background, featNames.value),
+  );
 
   /** Навыки: ссылки на статьи глоссария. */
   const skillNode = computed<string>(() => getBackgroundSkillNode(background));
 
-  /** Категории инструментов: выбор из всей категории называется ею. */
-  const { toolCategories, isPending: isToolCategoriesPending } =
-    useBackgroundToolCategories(() => background);
+  /**
+   * Каталог инструментов: выбор из всей категории называется ею, ссылки без
+   * снимка названия — названием карточки.
+   */
+  const { toolCatalog, isPending: isToolCatalogPending } =
+    useBackgroundToolCatalog(() => background);
 
   /** Владение инструментами: ссылки мастерской либо прежний свободный текст. */
   const toolNodes = computed<Array<string>>(() =>
-    getBackgroundToolNodes(background, toolCategories.value),
+    getBackgroundToolNodes(background, toolCatalog.value),
+  );
+
+  /** Снаряжение: варианты «А или Б» либо прежний свободный текст. */
+  const equipmentNode = computed<RenderNode>(() =>
+    getBackgroundEquipmentNode(background),
   );
 </script>
 
@@ -38,10 +59,11 @@
         <StatsBlock
           :ability-scores="background.abilityScores"
           :feat="featNode"
+          :is-feat-pending="isFeatNamesPending"
           :skill-proficiencies="skillNode"
           :tool-proficiency="toolNodes"
-          :is-tool-proficiency-pending="isToolCategoriesPending"
-          :equipment="background.equipment"
+          :is-tool-proficiency-pending="isToolCatalogPending"
+          :equipment="equipmentNode"
         />
       </div>
     </template>

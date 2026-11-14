@@ -8,7 +8,10 @@ import type {
   MailingSendResult,
   MailingSendStatus,
 } from '#shared/types';
-import type { RewardTier } from '~/shared/types';
+import type {
+  CodeContentFormState,
+  CodeContentRequest,
+} from '~admin/subscriptions/model';
 
 export type { MailingSendResponse, MailingSendResult, MailingSendStatus };
 
@@ -18,8 +21,8 @@ export interface MailingFormState {
   subject: string;
   /** Текст письма с маркерами `{{code}}` и `{{email}}`. */
   bodyText: string;
-  /** Тир, который получит каждый адресат рассылки. */
-  rewardTier: RewardTier;
+  /** Содержимое кода, который получит каждый адресат рассылки. */
+  content: CodeContentFormState;
   /** Название рассылки — попадает в метку выпущенных кодов. */
   label: string;
   /** Сырой список адресов из поля ввода. */
@@ -46,7 +49,8 @@ export interface MailingCampaign {
   startedAt: string;
   subject: string;
   bodyText: string;
-  rewardTier: RewardTier;
+  /** Содержимое кода, с которым выпускались коды рассылки. */
+  content: CodeContentRequest;
   label: string;
   results: MailingSendResult[];
 }
@@ -59,7 +63,8 @@ export interface MailingHistoryEntry {
   code: string;
   /** Название рассылки из метки. */
   campaign: string | null;
-  rewardTier: RewardTier | null;
+  /** Что несёт код, одной строкой. */
+  contentSummary: string;
   createdAt: string;
   /** Кто активировал код (null — ещё не активирован). */
   redeemedBy: string | null;

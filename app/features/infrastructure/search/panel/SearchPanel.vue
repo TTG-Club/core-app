@@ -51,6 +51,8 @@
         'rounded-xl border border-accented bg-default px-4 py-3.5',
         'text-left transition-colors duration-200',
         'hover:border-primary/60 hover:bg-elevated',
+        // В режиме «производительность» света по контуру нет — рамка ровная
+        'performance:border-primary/50 performance:hover:border-primary',
       ]"
       @click.left.exact.prevent="open"
     >
@@ -62,6 +64,7 @@
       <span
         aria-hidden="true"
         :class="$style.glow"
+        class="performance:hidden"
       >
         <span :class="$style.arcs" />
       </span>

@@ -1,6 +1,8 @@
-/** Карточка-ссылка на сайт предыдущей редакции D&D */
+/**
+ * Карточка-ссылка на сайт предыдущей редакции D&D. Адрес не здесь: он берётся
+ * из `runtimeConfig.public.oldSiteUrl`, чтобы dev вёл на dev, а прод — на прод.
+ */
 export const LEGACY_SITE = {
-  url: 'https://5e14.ttg.club/',
   eyebrow: 'Другая редакция',
   title: 'D&D 2014',
   description: 'Предыдущая редакция Dungeons & Dragons',

@@ -35,6 +35,8 @@ import {
   splitConditionParts,
 } from '~active-effects/model';
 
+import { INVENTORY_QUANTITY_MIN } from './constants';
+
 /** Вид броска, для которого подбирается режим. */
 export type SheetRollKind =
   | 'abilityCheck'
@@ -268,6 +270,57 @@ export function collectAppliedEffects(character: Character): ActiveEffect[] {
   return collectAppliedEffectEntries(character).map((entry) => entry.effect);
 }
 
+/**
+ * Кончился ли предмет: количество доведено до нуля. Запись остаётся в списке,
+ * но предмета у персонажа нет — надеть его и катить им атаку с уроном нельзя.
+ *
+ * @param inventoryItem предмет инвентаря.
+ * @returns true — предмета не осталось.
+ */
+export function isMissingInventoryItem(
+  inventoryItem: CharacterInventoryItem,
+): boolean {
+  return inventoryItem.quantity <= INVENTORY_QUANTITY_MIN;
+}
+
+/**
+ * Выполнено ли условие применения предмета. «При себе» довольствуется самим
+ * наличием предмета, «вручную» ждёт переключателя в его строке, остальное —
+ * отметки «надет».
+ *
+ * @param inventoryItem предмет инвентаря.
+ * @returns true — магия предмета включена.
+ */
+function isActivatedBonusItem(inventoryItem: CharacterInventoryItem): boolean {
+  switch (inventoryItem.bonusActivation) {
+    case 'carried':
+      return true;
+    case 'manual':
+      return inventoryItem.active;
+    default:
+      return inventoryItem.equipped;
+  }
+}
+
+/**
+ * Работает ли сейчас магия предмета: его пассивные бонусы и активные эффекты.
+ * Условие одно на весь лист. Предмет должен быть включён, быть у персонажа не
+ * в нулевом количестве, а предмету с настройкой нужна ещё и сама настройка —
+ * ненастроенный магический предмет по правилам 2024 не работает.
+ *
+ * @param inventoryItem предмет инвентаря.
+ * @returns true — бонусы и эффекты предмета идут в лист.
+ */
+export function isActiveBonusItem(
+  inventoryItem: CharacterInventoryItem,
+): boolean {
+  return (
+    isActivatedBonusItem(inventoryItem)
+    && !isMissingInventoryItem(inventoryItem)
+    && (!inventoryItem.requiresAttunement || inventoryItem.attuned)
+  );
+}
+
 /** Действующий эффект вместе с названием того, кто его несёт. */
 interface AppliedEffectEntry {
   effect: ActiveEffect;
@@ -297,14 +350,12 @@ function collectAppliedEffectEntries(
         ownerName: feature.name,
       })),
     ),
-    ...character.inventory
-      .filter((item) => item.equipped)
-      .flatMap((item) =>
-        (item.activeEffects ?? []).map((effect) => ({
-          effect,
-          ownerName: item.name,
-        })),
-      ),
+    ...character.inventory.filter(isActiveBonusItem).flatMap((item) =>
+      (item.activeEffects ?? []).map((effect) => ({
+        effect,
+        ownerName: item.name,
+      })),
+    ),
   ];
 }
 
