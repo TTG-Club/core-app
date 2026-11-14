@@ -8,4 +8,5 @@ export * from './getFilterKey';
 export * from './getGroupItems';
 export * from './range';
 export * from './selection';
+export * from './singleChoice';
 export * from './sortSourceGroups';

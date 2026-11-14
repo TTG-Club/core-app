@@ -4,8 +4,13 @@
     FilterItems,
   } from '../../../types';
 
-  import { getRangeItems, getSelectedItemIds } from '../../../utils';
+  import {
+    getRangeItems,
+    getSelectedItemIds,
+    isSingleChoiceGroup,
+  } from '../../../utils';
   import { FilterGroupOptions } from '../options';
+  import FilterGroupChoice from './FilterGroupChoice.vue';
   import FilterGroupValues from './FilterGroupValues.vue';
 
   type GroupPosition = 'standalone' | 'top' | 'bottom';
@@ -35,6 +40,15 @@
   /** Диапазон доступен, если среди показанных значений есть упорядоченные. */
   const supportsRange = computed(
     () => getRangeItems(items, group.value.rangeOrder).length > 0,
+  );
+
+  /**
+   * Группа-признак «да или нет» показывает два ответа вместо переключателей и
+   * тега. Показанное значение проверяется отдельно: под поиском оно может быть
+   * скрыто, и тогда ответам не от чего строиться.
+   */
+  const isSingleChoice = computed(
+    () => isSingleChoiceGroup(group.value) && items.length > 0,
   );
 
   // Классы бордера шапки: нижний блок не имеет скругления сверху
@@ -109,19 +123,26 @@
 
     <template #content>
       <div class="flex flex-col gap-3 pt-1 pb-3">
-        <FilterGroupOptions
+        <FilterGroupChoice
+          v-if="isSingleChoice"
           v-model="group"
-          v-model:range="rangeMode"
-          :items
-          :range-available="supportsRange"
-          size="md"
         />
 
-        <FilterGroupValues
-          v-model="group"
-          :items
-          :range="rangeMode"
-        />
+        <template v-else>
+          <FilterGroupOptions
+            v-model="group"
+            v-model:range="rangeMode"
+            :items
+            :range-available="supportsRange"
+            size="md"
+          />
+
+          <FilterGroupValues
+            v-model="group"
+            :items
+            :range="rangeMode"
+          />
+        </template>
       </div>
     </template>
   </UCollapsible>
@@ -134,6 +155,7 @@
       <span class="font-medium">{{ group.name }}</span>
 
       <FilterGroupOptions
+        v-if="!isSingleChoice"
         v-model="group"
         v-model:range="rangeMode"
         :items
@@ -142,7 +164,14 @@
     </div>
 
     <div :class="bodyClass">
+      <FilterGroupChoice
+        v-if="isSingleChoice"
+        v-model="group"
+        class="w-full"
+      />
+
       <FilterGroupValues
+        v-else
         v-model="group"
         class="w-full"
         :items
