@@ -6,6 +6,19 @@ export const DICE_CALCULATOR_ROUTE = '/tools/dice-calculator';
 /** Название инструмента в меню и заголовке страницы. */
 export const DICE_CALCULATOR_TITLE = 'Калькулятор бросков';
 
+/** Иконка инструмента в меню. */
+export const DICE_CALCULATOR_ICON = 'tabler:dice';
+
+/** Заголовок и описание страницы для поисковиков. */
+export const DICE_CALCULATOR_SEO = {
+  title: 'Калькулятор бросков [Dice Calculator] — D&D 5',
+  description:
+    'Калькулятор бросков для D&D 5: бросайте кости по формуле, считайте шансы попадания и урона и смотрите распределение результатов.',
+} as const;
+
+/** Пометка на кости, которую перебросили. */
+export const REROLLED_FACE_MARK = '↻';
+
 /** Ключ localStorage с последней введённой формулой. */
 export const DICE_FORMULA_STORAGE_KEY = 'dice-calculator:last-formula';
 

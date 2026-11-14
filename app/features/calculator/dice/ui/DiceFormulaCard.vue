@@ -7,8 +7,8 @@
     DICE_FORMULA_MAX_LENGTH,
     DICE_PRESETS,
     getAddDieTitle,
+    getQuickDieLabel,
     MODIFIER_STEP,
-    PERCENTILE_DIE_SIDES,
     QUICK_DICE_SIDES,
     ROLL_DAMAGE_TOGGLES,
     ROLL_MODES,
@@ -45,7 +45,7 @@
   const quickDice = computed(() =>
     QUICK_DICE_SIDES.map((sides) => ({
       sides,
-      label: sides === PERCENTILE_DIE_SIDES ? 'd%' : `d${sides}`,
+      label: getQuickDieLabel(sides),
       title: getAddDieTitle(sides),
     })),
   );
@@ -77,6 +77,11 @@
     })),
   );
 
+  /**
+   * Переключает кнопку режима, крита или сопротивления.
+   *
+   * @param key - Переключатель, по которому нажали
+   */
   function handleToggle(key: RollToggleKey): void {
     if (key === 'critical') {
       toggleCriticalDamage();
@@ -93,14 +98,18 @@
     toggleMode(key);
   }
 
+  const inputColor = computed(() => (hasError.value ? 'error' : 'primary'));
+
   const analyzeVariant = computed(() =>
     isAnalysisOpen.value ? 'soft' : 'outline',
   );
 
+  /** Прибавляет шаг к модификатору в конце формулы. */
   function handleIncrease(): void {
     adjustModifier(MODIFIER_STEP);
   }
 
+  /** Вычитает шаг из модификатора в конце формулы. */
   function handleDecrease(): void {
     adjustModifier(-MODIFIER_STEP);
   }
@@ -119,7 +128,7 @@
         autocomplete="off"
         spellcheck="false"
         :maxlength="DICE_FORMULA_MAX_LENGTH"
-        :color="hasError ? 'error' : 'primary'"
+        :color="inputColor"
         :aria-label="DICE_FORMULA_LABELS.section"
         :ui="{ trailing: 'pe-0.5' }"
         @keydown.enter="roll"
@@ -188,7 +197,7 @@
       <UButton
         color="neutral"
         variant="soft"
-        label="+1"
+        :label="DICE_FORMULA_LABELS.increaseModifierButton"
         :title="DICE_FORMULA_LABELS.increaseModifier"
         @click.left.exact.prevent="handleIncrease"
       />
@@ -196,7 +205,7 @@
       <UButton
         color="neutral"
         variant="soft"
-        label="−1"
+        :label="DICE_FORMULA_LABELS.decreaseModifierButton"
         :title="DICE_FORMULA_LABELS.decreaseModifier"
         @click.left.exact.prevent="handleDecrease"
       />

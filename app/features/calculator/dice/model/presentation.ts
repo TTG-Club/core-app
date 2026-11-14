@@ -5,6 +5,22 @@ import { CHECK_KIND_LABELS, getCheckOutcomeLabel } from './labels';
 /** Как подсвечена кость: натуральный максимум, минимум или никак. */
 export type FaceHighlight = 'none' | 'max' | 'min';
 
+/** Классы кости по её подсветке. */
+const FACE_HIGHLIGHT_CLASSES: Readonly<Record<FaceHighlight, string>> = {
+  none: 'text-highlighted ring-accented',
+  max: 'text-success ring-success',
+  min: 'text-error ring-error',
+};
+
+/** Классы кости, которая не идёт в счёт. */
+const DROPPED_FACE_CLASS = 'line-through opacity-40';
+
+/** Класс подписи удачного исхода проверки. */
+const CHECK_SUCCESS_CLASS = 'text-success';
+
+/** Класс подписи неудачного исхода проверки. */
+const CHECK_FAILURE_CLASS = 'text-error';
+
 /** Одна кость в разборе броска, готовая к показу. */
 export interface FaceView {
   key: string;
@@ -12,6 +28,7 @@ export interface FaceView {
   rerolled: boolean;
   dropped: boolean;
   highlight: FaceHighlight;
+  className: string;
   title: string;
 }
 
@@ -19,6 +36,7 @@ export interface FaceView {
 export interface CheckView {
   label: string;
   success: boolean;
+  className: string;
 }
 
 /** Строка разбора броска, готовая к показу. */
@@ -69,6 +87,9 @@ function createFaceView(
     rerolled: face.rerolled,
     dropped: face.dropped,
     highlight,
+    className: face.dropped
+      ? `${FACE_HIGHLIGHT_CLASSES[highlight]} ${DROPPED_FACE_CLASS}`
+      : FACE_HIGHLIGHT_CLASSES[highlight],
     title,
   };
 }
@@ -88,13 +109,16 @@ export function createRollPartView(
   index: number,
 ): RollPartView {
   if (part.type === 'check') {
+    const success = part.outcome !== 'miss';
+
     return {
       key: `check-${index}`,
       label: `${part.total} против ${CHECK_KIND_LABELS[part.kind]} ${part.target}`,
       faces: [],
       check: {
         label: getCheckOutcomeLabel(part),
-        success: part.outcome !== 'miss',
+        success,
+        className: success ? CHECK_SUCCESS_CLASS : CHECK_FAILURE_CLASS,
       },
     };
   }

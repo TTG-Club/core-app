@@ -1,10 +1,18 @@
 <script setup lang="ts">
-  import { CalculatorDice, DICE_CALCULATOR_TITLE } from '~calculator/dice';
+  import {
+    DICE_CALCULATOR_SEO,
+    DICE_CALCULATOR_TITLE,
+  } from '~calculator/dice/model';
+  import {
+    DiceAnalysisCard,
+    DiceFormulaCard,
+    DiceHelpCard,
+    DiceResultCard,
+  } from '~calculator/dice/ui';
 
   useSeoMeta({
-    title: 'Калькулятор бросков [Dice Calculator] — D&D 5',
-    description:
-      'Калькулятор бросков для D&D 5: бросайте кости по формуле, считайте шансы попадания и урона и смотрите распределение результатов.',
+    title: DICE_CALCULATOR_SEO.title,
+    description: DICE_CALCULATOR_SEO.description,
   });
 </script>
 
@@ -14,7 +22,15 @@
     :title="DICE_CALCULATOR_TITLE"
   >
     <ClientOnly>
-      <CalculatorDice />
+      <div class="flex flex-col gap-4">
+        <DiceFormulaCard />
+
+        <DiceResultCard />
+
+        <DiceAnalysisCard />
+
+        <DiceHelpCard />
+      </div>
 
       <template #fallback>
         <div class="flex justify-center py-16">

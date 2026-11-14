@@ -20,6 +20,7 @@
     CHART_MAX_AXIS_LABELS,
     CHART_OUTCOME_OPACITY,
     CHART_PADDING,
+    createChartReadout,
     formatProbability,
   } from '../model';
 
@@ -66,7 +67,11 @@
     const range = histogram.binWidth > 1 ? `${from}–${to}` : String(from);
     const cumulative = chanceAtLeast(distribution, from);
 
-    return `${range}: ${formatProbability(probability)} · не меньше: ${formatProbability(cumulative)}`;
+    return createChartReadout(
+      range,
+      formatProbability(probability),
+      formatProbability(cumulative),
+    );
   });
 
   /**
@@ -337,6 +342,7 @@
     hoveredBin.value = bin >= 0 && bin < histogram.binCount ? bin : null;
   }
 
+  /** Снимает подпись столбца, когда указатель ушёл с холста. */
   function handlePointerLeave(): void {
     hoveredBin.value = null;
   }

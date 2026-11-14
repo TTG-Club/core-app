@@ -6,6 +6,7 @@
     EMPTY_VALUE_PLACEHOLDER,
     formatRollNumber,
     getRollBanner,
+    REROLLED_FACE_MARK,
     RESULT_SPIN_INTERVAL,
     RESULT_SPIN_TICKS,
   } from '../model';
@@ -114,7 +115,7 @@
 
           <b
             class="text-sm font-semibold"
-            :class="part.check.success ? 'text-success' : 'text-error'"
+            :class="part.check.className"
           >
             {{ part.check.label }}
           </b>
@@ -129,12 +130,7 @@
             v-for="face in part.faces"
             :key="face.key"
             class="inline-flex h-8 min-w-8 items-center justify-center rounded-md px-1.5 text-base font-semibold tabular-nums ring"
-            :class="{
-              'text-highlighted ring-accented': face.highlight === 'none',
-              'text-success ring-success': face.highlight === 'max',
-              'text-error ring-error': face.highlight === 'min',
-              'line-through opacity-40': face.dropped,
-            }"
+            :class="face.className"
             :title="face.title"
           >
             {{ face.value }}
@@ -144,7 +140,7 @@
               class="ml-0.5 text-[10px] text-muted"
               aria-hidden="true"
             >
-              ↻
+              {{ REROLLED_FACE_MARK }}
             </span>
           </span>
         </template>

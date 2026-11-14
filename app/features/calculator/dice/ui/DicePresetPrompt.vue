@@ -18,6 +18,7 @@
   // цели — обычное дело, и вводить её КД заново незачем.
   const value = ref(prompt.defaultValue);
 
+  /** Закрывает поповер и отдаёт формулу с введённым числом. */
   function submit(): void {
     isOpen.value = false;
     emit('submit', fillPresetFormula(preset, value.value));

@@ -13,6 +13,7 @@ import {
   applyRollMode,
   changeModifier,
   createRollLabel,
+  DICE_FORMULA_ERRORS,
   DICE_FORMULA_STORAGE_KEY,
   dropLastTerm,
   findCheckKind,
@@ -103,7 +104,7 @@ export const useDiceCalculator = createSharedComposable(() => {
     const trimmed = source.trim();
 
     if (!trimmed) {
-      errorMessage.value = 'Введите формулу или нажмите на кость';
+      errorMessage.value = DICE_FORMULA_ERRORS.empty;
 
       return null;
     }
@@ -135,7 +136,7 @@ export const useDiceCalculator = createSharedComposable(() => {
       };
     } catch (error) {
       errorMessage.value =
-        error instanceof Error ? error.message : 'Не удалось разобрать формулу';
+        error instanceof Error ? error.message : DICE_FORMULA_ERRORS.unparsed;
 
       return null;
     }

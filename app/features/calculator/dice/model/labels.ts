@@ -8,7 +8,11 @@ import type {
   RollToggleKey,
 } from './types';
 
-import { D20_SIDES, MONTE_CARLO_SAMPLES } from './constants';
+import {
+  D20_SIDES,
+  MONTE_CARLO_SAMPLES,
+  PERCENTILE_DIE_SIDES,
+} from './constants';
 
 /** Режимы броска в порядке показа на кнопках. */
 export const ROLL_MODES: ReadonlyArray<RollMode> = [
@@ -195,9 +199,43 @@ export const DICE_FORMULA_LABELS = {
   diceGroup: 'Быстрое добавление костей',
   increaseModifier: 'Увеличить модификатор',
   decreaseModifier: 'Уменьшить модификатор',
+  increaseModifierButton: '+1',
+  decreaseModifierButton: '−1',
   dropLast: 'Убрать последний элемент',
   presetGroup: 'Готовые формулы и переключатели броска',
 } as const;
+
+/** Сообщения об ошибках формулы. */
+export const DICE_FORMULA_ERRORS = {
+  empty: 'Введите формулу или нажмите на кость',
+  unparsed: 'Не удалось разобрать формулу',
+} as const;
+
+/**
+ * Подпись кнопки быстрого добавления кости.
+ *
+ * @param sides - Число граней кости
+ * @returns Обозначение кости: процентная пишется как d%
+ */
+export function getQuickDieLabel(sides: number): string {
+  return sides === PERCENTILE_DIE_SIDES ? 'd%' : `d${sides}`;
+}
+
+/**
+ * Подпись столбца гистограммы под указателем.
+ *
+ * @param range - Значение или диапазон значений столбца
+ * @param probability - Вероятность попасть в столбец, уже отформатированная
+ * @param cumulative - Вероятность выбросить не меньше, уже отформатированная
+ * @returns Текст подписи
+ */
+export function createChartReadout(
+  range: string,
+  probability: string,
+  cumulative: string,
+): string {
+  return `${range}: ${probability} · не меньше: ${cumulative}`;
+}
 
 /**
  * Подсказка на кнопке быстрого добавления кости.
