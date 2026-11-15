@@ -106,7 +106,7 @@
       class="block scroll-mt-4"
     />
 
-    <UiDetailLayout :narrow="isStacked">
+    <UiDetailLayout :stacked="isStacked">
       <template #aside>
         <!--
         Обложку открываем в лайтбоксе (как галереи классов/видов). Заглушку

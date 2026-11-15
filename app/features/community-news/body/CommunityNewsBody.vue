@@ -31,7 +31,7 @@
 
 <template>
   <article>
-    <UiDetailLayout narrow>
+    <UiDetailLayout stacked>
       <template #aside>
         <div :class="[$style.cover, 'flex flex-col gap-3']">
           <!-- Видео заменяет обложку; обложка становится его заставкой -->

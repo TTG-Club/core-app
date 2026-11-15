@@ -65,12 +65,10 @@
       : undefined,
   );
 
-  // Новость читается одной узкой колонкой, как в дровере; у статьи остаётся
-  // широкая раскладка с содержанием сбоку.
-  const isNews = computed(() => article.value?.type === ARTICLE_TYPE.NEWS);
-
   // Возврат — в листинг соответствующего типа (новости → /news, статьи → /articles).
-  const closeUrl = computed(() => (isNews.value ? NEWS_ROUTE : ARTICLES_ROUTE));
+  const closeUrl = computed(() =>
+    article.value?.type === ARTICLE_TYPE.NEWS ? NEWS_ROUTE : ARTICLES_ROUTE,
+  );
 </script>
 
 <template>
@@ -80,7 +78,6 @@
     :date-time="article?.publishDateTime"
     :date-time-format="ARTICLE_DATE_FORMAT"
     copy-text
-    :narrow="isNews"
   >
     <template #actions>
       <PageActions
