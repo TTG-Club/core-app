@@ -15,10 +15,10 @@
 
   const image = computed(() => readImageAttributes(node.attrs));
 
-  // В редакторе картинка обтекается текстом всегда, без оглядки на ширину
-  // колонки: автору важно видеть, что он настроил. На странице в узкой колонке
-  // обтекание отключается (см. MarkupImage).
-  const floatClass = computed(() => {
+  // В редакторе картинка обтекается текстом и выравнивается всегда, без оглядки
+  // на ширину колонки: автору важно видеть, что он настроил. На странице в узкой
+  // колонке картинка встаёт на всю ширину (см. MarkupImage).
+  const placementClass = computed(() => {
     if (image.value?.float === 'left') {
       return 'float-left clear-left mr-4';
     }
@@ -27,12 +27,20 @@
       return 'float-right clear-right ml-4';
     }
 
+    if (image.value?.align === 'left') {
+      return 'clear-both mr-auto';
+    }
+
+    if (image.value?.align === 'right') {
+      return 'clear-both ml-auto';
+    }
+
     return 'clear-both mx-auto';
   });
 
-  const selectedClass = computed(() =>
-    selected ? 'outline-2 outline-offset-2 outline-primary' : '',
-  );
+  // Выделенная картинка залита цветом выделения текста и обведена рамкой: по
+  // одной рамке на тёмном фоне выделение легко не заметить.
+  const selectedClass = computed(() => (selected ? 'ring-2 ring-primary' : ''));
 
   const wrapperStyle = computed(() =>
     image.value
@@ -44,8 +52,8 @@
 <template>
   <NodeViewWrapper
     as="figure"
-    class="mb-2 w-(--markup-image-width) max-w-full cursor-pointer rounded-lg"
-    :class="[floatClass, selectedClass]"
+    class="relative mb-2 w-(--markup-image-width) max-w-full cursor-pointer rounded-lg"
+    :class="[placementClass, selectedClass]"
     :style="wrapperStyle"
     data-drag-handle
   >
@@ -66,7 +74,13 @@
     </template>
 
     <span
-      v-else
+      v-if="selected"
+      class="pointer-events-none absolute inset-0 rounded-lg bg-primary/30"
+      aria-hidden="true"
+    />
+
+    <span
+      v-if="!image"
       class="block rounded-lg bg-elevated p-3 text-sm text-muted"
     >
       {{ MARKUP_IMAGE_EMPTY_LABEL }}

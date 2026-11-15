@@ -36,7 +36,10 @@ interface ImageTokenData {
 
 /** Настройки картинки, которые меняет автор; `null` снимает значение. */
 export type ImageAttributesPatch = Partial<
-  Record<'float' | 'width' | 'alt' | 'caption', string | number | null>
+  Record<
+    'float' | 'align' | 'width' | 'alt' | 'caption',
+    string | number | null
+  >
 >;
 
 /**
@@ -105,6 +108,7 @@ export const TtgImage = Node.create({
     return {
       url: dataAttr('data-url', 'url'),
       float: dataAttr('data-float', 'float'),
+      align: dataAttr('data-align', 'align'),
       width: dataAttr('data-width', 'width'),
       alt: dataAttr('data-alt', 'alt'),
       caption: dataAttr('data-caption', 'caption'),

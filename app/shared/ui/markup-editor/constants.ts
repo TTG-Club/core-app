@@ -37,7 +37,7 @@ export const MARKUP_IMAGE_MENU = {
     icon: 'tabler:float-left',
   },
   floatNone: {
-    label: 'Отдельным блоком по центру',
+    label: 'Отдельным блоком, без обтекания',
     icon: 'tabler:float-none',
   },
   floatRight: {

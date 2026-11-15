@@ -61,7 +61,15 @@ export const IMAGE_FLOAT_CLASSES = {
   left: 'w-full @md:float-left @md:clear-left @md:mr-4 @md:w-(--markup-image-width)',
   right:
     'w-full @md:float-right @md:clear-right @md:ml-4 @md:w-(--markup-image-width)',
-  none: 'clear-both mx-auto w-full @md:w-(--markup-image-width)',
+} as const;
+
+// Классы отдельно стоящей картинки (без обтекания) по выравниванию: к левому
+// краю, по центру или к правому. Текст идёт под ней. В узкой колонке картинка
+// занимает всю ширину, и выравнивать нечего.
+export const IMAGE_ALIGN_CLASSES = {
+  left: 'clear-both mr-auto w-full @md:w-(--markup-image-width)',
+  center: 'clear-both mx-auto w-full @md:w-(--markup-image-width)',
+  right: 'clear-both ml-auto w-full @md:w-(--markup-image-width)',
 } as const;
 
 // Обёртка описания с картинками. Блочный поток вместо флекс-колонки родителя:

@@ -1,5 +1,5 @@
 export type { AnchoredMarkup, MarkupHeadingAnchor } from './anchors';
-export type { ImageAttributes, ImageFloat } from './image';
+export type { ImageAlign, ImageAttributes, ImageFloat } from './image';
 export type { MarkdownStat } from './markdown-entity';
 export type { MarkdownAlign, MarkdownColumn } from './markdown-table';
 

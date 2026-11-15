@@ -6,6 +6,12 @@ export const IMAGE_BLOCK_TYPE = 'image';
 /** Сторона обтекания картинки текстом. */
 export type ImageFloat = 'left' | 'right';
 
+/**
+ * Край, к которому прижата отдельно стоящая картинка. Середина — положение по
+ * умолчанию, в атрибутах не хранится.
+ */
+export type ImageAlign = 'left' | 'right';
+
 /** Ширины картинки в процентах от ширины текста, которые предлагает редактор. */
 export const IMAGE_WIDTH_PRESETS = [25, 33, 50, 75, 100] as const;
 
@@ -33,8 +39,13 @@ const IMAGE_URL_REGEXP = /^(?:\/(?!\/)|https?:\/\/)[^\s|{}]+$/i;
 export interface ImageAttributes {
   /** Адрес файла. */
   url: string;
-  /** Сторона обтекания; не задана — картинка стоит отдельным блоком по центру. */
+  /** Сторона обтекания; не задана — картинка стоит отдельным блоком. */
   float?: ImageFloat;
+  /**
+   * Край, к которому прижата отдельно стоящая картинка; не задан — по центру.
+   * У картинки с обтеканием сторону задаёт `float`, выравнивание не действует.
+   */
+  align?: ImageAlign;
   /** Ширина в процентах; не задана — берётся ширина по умолчанию. */
   width?: number;
   /** Текст-описание для тех, кто не видит картинку. */
@@ -101,6 +112,20 @@ function toImageFloat(rawFloat: unknown): ImageFloat | undefined {
 }
 
 /**
+ * Приводит выравнивание к известному значению.
+ *
+ * @param rawAlign - Сырое значение атрибута `align`
+ * @returns Край картинки; undefined — по центру
+ */
+function toImageAlign(rawAlign: unknown): ImageAlign | undefined {
+  if (rawAlign === 'left' || rawAlign === 'right') {
+    return rawAlign;
+  }
+
+  return undefined;
+}
+
+/**
  * Приводит подпись к строке. Разбор атрибутов превращает «123» в число, а
  * «true» в логическое значение, поэтому тип здесь не гарантирован.
  *
@@ -135,6 +160,7 @@ export function readImageAttributes(
   return {
     url,
     float: toImageFloat(attrs?.float),
+    align: toImageAlign(attrs?.align),
     width: toImageWidth(attrs?.width),
     alt: toImageText(attrs?.alt),
     caption: toImageText(attrs?.caption),
@@ -172,6 +198,10 @@ export function toImageMarkerAttributes(
     attrs.float = image.float;
   }
 
+  if (image.align) {
+    attrs.align = image.align;
+  }
+
   if (image.width !== undefined) {
     attrs.width = image.width;
   }
@@ -188,7 +218,7 @@ export function toImageMarkerAttributes(
 }
 
 /**
- * Собирает маркер картинки `{@image | url:… | float:… | width:… }` — строку,
+ * Собирает маркер картинки `{@image | url:… | float:… | align:… | width:… }` — строку,
  * которой картинка живёт в исходнике редактора.
  *
  * @param image - Настройки картинки

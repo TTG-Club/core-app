@@ -7,7 +7,11 @@
 
   import { UiGallery } from '~ui/gallery';
 
-  import { IMAGE_FLOAT_CLASSES, IMAGE_WIDTH_VARIABLE } from '../consts';
+  import {
+    IMAGE_ALIGN_CLASSES,
+    IMAGE_FLOAT_CLASSES,
+    IMAGE_WIDTH_VARIABLE,
+  } from '../consts';
   import { getImageWidth, readImageAttributes } from '../image';
 
   // `renderNodes` приходит всем компонентам маркеров (см. renderer.ts); картинке
@@ -28,7 +32,7 @@
   const figureClass = computed(() =>
     image.value?.float
       ? IMAGE_FLOAT_CLASSES[image.value.float]
-      : IMAGE_FLOAT_CLASSES.none,
+      : IMAGE_ALIGN_CLASSES[image.value?.align ?? 'center'],
   );
 
   // Описание для тех, кто не видит картинку; не задано — берётся подпись.

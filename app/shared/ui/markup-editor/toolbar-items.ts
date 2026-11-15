@@ -409,6 +409,16 @@ function readAlign(editor: Editor, nodeName: string): string | undefined {
 
 /** Текущее выравнивание блока под курсором (ячейка таблицы → заголовок → абзац). */
 function activeAlign(editor: Editor): string | undefined {
+  const imagePosition = getSelectedImagePosition(editor);
+
+  // Картинка: обтекаемая стоит у своей стороны, отдельно стоящая — по
+  // выравниванию (середина — положение по умолчанию).
+  if (imagePosition !== undefined) {
+    const image = getImageAt(editor, imagePosition);
+
+    return image?.float ?? image?.align ?? 'center';
+  }
+
   if (editor.isActive('tableCell')) {
     return readAlign(editor, 'tableCell');
   }
@@ -434,8 +444,23 @@ function activeAlign(editor: Editor): string | undefined {
  * таблицы — абзацу/заголовку: там `left` — значение по умолчанию, поэтому храним
  * его как `null` (обычный абзац-строка без `{@p}`). `updateAttributes` для узла не
  * под курсором — no-op, поэтому все вызовы безопасны.
+ *
+ * Выделенная картинка встаёт к выбранному краю ОТДЕЛЬНЫМ блоком: обтекание
+ * снимается, иначе сторону продолжал бы задавать `float` и выравнивание не
+ * было бы видно. Середина — положение по умолчанию, хранится как `null`.
  */
 function setAlign(editor: Editor, align: 'left' | 'center' | 'right'): void {
+  const imagePosition = getSelectedImagePosition(editor);
+
+  if (imagePosition !== undefined) {
+    updateImageAt(editor, imagePosition, {
+      float: null,
+      align: align === 'center' ? null : align,
+    });
+
+    return;
+  }
+
   const chain = editor.chain().focus();
 
   if (editor.isActive('tableCell') || editor.isActive('tableHeader')) {
@@ -505,7 +530,7 @@ function headingDropdown(editor: Editor): EditorToolbarItem {
 
 /**
  * Выпадающее меню выравнивания (единое, «как H»): работает и для ячеек таблицы, и
- * для абзацев/заголовков — «любой текст». Раньше выравнивание жило только в меню
+ * для абзацев/заголовков — «любой текст», — и для выделенной картинки. Раньше выравнивание жило только в меню
  * таблицы; теперь вынесено на общую панель тулбара.
  */
 function alignDropdown(editor: Editor): EditorToolbarItem {

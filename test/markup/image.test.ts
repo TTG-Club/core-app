@@ -40,6 +40,7 @@ describe('картинка в разметке', () => {
     ).toEqual({
       url: '/s3/a.webp',
       float: undefined,
+      align: undefined,
       width: 100,
       alt: '123',
       caption: 'Дракон красный',
@@ -74,6 +75,20 @@ describe('картинка в разметке', () => {
     ).toBe(
       '{@image | url:/s3/a.webp | float:right | width:33 | caption:Карта долины}',
     );
+  });
+
+  it('выравнивание читается только к левому и правому краю', () => {
+    expect(
+      readImageAttributes({ url: '/s3/a.webp', align: 'right' })?.align,
+    ).toBe('right');
+
+    expect(
+      readImageAttributes({ url: '/s3/a.webp', align: 'center' })?.align,
+    ).toBeUndefined();
+
+    expect(
+      buildImageMarker({ url: '/s3/a.webp', align: 'left', width: 25 }),
+    ).toBe('{@image | url:/s3/a.webp | align:left | width:25}');
   });
 
   it('чистит подпись от символов, ломающих маркер', () => {
