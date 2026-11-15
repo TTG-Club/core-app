@@ -121,11 +121,25 @@
     downloadCharacterJson(character);
   }
 
+  const { isSheetShared, setShareToken, getShareUrlByToken } =
+    useCharacterSheetShare();
+
   const { isExporting, exportToPdf } = useCharacterSheetPdf();
 
-  /** Экспорт листа в PDF — собирается из того же документа карточки. */
+  /**
+   * Экспорт листа в PDF — собирается из того же документа карточки; токен
+   * доступа карточка знает из списка, он уходит в QR-код. Без ссылки экспорт
+   * её включает, и список перечитывается — у карточки появился токен.
+   */
   function handleDownloadPdf(): void {
-    void exportToPdf(character);
+    void exportToPdf(character, {
+      shareUrl: getShareUrlByToken(shareToken),
+      ensureShare: true,
+    }).then((isShareEnabled) => {
+      if (isShareEnabled) {
+        emit('share-change');
+      }
+    });
   }
 
   /** Запрос на копию листа — создаёт её список (у него лимит и обновление). */
@@ -142,8 +156,6 @@
   function handleRemove(): void {
     isDeleteOpen.value = true;
   }
-
-  const { isSheetShared, setShareToken } = useCharacterSheetShare();
 
   const isShared = computed(() => isSheetShared(character.id));
 

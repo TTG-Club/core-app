@@ -16474,13 +16474,15 @@ export function downloadCharacterJson(character: Character): void {
  * а в основном бандле весили бы больше самого листа.
  *
  * @param character персонаж скачиваемого листа.
+ * @param shareUrl ссылка на просмотр листа для QR-кода; null — кода не будет.
  */
 export async function downloadCharacterPdf(
   character: Character,
+  shareUrl: string | null = null,
 ): Promise<void> {
   const { buildCharacterSheetPdf } = await import('./pdf');
 
-  const bytes = await buildCharacterSheetPdf(character);
+  const bytes = await buildCharacterSheetPdf(character, { shareUrl });
 
   // Копия байтов в свежий массив: `Blob` принимает только представления над
   // `ArrayBuffer`, а pdf-lib отдаёт массив над `ArrayBufferLike`.
