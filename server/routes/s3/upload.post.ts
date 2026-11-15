@@ -8,6 +8,8 @@ import { z } from 'zod/v4';
 
 import {
   getFileForUpload,
+  getS3OwnerFolder,
+  isTeamS3Section,
   readUploadFormFile,
   S3Service,
 } from '#server/domain/s3';
@@ -28,7 +30,7 @@ interface Request extends EventHandlerRequest {
 
 export default defineEventHandler<Request, Promise<S3UploadResponse>>(
   async (event) => {
-    const { username } = await getUserFromToken(event);
+    const user = await getUserFromToken(event);
     const file = await readUploadFormFile(event);
 
     let maxSize: number | undefined;
@@ -52,11 +54,21 @@ export default defineEventHandler<Request, Promise<S3UploadResponse>>(
       );
     }
 
+    // В командный раздел грузят только модераторы и администраторы: файл
+    // ложится в общую папку команды, а не в папку загрузившего.
+    if (isTeamS3Section(section)) {
+      assertAdminAccess(user);
+    }
+
     let fileForUpload: S3UploadFile;
 
     try {
       fileForUpload = await getCompressed(
-        getFileForUpload(section, username, file),
+        getFileForUpload(
+          section,
+          getS3OwnerFolder(section, user.username),
+          file,
+        ),
         maxSize,
       );
     } catch (error) {

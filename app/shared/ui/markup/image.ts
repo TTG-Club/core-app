@@ -12,6 +12,12 @@ export type ImageFloat = 'left' | 'right';
  */
 export type ImageAlign = 'left' | 'right';
 
+/**
+ * Положение отдельно стоящей картинки по умолчанию — по центру. Значение для
+ * классов оформления и кнопки выравнивания; в атрибутах узла его нет.
+ */
+export const IMAGE_DEFAULT_ALIGN = 'center';
+
 /** Ширины картинки в процентах от ширины текста, которые предлагает редактор. */
 export const IMAGE_WIDTH_PRESETS = [25, 33, 50, 75, 100] as const;
 

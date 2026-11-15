@@ -13,6 +13,7 @@ export {
   buildImageMarker,
   getImageWidth,
   IMAGE_BLOCK_TYPE,
+  IMAGE_DEFAULT_ALIGN,
   IMAGE_WIDTH_PRESETS,
   readImageAttributes,
   sanitizeImageText,

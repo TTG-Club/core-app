@@ -5,7 +5,13 @@ import type { S3UploadResponse } from '#server/domain/s3';
 import { StatusCodes } from 'http-status-codes';
 import { z } from 'zod/v4';
 
-import { getFileKey, isPrivateS3Key, S3Service } from '#server/domain/s3';
+import {
+  getFileKey,
+  getS3OwnerFolder,
+  isPrivateS3Key,
+  isTeamS3Section,
+  S3Service,
+} from '#server/domain/s3';
 
 const requestSchema = z.object({
   url: z.string().startsWith('/s3/'),
@@ -59,7 +65,11 @@ export default defineEventHandler<Request, Promise<S3UploadResponse>>(
       );
     }
 
-    if (!(await isUserHasAccess(event, username))) {
+    // Файл командного раздела копирует только команда, и копия остаётся в
+    // общей папке — иначе её адрес выдал бы логин копирующего.
+    if (isTeamS3Section(section)) {
+      assertAdminAccess(await getUserFromToken(event));
+    } else if (!(await isUserHasAccess(event, username))) {
       throw createError(getErrorResponse(StatusCodes.FORBIDDEN));
     }
 
@@ -70,7 +80,7 @@ export default defineEventHandler<Request, Promise<S3UploadResponse>>(
 
     const targetKey = getFileKey(
       section,
-      requesterUsername,
+      getS3OwnerFolder(section, requesterUsername),
       getSourceFilename(filename),
     );
 

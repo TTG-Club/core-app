@@ -6,10 +6,11 @@ import type {
   ParsedSelection,
 } from './types';
 
-import { getNodeText, parse, toMarkupSource } from '~ui/markup';
+import { getNodeText, parse, toMarkupSource, toStoredMarkup } from '~ui/markup';
 
 import {
   ADMIN_BUGS_FILTER_ALL,
+  BUG_REPORT_STATUS_COMMENT_LINE_BREAK_REGEXP,
   BUG_REPORT_TYPE_QUERY_VALUES,
   BUG_REPORT_TYPES,
   DEFAULT_BUG_REPORT_TYPE,
@@ -81,6 +82,37 @@ export function toBugReportDescriptionBlocks(description: string): string[] {
     .split(/\n{2,}/)
     .map((paragraph) => paragraph.trim())
     .filter((paragraph) => paragraph.length > 0);
+}
+
+/**
+ * Готовит сохранённый ответ модератора для редактора разметки: каждая строка
+ * становится абзацем. Внутри маркеров `{@...}` переносов нет, поэтому новые
+ * ответы (абзацы уже разделены пустой строкой) от этого не меняются, а старые,
+ * написанные обычным текстом, не слипаются в один абзац.
+ *
+ * @param statusComment Сохранённый ответ модератора.
+ * @returns Значение для `v-model` редактора.
+ */
+export function toBugReportCommentEditorValue(
+  statusComment: string | null | undefined,
+): string {
+  return (statusComment ?? '')
+    .trim()
+    .replace(BUG_REPORT_STATUS_COMMENT_LINE_BREAK_REGEXP, '\n\n');
+}
+
+/**
+ * Приводит значение редактора к строке, которая уходит на сервер: исходник
+ * разметки `{@...}`, как у описания репорта (колонка в базе — строка с лимитом,
+ * сервис её не разбирает). Нетронутое значение проходит тот же путь, что и
+ * правка в редакторе, — иначе сравнение «изменён ли ответ» расходилось бы на
+ * записи одного и того же текста.
+ *
+ * @param editorValue Значение `v-model` редактора.
+ * @returns Исходник разметки без пробелов по краям; пустая строка — ответа нет.
+ */
+export function toBugReportCommentSource(editorValue: string): string {
+  return toMarkupSource(toStoredMarkup(toMarkupSource(editorValue))).trim();
 }
 
 /**

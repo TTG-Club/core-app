@@ -12,7 +12,11 @@
     IMAGE_FLOAT_CLASSES,
     IMAGE_WIDTH_VARIABLE,
   } from '../consts';
-  import { getImageWidth, readImageAttributes } from '../image';
+  import {
+    getImageWidth,
+    IMAGE_DEFAULT_ALIGN,
+    readImageAttributes,
+  } from '../image';
 
   // `renderNodes` приходит всем компонентам маркеров (см. renderer.ts); картинке
   // он не нужен — вложенной разметки у неё нет.
@@ -32,7 +36,7 @@
   const figureClass = computed(() =>
     image.value?.float
       ? IMAGE_FLOAT_CLASSES[image.value.float]
-      : IMAGE_ALIGN_CLASSES[image.value?.align ?? 'center'],
+      : IMAGE_ALIGN_CLASSES[image.value?.align ?? IMAGE_DEFAULT_ALIGN],
   );
 
   // Описание для тех, кто не видит картинку; не задано — берётся подпись.

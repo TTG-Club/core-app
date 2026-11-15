@@ -9,7 +9,7 @@ import type { ImageFloat } from '~ui/markup';
 
 import type { MarkupEditorPreset, MarkupTag } from './tags';
 
-import { IMAGE_WIDTH_PRESETS } from '~ui/markup';
+import { IMAGE_DEFAULT_ALIGN, IMAGE_WIDTH_PRESETS } from '~ui/markup';
 
 import {
   MARKUP_IMAGE_ICON,
@@ -416,7 +416,7 @@ function activeAlign(editor: Editor): string | undefined {
   if (imagePosition !== undefined) {
     const image = getImageAt(editor, imagePosition);
 
-    return image?.float ?? image?.align ?? 'center';
+    return image?.float ?? image?.align ?? IMAGE_DEFAULT_ALIGN;
   }
 
   if (editor.isActive('tableCell')) {
@@ -455,7 +455,7 @@ function setAlign(editor: Editor, align: 'left' | 'center' | 'right'): void {
   if (imagePosition !== undefined) {
     updateImageAt(editor, imagePosition, {
       float: null,
-      align: align === 'center' ? null : align,
+      align: align === IMAGE_DEFAULT_ALIGN ? null : align,
     });
 
     return;
@@ -786,7 +786,8 @@ function blockItem(
  * инлайновые/интерактивные теги → ссылки на разделы.
  *
  * Базовый пресет оставляет только оформление текста (см. BASIC_TAG_KEYS): без
- * выравнивания, доменных вставок и ссылок на разделы.
+ * выравнивания, доменных вставок и ссылок на разделы. Картинка — в обоих
+ * наборах, когда форма её включила.
  *
  * @param editor - Экземпляр TipTap из слота UEditor
  * @param handlers - Колбэки панелей ввода (раздел/ссылка/кубик/подпись таблицы)
@@ -802,15 +803,23 @@ export function buildToolbarItems(
   // Заголовки собраны в headingDropdown, поэтому из блочной группы их убираем.
   const blockTags = BLOCK_TAGS.filter((tag) => !tag.key.startsWith('heading-'));
 
+  const { onImage } = handlers;
+
+  // Кнопка картинки есть в обоих наборах, если форма включила картинки.
+  const imageItems = onImage ? [imageItem(editor, handlers, onImage)] : [];
+
   if (preset === 'basic') {
     return [
       FORMAT_MARK_ITEMS.filter((item) => BASIC_TAG_KEYS.has(item.key)).map(
         (item) => markItem(editor, item),
       ),
       [headingDropdown(editor)],
-      blockTags
-        .filter((tag) => BASIC_TAG_KEYS.has(tag.key))
-        .map((tag) => blockItem(editor, tag, handlers)),
+      [
+        ...blockTags
+          .filter((tag) => BASIC_TAG_KEYS.has(tag.key))
+          .map((tag) => blockItem(editor, tag, handlers)),
+        ...imageItems,
+      ],
       [
         lineBreakItem(editor),
         ...INLINE_TAGS.filter((tag) => BASIC_TAG_KEYS.has(tag.key)).map((tag) =>
@@ -820,14 +829,12 @@ export function buildToolbarItems(
     ];
   }
 
-  const { onImage } = handlers;
-
   return [
     FORMAT_MARK_ITEMS.map((item) => markItem(editor, item)),
     [headingDropdown(editor), alignDropdown(editor)],
     [
       ...blockTags.map((tag) => blockItem(editor, tag, handlers)),
-      ...(onImage ? [imageItem(editor, handlers, onImage)] : []),
+      ...imageItems,
     ],
     [
       lineBreakItem(editor),

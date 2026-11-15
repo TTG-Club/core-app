@@ -81,6 +81,7 @@
     placeholder = 'Опиши материал',
     preset = 'full',
     imageSection = undefined,
+    tall = false,
   } = defineProps<{
     placeholder?: string;
     /**
@@ -90,6 +91,12 @@
      * (баг-репорт, лист персонажа, поиск игр).
      */
     imageSection?: string;
+    /**
+     * Высокое поле с самого начала — для текстов, которые пишут сразу
+     * несколькими абзацами (ответ модератора). Тянуть за угол можно в обоих
+     * случаях.
+     */
+    tall?: boolean;
     /**
      * Набор кнопок: `full` — всё для мастерской, `basic` — только оформление
      * текста (жирный/курсив/…, заголовки, списки, цитата, ссылка) для
@@ -378,7 +385,8 @@
   // Класс контейнера редактора: при ошибке валидации подсвечиваем рамкой error,
   // иначе обычная рамка с подсветкой primary при фокусе.
   const containerClass = computed(() => [
-    'flex h-60 min-h-40 min-w-0 resize-y flex-col overflow-hidden rounded-md border',
+    'flex min-h-40 min-w-0 resize-y flex-col overflow-hidden rounded-md border',
+    tall ? 'h-96' : 'h-60',
     highlight.value
       ? 'border-error'
       : 'border-default focus-within:border-primary',

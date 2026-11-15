@@ -102,6 +102,11 @@
     toBugReportDescriptionBlocks(props.bugReport.description),
   );
 
+  /** Абзацы ответа команды: с оформлением и картинками, старые — текстом. */
+  const commentBlocks = computed(() =>
+    toBugReportDescriptionBlocks(props.bugReport.statusComment ?? ''),
+  );
+
   // Порог раскрытия считаем по тексту без маркеров `{@...}`, иначе короткое, но
   // оформленное описание предлагало бы раскрыть «ничего».
   const descriptionText = computed(() =>
@@ -265,11 +270,13 @@
           <span>{{ MY_BUGS_COMMENT_TITLE }}</span>
         </div>
 
-        <p
-          class="mt-1.5 text-sm leading-relaxed break-words whitespace-pre-wrap text-secondary"
+        <!-- whitespace-pre-wrap — ради ответов, написанных до появления
+             оформления: в них переносы строк одиночные -->
+        <div
+          class="mt-1.5 text-sm leading-relaxed break-words whitespace-pre-wrap text-secondary [&>*:last-child]:mb-0"
         >
-          {{ bugReport.statusComment }}
-        </p>
+          <MarkupRender :render-node="commentBlocks" />
+        </div>
       </div>
 
       <!-- Подробности репорта -->
