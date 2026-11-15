@@ -24,7 +24,8 @@
         />
 
         <StatsBlock
-          :type="source.type"
+          :officiality="source.officiality"
+          :category="source.category"
           :publisher="source.publisher"
           :translation="source.translation"
         />
