@@ -46,6 +46,30 @@
 
   const headings = computed(() => anchoredContent.value.headings);
 
+  // Новость читается одной колонкой на любой ширине: обложка или ролик, под
+  // ним теги, ниже текст. Статья остаётся с колонкой содержания сбоку.
+  const isStacked = computed(() => article.type === ARTICLE_TYPE.NEWS);
+
+  // Содержание нужно только сбоку от длинной статьи; в столбике оно бы
+  // вклинилось между обложкой и текстом.
+  const isContentsShown = computed(
+    () => !isStacked.value && headings.value.length > 0,
+  );
+
+  // В столбике теги всегда стоят под обложкой; в раскладке статьи — сбоку на
+  // широком контейнере и над текстом в узком.
+  const asideTagsClass = computed(() =>
+    isStacked.value ? undefined : 'hidden @min-3xl:block',
+  );
+
+  const isInlineTagsShown = computed(
+    () => !isStacked.value && article.tags.length > 0,
+  );
+
+  const isAsideFooterShown = computed(
+    () => isContentsShown.value || article.tags.length > 0,
+  );
+
   const [DefineArticleTags, ArticleTags] = createReusableTemplate();
 
   // Анонс необязателен: если текста нет — не рендерим его блок, иначе пустой
@@ -71,8 +95,9 @@
   </DefineArticleTags>
 
   <!--
-    Общая раскладка карточек: на широком контейнере картинка слева, весь текст
-    справа; в узком дровере — в столбик. Один ArticleBody на чтение/дровер/предпросмотр.
+    Статья: на широком контейнере картинка слева, весь текст справа; в узком
+    дровере — в столбик. Новость — всегда в столбик. Один ArticleBody на
+    чтение/дровер/предпросмотр.
   -->
   <article>
     <!-- Метка начала статьи для пункта содержания «На самый верх» -->
@@ -81,7 +106,7 @@
       class="block scroll-mt-4"
     />
 
-    <UiDetailLayout>
+    <UiDetailLayout :narrow="isStacked">
       <template #aside>
         <!--
         Обложку открываем в лайтбоксе (как галереи классов/видов). Заглушку
@@ -127,16 +152,19 @@
           В узкой раскладке (дровер, мобильные) содержание скрыто, а теги стоят
           над текстом — колонка там над ним, а не рядом.
         -->
-          <div class="sticky top-0 flex flex-col gap-4">
+          <div
+            v-if="isAsideFooterShown"
+            class="sticky top-0 flex flex-col gap-4"
+          >
             <ArticleTableOfContents
-              v-if="headings.length"
+              v-if="isContentsShown"
               class="hidden lg:@min-3xl:block"
               :headings
             />
 
             <div
               v-if="article.tags.length"
-              class="hidden @min-3xl:block"
+              :class="asideTagsClass"
             >
               <ArticleTags />
             </div>
@@ -146,7 +174,7 @@
 
       <div class="flex flex-col">
         <div
-          v-if="article.tags.length"
+          v-if="isInlineTagsShown"
           class="mb-3 @min-3xl:hidden"
         >
           <ArticleTags />

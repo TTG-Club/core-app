@@ -84,6 +84,7 @@
     :date-time="news?.publishDateTime"
     :date-time-format="COMMUNITY_NEWS_DATE_FORMAT"
     copy-text
+    narrow
   >
     <template #actions>
       <PageActions

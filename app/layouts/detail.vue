@@ -6,6 +6,10 @@
 
   import { CommentsBlock } from '~comments/section';
   import { AppFooter } from '~infrastructure/footer';
+  import {
+    DETAIL_NARROW_WIDTH_CLASS,
+    DETAIL_WIDE_WIDTH_CLASS,
+  } from '~ui/detail-layout';
   import { SourceTag } from '~ui/source-tag';
 
   const {
@@ -17,6 +21,7 @@
     backTo = undefined,
     sectionPath = undefined,
     swipePaths = undefined,
+    narrow = false,
   } = defineProps<{
     title: string | undefined;
     copyText?: boolean;
@@ -32,6 +37,11 @@
      * без него листается список.
      */
     swipePaths?: Array<string>;
+    /**
+     * Узкая колонка для чтения (новости): шапка, запись и комментарии идут
+     * одним столбиком по центру, а не на всю ширину страницы.
+     */
+    narrow?: boolean;
   }>();
 
   const { format } = useDayjs();
@@ -51,6 +61,10 @@
   // Запись под пальцем уезжает вбок и не должна растягивать страницу
   const rootClass = computed(() =>
     sectionPath ? 'overflow-x-clip' : undefined,
+  );
+
+  const widthClass = computed(() =>
+    narrow ? DETAIL_NARROW_WIDTH_CLASS : DETAIL_WIDE_WIDTH_CLASS,
   );
 
   const formattedDateTime = computed(() => {
@@ -74,7 +88,8 @@
     >
       <div class="w-full shrink-0">
         <div
-          class="mx-auto flex w-full max-w-(--max-content) flex-col gap-1 p-4 md:pt-6"
+          class="mx-auto flex w-full flex-col gap-1 p-4 md:pt-6"
+          :class="widthClass"
         >
           <div class="flex items-center gap-1">
             <UButton
@@ -153,7 +168,8 @@
 
       <div class="w-full shrink-0">
         <div
-          class="mx-auto flex w-full max-w-(--max-content) flex-col gap-2 px-4 pb-8 lg:gap-3"
+          class="mx-auto flex w-full flex-col gap-2 px-4 pb-8 lg:gap-3"
+          :class="widthClass"
         >
           <slot name="default" />
 

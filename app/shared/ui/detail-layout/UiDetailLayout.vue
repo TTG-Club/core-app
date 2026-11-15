@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { DETAIL_NARROW_WIDTH_CLASS } from './constants';
+
   /**
    * Единая раскладка карточки раздела: узкая колонка свойств слева и текст
    * справа. Раскладка зависит от ширины КОНТЕЙНЕРА, а не окна: в дровере и
@@ -11,22 +13,33 @@
    * Раскладка отвечает только за колонки; внутреннее устройство каждой
    * колонки (отступы, ряды на средней ширине) задаёт сама карточка.
    */
-  const { stacked = false } = defineProps<{
+  const { stacked = false, narrow = false } = defineProps<{
     /**
      * Колонки всегда столбиком, как в узком контейнере: свойства сверху,
      * текст под ними во всю ширину.
      */
     stacked?: boolean;
+    /**
+     * Узкая колонка для чтения (новости): колонки всегда столбиком, а сама
+     * карточка не шире колонки чтения даже в широком контейнере.
+     */
+    narrow?: boolean;
   }>();
+
+  const isStacked = computed(() => stacked || narrow);
+
+  const rootClass = computed(() =>
+    narrow ? DETAIL_NARROW_WIDTH_CLASS : undefined,
+  );
 
   const rowClass = computed(() => [
     'flex flex-col gap-4',
-    { '@min-3xl:flex-row @min-3xl:gap-7': !stacked },
+    { '@min-3xl:flex-row @min-3xl:gap-7': !isStacked.value },
   ]);
 
   const asideClass = computed(() => [
     'flex w-full flex-col',
-    { '@min-3xl:w-80 @min-3xl:shrink-0': !stacked },
+    { '@min-3xl:w-80 @min-3xl:shrink-0': !isStacked.value },
   ]);
 
   defineSlots<{
@@ -38,7 +51,10 @@
 </script>
 
 <template>
-  <div class="@container w-full min-w-0">
+  <div
+    class="@container w-full min-w-0"
+    :class="rootClass"
+  >
     <div :class="rowClass">
       <div
         v-if="$slots.aside"
