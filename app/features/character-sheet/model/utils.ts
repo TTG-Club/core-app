@@ -7876,8 +7876,9 @@ interface FeatureGrantedSpellEntry extends GrantedSpellEntry {
  * (см. `getInnateSpells` и `getClassGrantedSpells`), а вот справочнику и
  * выгрузке важны все разом.
  *
- * Одно и то же заклинание может прийти дважды (вид и черта, две черты): в
- * списке ему место одно, и остаётся первая запись — правки достаются ей.
+ * Одно и то же заклинание может прийти дважды (вид и черта, класс и подкласс):
+ * в списке ему место одно — остаётся выдача, которая держит его готовым, а при
+ * равных правах первая запись (см. `uniqGrantedSpells`).
  *
  * @param character персонаж листа.
  * @returns заклинания вне книги персонажа.
@@ -7977,12 +7978,41 @@ function collectGrantedSpells(character: Character): GrantedSpellEntry[] {
     ),
   ];
 
-  return uniqBy(granted, (entry) => entry.spell.url).map(
-    ({ spell, fromClass }) => ({
-      spell: { ...spell, prepared: isInnateSpellPrepared(spell) },
-      fromClass,
-    }),
-  );
+  return uniqGrantedSpells(granted).map(({ spell, fromClass }) => ({
+    spell: { ...spell, prepared: isInnateSpellPrepared(spell) },
+    fromClass,
+  }));
+}
+
+/**
+ * Убирает дубли выданных заклинаний, оставляя по одному на URL.
+ *
+ * Одно заклинание может прийти от класса («весь список класса», готовит игрок)
+ * и от подкласса (заклинание домена, готово всегда) — так «Дневной свет» у
+ * жреца домена Света. Выдача, которая держит заклинание готовым, сильнее:
+ * иначе заклинание домена числилось бы неподготовленным и занимало место в
+ * пределе. При равных правах остаётся первая запись, и место в списке
+ * дубль берёт у первой встречи.
+ *
+ * @param entries заклинания вне книги вместе с дублями.
+ * @returns по одной записи на заклинание.
+ */
+function uniqGrantedSpells<T extends GrantedSpellEntry>(entries: T[]): T[] {
+  const chosen = new Map<string, T>();
+
+  for (const entry of entries) {
+    const current = chosen.get(entry.spell.url);
+
+    if (
+      !current
+      || (takesPreparationSpace(current.spell)
+        && !takesPreparationSpace(entry.spell))
+    ) {
+      chosen.set(entry.spell.url, entry);
+    }
+  }
+
+  return [...chosen.values()];
 }
 
 /**
@@ -8097,9 +8127,13 @@ export function findFeatureSpell(
   features: CharacterFeature[],
   spellUrl: string,
 ): CharacterSpell | undefined {
-  return getFeatureGrantedSpells(features).find(
-    (entry) => entry.spell.url === spellUrl,
-  )?.spell;
+  // Та же запись, что видна во вкладке (см. `uniqGrantedSpells`): иначе
+  // подготовку и предел правка считала бы по проигравшему дублю
+  return uniqGrantedSpells(
+    getFeatureGrantedSpells(features).filter(
+      (entry) => entry.spell.url === spellUrl,
+    ),
+  )[0]?.spell;
 }
 
 /**
