@@ -8,11 +8,13 @@
     createHistogram,
     CRITICAL_OUTCOME_LABEL,
     DICE_ANALYSIS_LABELS,
+    DICE_ICONS,
     EMPTY_VALUE_PLACEHOLDER,
     formatProbability,
     formatRollNumber,
   } from '../model';
   import DiceDistributionChart from './DiceDistributionChart.vue';
+  import DiceOrnatePanel from './DiceOrnatePanel.vue';
 
   const { analysis, chanceThreshold, isAnalysisOpen, result } =
     useDiceCalculator();
@@ -132,20 +134,12 @@
 </script>
 
 <template>
-  <section
+  <DiceOrnatePanel
     v-if="isAnalysisOpen && analysis && histogram"
-    class="flex flex-col gap-3 rounded-xl border border-default bg-muted p-4"
+    :label="DICE_ANALYSIS_LABELS.title"
+    :icon="DICE_ICONS.analysis"
     :aria-label="DICE_ANALYSIS_LABELS.section"
   >
-    <h3 class="flex items-center gap-2 text-sm font-semibold text-highlighted">
-      <UIcon
-        name="tabler:chart-bar"
-        class="size-4 text-primary"
-      />
-
-      {{ DICE_ANALYSIS_LABELS.title }}
-    </h3>
-
     <div
       v-if="outcomes.length"
       class="flex flex-wrap gap-2"
@@ -170,13 +164,15 @@
       <div
         v-for="stat in stats"
         :key="stat.key"
-        class="rounded-md bg-elevated px-3 py-2.5 text-center ring ring-default"
+        class="rounded-lg bg-default px-2 py-2.5 text-center ring ring-default"
       >
-        <div class="text-xl font-bold text-highlighted tabular-nums">
+        <div
+          class="font-display text-3xl leading-none font-bold text-highlighted lining-nums tabular-nums"
+        >
           {{ stat.value }}
         </div>
 
-        <div class="text-xs text-muted">{{ stat.label }}</div>
+        <div class="mt-1 text-xs text-muted">{{ stat.label }}</div>
       </div>
     </div>
 
@@ -223,5 +219,5 @@
     </div>
 
     <p class="text-xs text-muted">{{ note }}</p>
-  </section>
+  </DiceOrnatePanel>
 </template>

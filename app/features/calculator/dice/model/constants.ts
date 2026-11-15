@@ -9,6 +9,19 @@ export const DICE_CALCULATOR_TITLE = 'Калькулятор бросков';
 /** Иконка инструмента в меню. */
 export const DICE_CALCULATOR_ICON = 'tabler:dice';
 
+/** Иконки страницы калькулятора: по одной на панель и на действие. */
+export const DICE_ICONS = {
+  hero: 'ttg:dice-d20',
+  formula: 'tabler:wand',
+  tray: 'tabler:dice-5',
+  analysis: 'tabler:chart-histogram',
+  help: 'tabler:book-2',
+  roll: 'ttg:dice-d20',
+  clear: 'tabler:x',
+  dropLast: 'tabler:backspace',
+  expand: 'tabler:chevron-down',
+} as const;
+
 /** Заголовок и описание страницы для поисковиков. */
 export const DICE_CALCULATOR_SEO = {
   title: 'Калькулятор бросков [Dice Calculator] — D&D 5',
@@ -61,6 +74,19 @@ export const DICE_SHAPE_PATHS: Readonly<Record<number, string>> = {
   20: 'M12 2l8.7 5v10L12 22 3.3 17V7z',
   100: 'M12 2l8.7 5v10L12 22 3.3 17V7z',
 };
+
+/** Поле рисунка двадцатигранника — эмблемы калькулятора. */
+export const D20_EMBLEM_VIEW_BOX = '0 0 200 200';
+
+/** Внешний контур двадцатигранника на эмблеме. */
+export const D20_EMBLEM_OUTLINE_PATH = 'M100 10 178 55v90l-78 45-78-45V55z';
+
+/** Передняя грань двадцатигранника: в неё вписывается число результата. */
+export const D20_EMBLEM_FACE_PATH = 'M100 46 152 134H48z';
+
+/** Рёбра между передней гранью и контуром двадцатигранника. */
+export const D20_EMBLEM_EDGES_PATH =
+  'M100 10v36M22 55l78-9 78 9M22 55l26 79-26 11M178 55l-26 79 26 11M48 134l52 56 52-56';
 
 /** Насколько кнопки `+1` и `−1` меняют модификатор формулы. */
 export const MODIFIER_STEP = 1;

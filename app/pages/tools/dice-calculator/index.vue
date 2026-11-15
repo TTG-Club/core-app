@@ -1,10 +1,8 @@
 <script setup lang="ts">
-  import {
-    DICE_CALCULATOR_SEO,
-    DICE_CALCULATOR_TITLE,
-  } from '~calculator/dice/model';
+  import { DICE_CALCULATOR_SEO } from '~calculator/dice/model';
   import {
     DiceAnalysisCard,
+    DiceCalculatorHero,
     DiceFormulaCard,
     DiceHelpCard,
     DiceResultCard,
@@ -17,29 +15,40 @@
 </script>
 
 <template>
-  <NuxtLayout
-    name="detail"
-    :title="DICE_CALCULATOR_TITLE"
-  >
-    <ClientOnly>
-      <div class="flex flex-col gap-4">
-        <DiceFormulaCard />
+  <NuxtLayout name="default">
+    <div class="flex flex-col gap-3 pt-4 lg:gap-4 lg:pt-0">
+      <DiceCalculatorHero />
 
-        <DiceResultCard />
+      <ClientOnly>
+        <!-- С `lg` — две колонки: слева формула и справка, справа поднос
+          и анализ. Ниже колонки растворяются (`contents`), и порядок задаёт
+          `order`: результат броска должен идти сразу за формулой, а справка —
+          последней -->
+        <div
+          class="grid gap-3 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-4"
+        >
+          <div class="flex flex-col gap-3 max-lg:contents lg:gap-4">
+            <DiceFormulaCard class="order-1" />
 
-        <DiceAnalysisCard />
+            <DiceHelpCard class="order-4" />
+          </div>
 
-        <DiceHelpCard />
-      </div>
+          <div class="flex flex-col gap-3 max-lg:contents lg:gap-4">
+            <DiceResultCard class="order-2" />
 
-      <template #fallback>
-        <div class="flex justify-center py-16">
-          <UIcon
-            name="tabler:loader-2"
-            class="size-8 animate-spin text-muted"
-          />
+            <DiceAnalysisCard class="order-3" />
+          </div>
         </div>
-      </template>
-    </ClientOnly>
+
+        <template #fallback>
+          <div class="flex justify-center py-16">
+            <UIcon
+              name="tabler:loader-2"
+              class="size-8 animate-spin text-muted"
+            />
+          </div>
+        </template>
+      </ClientOnly>
+    </div>
   </NuxtLayout>
 </template>

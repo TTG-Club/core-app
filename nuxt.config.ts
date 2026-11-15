@@ -226,6 +226,13 @@ export default defineNuxtConfig({
         subsets: ['latin', 'cyrillic'],
         weights: ['400', '500', '600'],
       },
+      // Антиква крупных заголовков и чисел (`font-display`): грузится только
+      // на страницах, где ею что-то набрано.
+      {
+        name: 'Cormorant Garamond',
+        subsets: ['latin', 'cyrillic'],
+        weights: ['600', '700'],
+      },
     ],
   },
 
