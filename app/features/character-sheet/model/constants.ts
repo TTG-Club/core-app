@@ -229,6 +229,13 @@ export const SHEET_PDF_MIME_TYPE = 'application/pdf';
 /** Заголовок тоста при сбое сборки PDF. */
 export const SHEET_PDF_ERROR_TITLE = 'Не удалось собрать PDF листа';
 
+/** Заголовок тоста: экспорт PDF сам включил доступ по ссылке ради QR-кода. */
+export const SHEET_PDF_SHARE_ENABLED_TITLE = 'Доступ по ссылке включён';
+
+/** Пояснение тоста о включённом при экспорте доступе. */
+export const SHEET_PDF_SHARE_ENABLED_DESCRIPTION =
+  'QR-код в PDF ведёт на лист. Отключить ссылку можно в меню «Поделиться листом».';
+
 /** Подписи и иконки статусов автосохранения листа. */
 export const SHEET_SAVE_STATUS_META: Record<
   SheetSaveStatus,

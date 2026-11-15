@@ -68,8 +68,19 @@ export function useCharacterSheetShare() {
    * @returns адрес ссылки; null — доступ выключен либо токен от другого листа.
    */
   function getShareUrl(sheetId: string): string | null {
-    return isSheetShared(sheetId)
-      ? `${getOrigin()}${CHARACTER_SHEET_SHARED_ROUTE}/${shareToken.value}`
+    return isSheetShared(sheetId) ? getShareUrlByToken(shareToken.value) : null;
+  }
+
+  /**
+   * Адрес ссылки по готовому токену — когда токен известен не из общего
+   * состояния: из списка листов, сохранённой записи или адреса чужого листа.
+   *
+   * @param token токен доступа; null — доступ выключен.
+   * @returns адрес ссылки либо null.
+   */
+  function getShareUrlByToken(token: string | null | undefined): string | null {
+    return token
+      ? `${getOrigin()}${CHARACTER_SHEET_SHARED_ROUTE}/${token}`
       : null;
   }
 
@@ -167,6 +178,7 @@ export function useCharacterSheetShare() {
     isPending,
     isSheetShared,
     getShareUrl,
+    getShareUrlByToken,
     setShareToken,
     setViewedShareToken,
     setEditorAccess,
