@@ -501,7 +501,7 @@
         <MarkupEditor
           v-model="statusCommentInput"
           preset="basic"
-          tall
+          compact
           :image-section="BUG_REPORT_STATUS_COMMENT_IMAGE_SECTION"
           :placeholder="BUG_REPORT_STATUS_COMMENT_PLACEHOLDER"
         />

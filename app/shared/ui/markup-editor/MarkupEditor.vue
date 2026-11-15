@@ -81,7 +81,7 @@
     placeholder = 'Опиши материал',
     preset = 'full',
     imageSection = undefined,
-    tall = false,
+    compact = false,
   } = defineProps<{
     placeholder?: string;
     /**
@@ -92,11 +92,11 @@
      */
     imageSection?: string;
     /**
-     * Высокое поле с самого начала — для текстов, которые пишут сразу
-     * несколькими абзацами (ответ модератора). Тянуть за угол можно в обоих
-     * случаях.
+     * Низкое поле с самого начала — для коротких текстов рядом с другим
+     * содержимым (ответ модератора над описанием репорта). Тянуть за угол можно
+     * в обоих случаях.
      */
-    tall?: boolean;
+    compact?: boolean;
     /**
      * Набор кнопок: `full` — всё для мастерской, `basic` — только оформление
      * текста (жирный/курсив/…, заголовки, списки, цитата, ссылка) для
@@ -386,7 +386,7 @@
   // иначе обычная рамка с подсветкой primary при фокусе.
   const containerClass = computed(() => [
     'flex min-h-40 min-w-0 resize-y flex-col overflow-hidden rounded-md border',
-    tall ? 'h-96' : 'h-60',
+    compact ? 'h-48' : 'h-60',
     highlight.value
       ? 'border-error'
       : 'border-default focus-within:border-primary',
