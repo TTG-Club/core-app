@@ -3,6 +3,7 @@ import type { Component } from 'vue';
 import {
   MarkupBadge,
   MarkupHeading,
+  MarkupImage,
   MarkupKbd,
   MarkupLink,
   MarkupList,
@@ -69,6 +70,9 @@ export const MARKER_CONFIGS: MarkerConfig[] = [
     isBlock: true,
   },
   { type: 'table', component: MarkupTable, isBlock: true },
+  // Картинка в тексте: `{@image | url:… | float:left | width:40 | caption:…}`.
+  // Своего текста у маркера нет — только атрибуты (см. image.ts).
+  { type: 'image', component: MarkupImage, aliases: ['img'], isBlock: true },
 
   // Sections
   { type: 'class', component: MarkupSectionLink },

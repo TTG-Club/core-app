@@ -4,7 +4,10 @@
   import { MarkupEditor } from '~ui/markup-editor';
 
   import { CREATURE_ACTION_EFFECT_CONTEXTS } from '../../model';
-  import { CREATURE_ACTION_ADD_LABELS } from '../constants';
+  import {
+    CREATURE_ACTION_ADD_LABELS,
+    CREATURE_UPLOAD_SECTION,
+  } from '../constants';
   import { CreatureActionList } from './action';
 
   const model = defineModel<LegendaryActions>({ required: true });
@@ -57,6 +60,7 @@
         >
           <MarkupEditor
             v-model="model.description"
+            :image-section="CREATURE_UPLOAD_SECTION"
             placeholder="Введите описание (необязательно)"
           />
         </UFormField>

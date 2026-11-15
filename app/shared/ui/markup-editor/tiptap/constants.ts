@@ -33,3 +33,9 @@ export const LINE_BREAK_MARKER = '{@br}';
  * внутри абзаца, см. ttg-quote.ts).
  */
 export const QUOTE_PARAGRAPH_SEPARATOR = `${LINE_BREAK_MARKER}${LINE_BREAK_MARKER}`;
+
+/** Имя атомарного блочного узла картинки `{@image …}`. */
+export const IMAGE_NODE = 'ttgImage';
+
+/** DOM-атрибут узла картинки (копирование и вставка внутри редактора). */
+export const IMAGE_NODE_ATTR = 'data-ttg-image';

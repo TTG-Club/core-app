@@ -1,5 +1,6 @@
 export { default as MarkupBadge } from './MarkupBadge.vue';
 export { default as MarkupHeading } from './MarkupHeading.vue';
+export { default as MarkupImage } from './MarkupImage.vue';
 export { default as MarkupKbd } from './MarkupKbd.vue';
 export { default as MarkupLink } from './MarkupLink.vue';
 export { default as MarkupList } from './MarkupList.vue';

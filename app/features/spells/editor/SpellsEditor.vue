@@ -22,7 +22,7 @@
   } from '~spells/model';
   import { SpellPreview } from '~spells/preview';
   import { EditorBaseInfo } from '~ui/editor';
-  import { MarkupEditor } from '~ui/markup-editor';
+  import { MARKUP_IMAGE_SECTIONS, MarkupEditor } from '~ui/markup-editor';
   import {
     SelectClassCatalog,
     SelectDamageType,
@@ -238,6 +238,7 @@
               >
                 <MarkupEditor
                   v-model="state.description"
+                  :image-section="MARKUP_IMAGE_SECTIONS.spells"
                   :placeholder="SPELL_MAIN_TAB_LABELS.descriptionPlaceholder"
                 />
               </UFormField>

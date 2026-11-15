@@ -7,7 +7,7 @@
   import { createFeatEditorRows, createFeatMechanics } from '~feats/model';
   import { ConfirmDialog } from '~initiative/ui-kit';
   import { EditorNestedSection } from '~ui/editor';
-  import { MarkupEditor } from '~ui/markup-editor';
+  import { MARKUP_IMAGE_SECTIONS, MarkupEditor } from '~ui/markup-editor';
   import { SelectLevel } from '~ui/select';
   import { InfoTooltip } from '~ui/tooltip';
 
@@ -545,6 +545,7 @@
           >
             <MarkupEditor
               v-model="option.description"
+              :image-section="MARKUP_IMAGE_SECTIONS.classes"
               :placeholder="CLASS_FEATURE_OPTIONS_EDITOR.descriptionPlaceholder"
             />
           </UFormField>

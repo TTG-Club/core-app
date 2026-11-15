@@ -1,6 +1,7 @@
 import type { MarkerNode, RenderNode } from './types';
 
 import { MAX_DEPTH } from './consts';
+import { IMAGE_BLOCK_TYPE, readImageAttributes } from './image';
 import { toMarkdownRow } from './markdown-table';
 import { parse } from './parser';
 import {
@@ -102,6 +103,34 @@ function renderBlocks(nodes: unknown[], depth: number): string[] {
 }
 
 /**
+ * Рендерит картинку как `![описание](адрес)`. Адрес на сайте (`/s3/…`)
+ * дополняется доменом: Markdown уносят с сайта, и относительный путь там никуда
+ * не ведёт. Обтекание и ширина в Markdown не выражаются; подпись идёт курсивом
+ * следующей строкой.
+ *
+ * @param node - Узел картинки
+ * @returns Markdown-картинка либо пустая строка, если адреса нет
+ */
+function renderImage(node: MarkerNode): string {
+  const image = readImageAttributes(node.attrs);
+
+  if (!image) {
+    return '';
+  }
+
+  const origin = image.url.startsWith('/')
+    ? (globalThis.location?.origin ?? '')
+    : '';
+
+  const picture = `![${escapeMarkdown(image.alt ?? image.caption)}](${origin}${image.url})`;
+
+  return image.caption
+    ? `${picture}  
+*${escapeMarkdown(image.caption)}*`
+    : picture;
+}
+
+/**
  * Рендерит блочный маркер; неблочные маркеры на верхнем уровне остаются
  * абзацем.
  */
@@ -116,6 +145,10 @@ function renderBlockMarker(node: MarkerNode, depth: number): string {
 
   if (node.type === 'separator') {
     return '---';
+  }
+
+  if (node.type === IMAGE_BLOCK_TYPE) {
+    return renderImage(node);
   }
 
   if (node.type === 'heading') {
@@ -441,6 +474,7 @@ function renderMarker(node: MarkerNode, depth: number): string {
     case 'table':
     case 'quote':
     case 'heading':
+    case 'image':
       return renderBlockMarker(node, depth);
     default:
       // Всё остальное отдаёт голый текст. Ссылки на разделы

@@ -1,6 +1,22 @@
 export type { AnchoredMarkup, MarkupHeadingAnchor } from './anchors';
+export type { ImageAttributes, ImageFloat } from './image';
 export type { MarkdownStat } from './markdown-entity';
 export type { MarkdownAlign, MarkdownColumn } from './markdown-table';
+
+export {
+  CELL_PLACEHOLDER,
+  EMPTY_PARAGRAPH_MARKDOWN,
+  IMAGE_WIDTH_VARIABLE,
+} from './consts';
+
+export {
+  buildImageMarker,
+  getImageWidth,
+  IMAGE_BLOCK_TYPE,
+  IMAGE_WIDTH_PRESETS,
+  readImageAttributes,
+  sanitizeImageText,
+} from './image';
 
 export {
   buildMarkdownEntity,
@@ -28,7 +44,6 @@ export {
 
 export { getHeadingAnchor, withHeadingAnchors } from './anchors';
 export { MARKER_ALIASES, MARKER_MAP } from './config';
-export { CELL_PLACEHOLDER, EMPTY_PARAGRAPH_MARKDOWN } from './consts';
 export { buildMarkdownTable, toMarkdownRow } from './markdown-table';
 export { default as MarkupRender } from './MarkupRender.vue';
 export { parse } from './parser';

@@ -517,6 +517,7 @@
       >
         <MarkupEditor
           v-model="state.content"
+          :image-section="COMMUNITY_NEWS_IMAGE_SECTION"
           :placeholder="COMMUNITY_NEWS_EDITOR_TEXT.contentPlaceholder"
         />
       </UFormField>

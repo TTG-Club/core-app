@@ -14,6 +14,7 @@ import { BLOCK_MARKER_NODE, FORMAT_MARK_ATTR } from './constants';
 import { classifyLinkMarker } from './link-markers';
 import { isBlockMarker } from './render-chip';
 import { isHeadingMarkerStart } from './ttg-heading';
+import { isImageMarkerStart } from './ttg-image';
 import { isListMarkerStart } from './ttg-list';
 import { isParagraphMarkerStart } from './ttg-paragraph';
 import { isQuoteMarkerStart } from './ttg-quote';
@@ -264,7 +265,7 @@ export const blockMarkerMarkdownTokenizer: MarkdownTokenizer = {
       return undefined;
     }
 
-    // Списки, таблицы, цитаты, заголовки и выровненные абзацы обрабатывают
+    // Списки, таблицы, цитаты, заголовки, выровненные абзацы и картинки обрабатывают
     // НАТИВНЫЕ токенайзеры (редактируемые узлы) — сюда попадают только прочие
     // блочные маркеры (разделитель).
     if (
@@ -273,6 +274,7 @@ export const blockMarkerMarkdownTokenizer: MarkdownTokenizer = {
       || isQuoteMarkerStart(source)
       || isHeadingMarkerStart(source)
       || isParagraphMarkerStart(source)
+      || isImageMarkerStart(source)
     ) {
       return undefined;
     }

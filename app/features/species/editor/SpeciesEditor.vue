@@ -13,7 +13,7 @@
   import { createFeatEditorRows, createFeatMechanics } from '~feats/model';
   import { SpeciesPreview } from '~species/preview';
   import { EditorBaseInfo } from '~ui/editor';
-  import { MarkupEditor } from '~ui/markup-editor';
+  import { MARKUP_IMAGE_SECTIONS, MarkupEditor } from '~ui/markup-editor';
   import { SelectCreatureType, SelectSpecies } from '~ui/select';
   import { InfoTooltip } from '~ui/tooltip';
   import { UploadGallery, UploadImage } from '~ui/upload';
@@ -162,6 +162,7 @@
             >
               <MarkupEditor
                 v-model="state.description"
+                :image-section="MARKUP_IMAGE_SECTIONS.species"
                 :placeholder="SPECIES_EDITOR_LABELS.descriptionPlaceholder"
               />
             </UFormField>

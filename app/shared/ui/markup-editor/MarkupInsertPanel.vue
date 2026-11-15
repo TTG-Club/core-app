@@ -3,20 +3,33 @@
 
   import type { MarkupTag } from './tags';
 
+  import { sanitizeImageText } from '~ui/markup';
+
   import {
     INSERT_PANEL_CONFIRM_ICON,
     INSERT_PANEL_CONFIRM_LABELS,
     INSERT_PANEL_ENTER_KEY_HINT,
+    MARKUP_IMAGE_PANEL_FIELDS,
   } from './constants';
   import { hasMarkerAtom } from './tiptap/node-utils';
+  import {
+    getImageAt,
+    getSelectedImagePosition,
+    updateImageAt,
+  } from './tiptap/ttg-image';
   import { sanitizeMarkerText } from './toolbar-items';
 
-  /** Режим панели: поиск сущности раздела, ввод нотации кубика, подпись таблицы или URL ссылки. */
+  /**
+   * Режим панели: поиск сущности раздела, ввод нотации кубика, подпись таблицы,
+   * URL ссылки, подпись или текст-описание картинки.
+   */
   type PanelMode =
     | { kind: 'section'; tag: MarkupTag }
     | { kind: 'dice'; tag: MarkupTag }
     | { kind: 'caption' }
-    | { kind: 'link'; tag: MarkupTag };
+    | { kind: 'link'; tag: MarkupTag }
+    | { kind: 'image-caption' }
+    | { kind: 'image-alt' };
 
   /** Минимальная форма результата поиска раздела (нужны имя и slug). */
   interface SectionSearchResult {
@@ -60,6 +73,19 @@
   // теряет их (сплющивает в пробел) — такой текст как подпись ненадёжен.
   const selectionHasChip = hasMarkerAtom(editor, range.from, range.to);
 
+  // Позиция выделенной картинки на момент открытия: пока фокус в поле панели,
+  // подпись пишется именно ей.
+  const imagePosition = getSelectedImagePosition(editor);
+
+  /** Атрибут картинки, который правит панель в текущем режиме. */
+  const imageField = computed(() => {
+    if (mode.kind === 'image-caption') {
+      return 'caption';
+    }
+
+    return mode.kind === 'image-alt' ? 'alt' : undefined;
+  });
+
   // Начальное значение поля: подпись — текущий caption таблицы (редактирование);
   // ссылка — ПУСТО (поле = URL, метку берём из выделения при вставке); остальные —
   // выделенный текст (значение по умолчанию для вставки/поиска).
@@ -71,6 +97,16 @@
     // Ссылка → поле = URL (метку берём из выделения при вставке).
     if (mode.kind === 'link') {
       return '';
+    }
+
+    // Картинка → текущая подпись или описание (редактирование).
+    if (imageField.value) {
+      const image =
+        imagePosition === undefined
+          ? undefined
+          : getImageAt(editor, imagePosition);
+
+      return image?.[imageField.value] ?? '';
     }
 
     // Кубик → поле = ФОРМУЛА: выделил «1к6», нажал кубик — формула уже готова, и
@@ -117,6 +153,10 @@
       return 'tabler:link';
     }
 
+    if (mode.kind === 'image-caption' || mode.kind === 'image-alt') {
+      return MARKUP_IMAGE_PANEL_FIELDS[mode.kind].icon;
+    }
+
     return 'tabler:search';
   });
 
@@ -138,6 +178,10 @@
       return `Поиск: ${mode.tag.label}`;
     }
 
+    if (mode.kind === 'image-caption' || mode.kind === 'image-alt') {
+      return MARKUP_IMAGE_PANEL_FIELDS[mode.kind].label;
+    }
+
     return '';
   });
 
@@ -155,6 +199,10 @@
       return 'Ссылка (URL)';
     }
 
+    if (mode.kind === 'image-caption' || mode.kind === 'image-alt') {
+      return MARKUP_IMAGE_PANEL_FIELDS[mode.kind].label;
+    }
+
     return 'Поиск сущности';
   });
 
@@ -166,7 +214,7 @@
 
   /** Подпись кнопки подтверждения по режиму. */
   const confirmLabel = computed(() =>
-    mode.kind === 'caption'
+    mode.kind === 'caption' || imageField.value
       ? INSERT_PANEL_CONFIRM_LABELS.caption
       : INSERT_PANEL_CONFIRM_LABELS.insert,
   );
@@ -322,6 +370,20 @@
   }
 
   /**
+   * Подпись и описание картинки — АТРИБУТЫ её узла. Пишем их картинке, которая
+   * была выделена при открытии панели; пустая строка снимает значение.
+   */
+  function confirmImageText() {
+    if (imageField.value && imagePosition !== undefined) {
+      updateImageAt(editor, imagePosition, {
+        [imageField.value]: sanitizeImageText(query.value) || null,
+      });
+    }
+
+    emit('close');
+  }
+
+  /**
    * Подтверждает ввод панели по её режиму — и клавишей Enter в поле, и кнопкой
    * подтверждения: кубик/подпись/ссылка применяются, в поиске раздела
    * выбирается подсвеченный результат.
@@ -341,6 +403,12 @@
 
     if (mode.kind === 'link') {
       confirmLink();
+
+      return;
+    }
+
+    if (imageField.value) {
+      confirmImageText();
 
       return;
     }

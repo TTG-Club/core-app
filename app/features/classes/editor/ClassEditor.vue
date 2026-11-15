@@ -18,7 +18,7 @@
   } from '~feats/editor/ui';
   import { createFeatEditorRows, createFeatMechanics } from '~feats/model';
   import { EditorBaseInfo, StartingEquipmentEditor } from '~ui/editor';
-  import { MarkupEditor } from '~ui/markup-editor';
+  import { MARKUP_IMAGE_SECTIONS, MarkupEditor } from '~ui/markup-editor';
   import { SelectAbilities, SelectCasterType } from '~ui/select';
   import { InfoTooltip } from '~ui/tooltip';
   import { UploadGallery, UploadImage } from '~ui/upload';
@@ -275,6 +275,7 @@
               >
                 <MarkupEditor
                   v-model="state.description"
+                  :image-section="MARKUP_IMAGE_SECTIONS.classes"
                   :placeholder="CLASS_EDITOR_LABELS.descriptionPlaceholder"
                 />
               </UFormField>

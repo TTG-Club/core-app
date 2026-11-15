@@ -196,6 +196,7 @@
             >
               <MarkupEditor
                 v-model="state.description"
+                :image-section="CREATURE_UPLOAD_SECTION"
                 placeholder="Введи описание"
               />
             </UFormField>

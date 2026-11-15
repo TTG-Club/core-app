@@ -5,7 +5,7 @@
 
   import { GlossaryPreview } from '~glossary/preview';
   import { EditorBaseInfo } from '~ui/editor';
-  import { MarkupEditor } from '~ui/markup-editor';
+  import { MARKUP_IMAGE_SECTIONS, MarkupEditor } from '~ui/markup-editor';
   import { useWorkshopForm } from '~workshop/composable';
   import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
   import { WorkshopEditorFormControls } from '~workshop/revision/ui';
@@ -92,6 +92,7 @@
         >
           <MarkupEditor
             v-model="state.description"
+            :image-section="MARKUP_IMAGE_SECTIONS.glossary"
             placeholder="Введи описание"
           />
         </UFormField>

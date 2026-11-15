@@ -2,7 +2,7 @@
   import type { ClassFeatureCreate } from '../../model';
 
   import { createFeatEditorRows, createFeatMechanics } from '~feats/model';
-  import { MarkupEditor } from '~ui/markup-editor';
+  import { MARKUP_IMAGE_SECTIONS, MarkupEditor } from '~ui/markup-editor';
   import { SelectLevel } from '~ui/select';
   import { InfoTooltip } from '~ui/tooltip';
 
@@ -424,6 +424,7 @@
             >
               <MarkupEditor
                 v-model="feature.description"
+                :image-section="MARKUP_IMAGE_SECTIONS.classes"
                 :placeholder="CLASS_FEATURES_EDITOR.descriptionPlaceholder"
               />
             </UFormField>

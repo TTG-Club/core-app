@@ -1,10 +1,21 @@
 <script setup lang="ts">
   import type { DropdownMenuItem } from '@nuxt/ui';
+  import type { EditorView } from '@tiptap/pm/view';
+  import type { Editor } from '@tiptap/vue-3';
 
   import type { MarkupEditorPreset, MarkupTag } from './tags';
+  import type { ToolbarHandlers } from './toolbar-items';
 
-  import { toMarkupSource, toStoredMarkup } from '~ui/markup';
+  import { Selection } from '@tiptap/pm/state';
 
+  import { buildImageMarker, toMarkupSource, toStoredMarkup } from '~ui/markup';
+
+  import {
+    MARKUP_IMAGE_ICON,
+    MARKUP_IMAGE_MAX_SIZE,
+    MARKUP_IMAGE_UPLOAD_LABEL,
+    MARKUP_IMAGE_UPLOADING_LABEL,
+  } from './constants';
   import MarkupInsertPanel from './MarkupInsertPanel.vue';
   import {
     BASIC_TAG_KEYS,
@@ -15,10 +26,12 @@
     SECTION_TAGS,
   } from './tags';
   import {
+    insertImageNode,
     transformPastedMarkupHtml,
     TtgBlockMarker,
     ttgFormatMarks,
     ttgHeadingExtensions,
+    TtgImage,
     TtgKeymap,
     ttgListExtensions,
     TtgMarker,
@@ -35,7 +48,9 @@
     | { kind: 'section'; tag: MarkupTag }
     | { kind: 'dice'; tag: MarkupTag }
     | { kind: 'caption' }
-    | { kind: 'link'; tag: MarkupTag };
+    | { kind: 'link'; tag: MarkupTag }
+    | { kind: 'image-caption' }
+    | { kind: 'image-alt' };
 
   // Маркеры {@...} в редакторе: форматирующие ({@i}/{@b}/…) — редактируемые марки
   // (можно вкладывать друг в друга и Markdown), остальные — атомарные чипы.
@@ -45,6 +60,7 @@
     TtgBlockMarker,
     TtgSectionLink,
     TtgSeparatorMarkdown,
+    TtgImage,
     TtgKeymap,
     ...ttgFormatMarks,
     ...ttgHeadingExtensions,
@@ -61,8 +77,19 @@
   // обратно в структуру — `toStoredMarkup`. Поле остаётся строковым во всех формах.
   const model = defineModel<string>({ default: '' });
 
-  const { placeholder = 'Опиши материал', preset = 'full' } = defineProps<{
+  const {
+    placeholder = 'Опиши материал',
+    preset = 'full',
+    imageSection = undefined,
+  } = defineProps<{
     placeholder?: string;
+    /**
+     * Раздел хранилища для картинок в тексте (первый сегмент ключа в S3). Задан —
+     * в редакторе появляется кнопка картинки, вставка из буфера и
+     * перетаскиванием. Не задан — картинок нет: так живут пользовательские формы
+     * (баг-репорт, лист персонажа, поиск игр).
+     */
+    imageSection?: string;
     /**
      * Набор кнопок: `full` — всё для мастерской, `basic` — только оформление
      * текста (жирный/курсив/…, заголовки, списки, цитата, ссылка) для
@@ -195,7 +222,153 @@
   // ProseMirror молча теряет `<strong>`/`<em>`/`<a>` (их марок в схеме нет), а
   // `<hr>`, `<code>` и `<img>` доживают до сохранения чужими узлами и печатаются
   // на странице мусорным текстом.
-  const editorProps = { transformPastedHTML: transformPastedMarkupHtml };
+  //
+  // Файлы-картинки из буфера и перетаскивания загружаем сами (см. ниже): без
+  // этого ProseMirror их молча отбрасывает.
+  const editorProps = {
+    transformPastedHTML: transformPastedMarkupHtml,
+    handlePaste: handleEditorPaste,
+    handleDrop: handleEditorDrop,
+  };
+
+  // Картинки в тексте включены, только если форма назвала раздел хранилища.
+  const isImageEnabled = computed(() => !!imageSection);
+
+  const { isUploading: isImageUploading, uploadImage } = useImageUpload({
+    section: () => imageSection ?? '',
+    maxSize: MARKUP_IMAGE_MAX_SIZE,
+  });
+
+  const { open: openImageDialog, onChange: onImageDialogChange } =
+    useFileDialog({ accept: IMAGE_UPLOAD_ACCEPT, multiple: true });
+
+  // Куда вставлять выбранные в диалоге файлы: в визуальный редактор, с тулбара
+  // которого открыли диалог, либо (не задано) — в текст режима кода.
+  let imageDialogView: EditorView | undefined;
+
+  /**
+   * Файлы-картинки из буфера обмена или перетаскивания.
+   *
+   * @param transfer - Данные события вставки или перетаскивания
+   * @returns Файлы с типом `image/*`
+   */
+  function getImageFiles(transfer: DataTransfer | null): File[] {
+    return Array.from(transfer?.files ?? []).filter((file) =>
+      file.type.startsWith('image/'),
+    );
+  }
+
+  /**
+   * Загружает файлы по одному и отдаёт адрес каждого на вставку. Файл, не
+   * прошедший проверку, пропускается — пользователь уже увидел причину тостом.
+   *
+   * @param files - Выбранные, вставленные или перетащенные файлы
+   * @param insert - Вставка картинки по адресу загруженного файла
+   */
+  async function uploadImages(
+    files: File[],
+    insert: (url: string) => void,
+  ): Promise<void> {
+    for (const file of files) {
+      const url = await uploadImage(file);
+
+      if (url) {
+        insert(url);
+      }
+    }
+  }
+
+  /**
+   * Открывает выбор файлов с тулбара визуального редактора.
+   *
+   * @param editor - Редактор, в который встанут картинки
+   */
+  function pickImages(editor: Editor): void {
+    imageDialogView = editor.view;
+    openImageDialog();
+  }
+
+  /** Открывает выбор файлов из режима кода. */
+  function pickImagesIntoCode(): void {
+    imageDialogView = undefined;
+    openImageDialog();
+  }
+
+  onImageDialogChange((files) => {
+    const view = imageDialogView;
+
+    uploadImages(Array.from(files ?? []), (url) =>
+      view ? insertImageNode(view, url) : insertImageIntoCode(url),
+    );
+  });
+
+  /**
+   * Вставка из буфера: картинка-файл (снимок экрана, скопированное изображение)
+   * загружается и встаёт в текст. Буфер с текстом не трогаем: редакторы
+   * документов кладут рядом с текстом его снимок картинкой, и вставился бы он.
+   *
+   * @param view - Представление редактора
+   * @param event - Событие вставки
+   * @returns true, если вставку обработали сами
+   */
+  function handleEditorPaste(view: EditorView, event: ClipboardEvent): boolean {
+    const files = getImageFiles(event.clipboardData);
+
+    if (
+      !isImageEnabled.value
+      || !files.length
+      || event.clipboardData?.getData('text/plain')
+    ) {
+      return false;
+    }
+
+    event.preventDefault();
+    uploadImages(files, (url) => insertImageNode(view, url));
+
+    return true;
+  }
+
+  /**
+   * Перетаскивание файлов-картинок в редактор: курсор встаёт в точку броска, и
+   * картинки вставляются туда. Перенос узлов внутри редактора не трогаем.
+   *
+   * @param view - Представление редактора
+   * @param event - Событие броска
+   * @param _slice - Перетаскиваемый фрагмент документа (не нужен)
+   * @param moved - Перенос внутри самого редактора
+   * @returns true, если бросок обработали сами
+   */
+  function handleEditorDrop(
+    view: EditorView,
+    event: DragEvent,
+    _slice: unknown,
+    moved: boolean,
+  ): boolean {
+    const files = getImageFiles(event.dataTransfer);
+
+    if (moved || !isImageEnabled.value || !files.length) {
+      return false;
+    }
+
+    event.preventDefault();
+
+    const dropPoint = view.posAtCoords({
+      left: event.clientX,
+      top: event.clientY,
+    });
+
+    if (dropPoint) {
+      view.dispatch(
+        view.state.tr.setSelection(
+          Selection.near(view.state.doc.resolve(dropPoint.pos)),
+        ),
+      );
+    }
+
+    uploadImages(files, (url) => insertImageNode(view, url));
+
+    return true;
+  }
 
   // Markdown здесь — лишь ТРАНСПОРТ для round-trip наших {@...}. Формат Markdown
   // мы не используем, поэтому GFM выключен: `| a | b |`, `~~зачёркнутое~~`,
@@ -230,20 +403,50 @@
     insertPanel.value = { kind: 'caption' };
   }
 
+  /** Открывает панель ввода подписи под выделенной картинкой. */
+  function openImageCaptionPanel() {
+    insertPanel.value = { kind: 'image-caption' };
+  }
+
+  /** Открывает панель ввода текста-описания выделенной картинки. */
+  function openImageAltPanel() {
+    insertPanel.value = { kind: 'image-alt' };
+  }
+
   function closeInsertPanel() {
     insertPanel.value = null;
   }
 
-  // Ключ панели: пересоздаёт её при смене режима/раздела (у подписи tag нет).
+  // Ключ панели: пересоздаёт её при смене режима/раздела (у подписей таблицы и
+  // картинки tag нет — ключом служит сам режим).
   const insertPanelKey = computed(() => {
     const panel = insertPanel.value;
 
-    if (!panel || panel.kind === 'caption') {
-      return 'caption';
+    if (!panel) {
+      return '';
     }
 
-    return `${panel.kind}:${panel.tag.key}`;
+    return 'tag' in panel ? `${panel.kind}:${panel.tag.key}` : panel.kind;
   });
+
+  /**
+   * Колбэки тулбара визуального редактора. Загрузка картинки передаётся, только
+   * когда картинки включены, — без неё тулбар кнопку не рисует.
+   *
+   * @param editor - Экземпляр TipTap из слота UEditor
+   * @returns Колбэки панелей ввода и загрузки картинки
+   */
+  function getToolbarHandlers(editor: Editor): ToolbarHandlers {
+    return {
+      onSection: openSectionPanel,
+      onLink: openLinkPanel,
+      onDice: openDicePanel,
+      onCaption: openCaptionPanel,
+      onImage: isImageEnabled.value ? () => pickImages(editor) : undefined,
+      onImageCaption: openImageCaptionPanel,
+      onImageAlt: openImageAltPanel,
+    };
+  }
 
   // Те же группы и порядок, что и в визуальном тулбаре (форматы → блок →
   // kbd+интерактив → раздел), чтобы набор кнопок совпадал в обоих режимах.
@@ -294,6 +497,25 @@
   });
 
   /**
+   * Вставляет маркер картинки в текст режима кода отдельной строкой — туда, где
+   * стоит курсор (или в конец, если поле ещё не трогали).
+   *
+   * @param url - Адрес загруженной картинки
+   */
+  function insertImageIntoCode(url: string): void {
+    const value = codeValue.value;
+    const position = textareaRef.value?.selectionEnd ?? value.length;
+
+    codeValue.value = [
+      value.slice(0, position).trimEnd(),
+      buildImageMarker({ url }),
+      value.slice(position).trimStart(),
+    ]
+      .filter(Boolean)
+      .join('\n');
+  }
+
+  /**
    * Вставляет разметку тега в позицию курсора текстового поля режима кода:
    * оборачивает выделение либо подставляет значение-заглушку.
    */
@@ -335,6 +557,18 @@
       >
         {{ showCode ? 'Визуальный вид' : 'Показать код' }}
       </UButton>
+
+      <span
+        v-if="isImageUploading"
+        class="flex items-center gap-1 text-xs text-muted"
+      >
+        <UIcon
+          name="tabler:loader-2"
+          class="size-3.5 animate-spin"
+        />
+
+        {{ MARKUP_IMAGE_UPLOADING_LABEL }}
+      </span>
     </div>
 
     <ClientOnly>
@@ -365,16 +599,7 @@
               <UEditorToolbar
                 :editor
                 :items="
-                  buildToolbarItems(
-                    editor,
-                    {
-                      onSection: openSectionPanel,
-                      onLink: openLinkPanel,
-                      onDice: openDicePanel,
-                      onCaption: openCaptionPanel,
-                    },
-                    preset,
-                  )
+                  buildToolbarItems(editor, getToolbarHandlers(editor), preset)
                 "
                 class="flex-wrap border-b border-default"
                 :ui="{ group: 'flex-wrap' }"
@@ -420,6 +645,21 @@
                 />
               </UTooltip>
             </div>
+
+            <UTooltip
+              v-if="isImageEnabled"
+              :text="MARKUP_IMAGE_UPLOAD_LABEL"
+              :ui="{ content: TOOLBAR_LAYER_CLASS }"
+            >
+              <UButton
+                :icon="MARKUP_IMAGE_ICON"
+                :aria-label="MARKUP_IMAGE_UPLOAD_LABEL"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                @click.left.exact.prevent="pickImagesIntoCode"
+              />
+            </UTooltip>
 
             <UDropdownMenu
               v-if="hasSectionLinks"
@@ -595,6 +835,19 @@
   .markup-editor-table
     :deep(.tiptap :is(p, h1, h2, h3, h4)[data-align='left']) {
     text-align: left;
+  }
+
+  /* Картинка с обтеканием (TtgImage) — это float. Рядом с ней таблица, цитата и
+     линия-разделитель не помещаются и уходят под неё; заголовок и список встают
+     рядом, сужаясь (иначе линия под заголовком и маркеры списка уезжают под
+     картинку). Так же ведёт себя текст на странице — см. IMAGE_FLOW_BLOCK_CLASSES. */
+  .markup-editor-table
+    :deep(.tiptap :is(.tableWrapper, blockquote, .ttg-marker-chip-block)) {
+    clear: both;
+  }
+
+  .markup-editor-table :deep(.tiptap :is(h1, h2, h3, h4, ul, ol)) {
+    display: flow-root;
   }
 
   /* Подсветка выделенной при редактировании ячейки (prosemirror-tables). */

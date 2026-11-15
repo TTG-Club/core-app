@@ -5,8 +5,17 @@ import type {
 } from '@nuxt/ui';
 import type { Editor } from '@tiptap/vue-3';
 
+import type { ImageFloat } from '~ui/markup';
+
 import type { MarkupEditorPreset, MarkupTag } from './tags';
 
+import { IMAGE_WIDTH_PRESETS } from '~ui/markup';
+
+import {
+  MARKUP_IMAGE_ICON,
+  MARKUP_IMAGE_MENU,
+  MARKUP_IMAGE_UPLOAD_LABEL,
+} from './constants';
 import {
   BASIC_TAG_KEYS,
   BLOCK_TAGS,
@@ -21,6 +30,11 @@ import {
 } from './tiptap/constants';
 import { FORMAT_SPECS } from './tiptap/marks';
 import { hasMarkerAtom } from './tiptap/node-utils';
+import {
+  getImageAt,
+  getSelectedImagePosition,
+  updateImageAt,
+} from './tiptap/ttg-image';
 
 /** Колбэки для тегов, которые открывают панель ввода вместо прямой вставки. */
 export interface ToolbarHandlers {
@@ -32,6 +46,15 @@ export interface ToolbarHandlers {
   onDice: (tag: MarkupTag) => void;
   /** Подпись таблицы — открыть панель ввода (пишет атрибут caption). */
   onCaption: () => void;
+  /**
+   * Картинка — открыть выбор файла. Не задан — картинки в этом редакторе
+   * выключены, и кнопки нет.
+   */
+  onImage?: () => void;
+  /** Подпись под выделенной картинкой — открыть панель ввода. */
+  onImageCaption: () => void;
+  /** Текст-описание выделенной картинки — открыть панель ввода. */
+  onImageAlt: () => void;
 }
 
 /** Кнопка-переключатель форматирующей марки: имя марки (из marks.ts) + вид. */
@@ -623,6 +646,85 @@ function tableDropdown(
 }
 
 /**
+ * Кнопка картинки. Пока картинка не выделена — обычная кнопка: открывает выбор
+ * файла. Когда выделена — меню её настроек: обтекание, ширина, подписи,
+ * удаление (настройки — атрибуты узла, как подпись и выравнивание у таблицы).
+ *
+ * @param editor - Экземпляр TipTap
+ * @param handlers - Колбэки панелей ввода
+ * @param onImage - Открывает выбор файла для загрузки
+ * @returns Пункт тулбара
+ */
+function imageItem(
+  editor: Editor,
+  handlers: ToolbarHandlers,
+  onImage: () => void,
+): EditorToolbarItem {
+  const position = getSelectedImagePosition(editor);
+
+  const image =
+    position === undefined ? undefined : getImageAt(editor, position);
+
+  if (position === undefined || !image) {
+    return {
+      'icon': MARKUP_IMAGE_ICON,
+      'tooltip': kbdTooltip(MARKUP_IMAGE_UPLOAD_LABEL),
+      'aria-label': MARKUP_IMAGE_UPLOAD_LABEL,
+      'onClick': onImage,
+    };
+  }
+
+  const floatItem = (
+    float: ImageFloat | null,
+    menuItem: { label: string; icon: string },
+  ): DropdownMenuItem => ({
+    ...menuItem,
+    active: (image.float ?? null) === float,
+    onClick: () => updateImageAt(editor, position, { float }),
+  });
+
+  const widthItem = (width: number): DropdownMenuItem => ({
+    label: `${MARKUP_IMAGE_MENU.width.label} ${width}%`,
+    icon: MARKUP_IMAGE_MENU.width.icon,
+    active: image.width === width,
+    onClick: () => updateImageAt(editor, position, { width }),
+  });
+
+  return {
+    'icon': MARKUP_IMAGE_ICON,
+    'tooltip': kbdTooltip(MARKUP_IMAGE_MENU.settings),
+    'aria-label': MARKUP_IMAGE_MENU.settings,
+    'active': true,
+    'ui': { content: TOOLBAR_LAYER_CLASS },
+    'items': [
+      [
+        floatItem('left', MARKUP_IMAGE_MENU.floatLeft),
+        floatItem(null, MARKUP_IMAGE_MENU.floatNone),
+        floatItem('right', MARKUP_IMAGE_MENU.floatRight),
+      ],
+      IMAGE_WIDTH_PRESETS.map((width) => widthItem(width)),
+      [
+        {
+          ...MARKUP_IMAGE_MENU.caption,
+          onClick: () => handlers.onImageCaption(),
+        },
+        {
+          ...MARKUP_IMAGE_MENU.alt,
+          onClick: () => handlers.onImageAlt(),
+        },
+      ],
+      [
+        { ...MARKUP_IMAGE_MENU.upload, onClick: onImage },
+        {
+          ...MARKUP_IMAGE_MENU.remove,
+          onClick: () => editor.chain().focus().deleteSelection().run(),
+        },
+      ],
+    ],
+  };
+}
+
+/**
  * Строит пункт блочного тега: списки — нативный переключатель, цитата — нативный
  * blockquote, таблица — выпадающее меню операций, разделитель — блочный чип,
  * остальное — {@...}-чип отдельным блоком. Заголовки сюда НЕ попадают — они собраны
@@ -663,6 +765,7 @@ function blockItem(
  *
  * @param editor - Экземпляр TipTap из слота UEditor
  * @param handlers - Колбэки панелей ввода (раздел/ссылка/кубик/подпись таблицы)
+ *   и загрузки картинки
  * @param preset - Набор кнопок: полный или базовый
  * @returns Массив групп пунктов тулбара
  */
@@ -692,10 +795,15 @@ export function buildToolbarItems(
     ];
   }
 
+  const { onImage } = handlers;
+
   return [
     FORMAT_MARK_ITEMS.map((item) => markItem(editor, item)),
     [headingDropdown(editor), alignDropdown(editor)],
-    blockTags.map((tag) => blockItem(editor, tag, handlers)),
+    [
+      ...blockTags.map((tag) => blockItem(editor, tag, handlers)),
+      ...(onImage ? [imageItem(editor, handlers, onImage)] : []),
+    ],
     [
       lineBreakItem(editor),
       ...INLINE_TAGS.map((tag) => inlineItem(editor, tag, handlers)),

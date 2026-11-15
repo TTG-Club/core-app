@@ -2,7 +2,7 @@
   import type { SpeciesFeatureCreate } from '../../model';
 
   import { createFeatEditorRows, createFeatMechanics } from '~feats/model';
-  import { MarkupEditor } from '~ui/markup-editor';
+  import { MARKUP_IMAGE_SECTIONS, MarkupEditor } from '~ui/markup-editor';
 
   import {
     getFeatureFilledBlocksCount,
@@ -266,6 +266,7 @@
           >
             <MarkupEditor
               v-model="feature.description"
+              :image-section="MARKUP_IMAGE_SECTIONS.species"
               :placeholder="SPECIES_FEATURES_EDITOR.descriptionPlaceholder"
             />
           </UFormField>

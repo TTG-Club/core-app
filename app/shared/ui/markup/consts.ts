@@ -48,6 +48,39 @@ export const GROUP_SPACING_BEFORE_SEPARATOR = 'mb-0';
 // шире, чем сверху.
 export const GROUP_SPACING_AFTER_SEPARATOR = 'mt-0! mb-2';
 
+// CSS-переменная с шириной картинки в процентах: значение задаёт автор, поэтому
+// готового класса Tailwind под него нет.
+export const IMAGE_WIDTH_VARIABLE = '--markup-image-width';
+
+// Классы картинки по стороне обтекания. Всё, что зависит от ширины колонки,
+// стоит под контейнерным запросом `@md:` к обёртке MarkupRender: в узкой колонке
+// (телефон, дровер) картинка занимает всю ширину и текст её не обтекает. Свою
+// сторону картинка «очищает», чтобы две подряд вставали друг под другом, а не
+// лесенкой.
+export const IMAGE_FLOAT_CLASSES = {
+  left: 'w-full @md:float-left @md:clear-left @md:mr-4 @md:w-(--markup-image-width)',
+  right:
+    'w-full @md:float-right @md:clear-right @md:ml-4 @md:w-(--markup-image-width)',
+  none: 'clear-both mx-auto w-full @md:w-(--markup-image-width)',
+} as const;
+
+// Обёртка описания с картинками. Блочный поток вместо флекс-колонки родителя:
+// во флексе `float` не работает. Она же — контейнер для запросов `@md:` выше и
+// граница, за которую обтекаемая картинка не вылезает (`flow-root`).
+export const IMAGE_FLOW_WRAPPER_CLASS = '@container flow-root w-full';
+
+// Как блок ведёт себя рядом с обтекаемой картинкой. Абзац обтекает её сам.
+// Заголовок и список сужаются и встают рядом (`flow-root`): иначе линия под
+// заголовком и маркеры списка уезжают под картинку. Таблица, цитата и
+// разделитель рядом с картинкой не помещаются — уходят под неё.
+export const IMAGE_FLOW_BLOCK_CLASSES: Record<string, string> = {
+  heading: 'flow-root',
+  list: 'flow-root',
+  table: 'clear-both',
+  quote: 'clear-both',
+  separator: 'clear-both',
+};
+
 // Тип блочного маркера-заголовка (`{@h}`). По нему withHeadingAnchors находит
 // заголовки, которым нужен якорь для содержания.
 export const HEADING_BLOCK_TYPE = 'heading';
