@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 // Прямо из модуля: баррел `~ui/markup` тянет SFC — окружение тестов их не грузит.
 import {
   buildImageMarker,
+  getImageNarrowWidth,
   getImageWidth,
   isImageUrl,
   readImageAttributes,
@@ -58,6 +59,18 @@ describe('картинка в разметке', () => {
     expect(getImageWidth({ url: '/s3/a.webp', float: 'left', width: 25 })).toBe(
       25,
     );
+  });
+
+  it('в узкой колонке картинка держит размер широкой, пока помещается', () => {
+    expect(getImageNarrowWidth({ url: '/s3/a.webp', width: 25 })).toBe(
+      'min(100%, 180px)',
+    );
+
+    expect(getImageNarrowWidth({ url: '/s3/a.webp', float: 'left' })).toBe(
+      'min(100%, 288px)',
+    );
+
+    expect(getImageNarrowWidth({ url: '/s3/a.webp' })).toBe('min(100%, 720px)');
   });
 
   it('собирает маркер без пустых значений', () => {
