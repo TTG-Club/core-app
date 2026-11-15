@@ -19,9 +19,8 @@
     ROLL_TOGGLE_HINTS,
     ROLL_TOGGLE_LABELS,
   } from '../model';
-  import DiceFaceIcon from './DiceFaceIcon.vue';
-  import DiceOrnatePanel from './DiceOrnatePanel.vue';
   import DicePresetPrompt from './DicePresetPrompt.vue';
+  import DiceToolPanel from './DiceToolPanel.vue';
 
   const {
     formula,
@@ -120,9 +119,8 @@
 </script>
 
 <template>
-  <DiceOrnatePanel
+  <DiceToolPanel
     :label="DICE_FORMULA_LABELS.section"
-    :icon="DICE_ICONS.formula"
     :aria-label="DICE_FORMULA_LABELS.section"
   >
     <div class="flex flex-col gap-1.5">
@@ -169,7 +167,6 @@
           color="primary"
           size="xl"
           class="flex-1 justify-center font-semibold"
-          :class="$style.roll"
           @click.left.exact.prevent="roll"
         />
 
@@ -201,24 +198,16 @@
           :key="die.sides"
           color="primary"
           variant="soft"
-          class="flex-col justify-center gap-1 px-1 py-2 font-mono"
-          :class="$style.key"
+          class="min-h-11 justify-center px-1 font-mono text-base"
+          :label="die.label"
           :title="die.title"
           @click.left.exact.prevent="addDie(die.sides)"
-        >
-          <DiceFaceIcon
-            :sides="die.sides"
-            class="size-6"
-          />
-
-          {{ die.label }}
-        </UButton>
+        />
 
         <UButton
           color="neutral"
           variant="soft"
-          class="justify-center px-1 font-mono text-base"
-          :class="$style.key"
+          class="min-h-11 justify-center px-1 font-mono text-base"
           :label="DICE_FORMULA_LABELS.increaseModifierButton"
           :title="DICE_FORMULA_LABELS.increaseModifier"
           @click.left.exact.prevent="handleIncrease"
@@ -227,8 +216,7 @@
         <UButton
           color="neutral"
           variant="soft"
-          class="justify-center px-1 font-mono text-base"
-          :class="$style.key"
+          class="min-h-11 justify-center px-1 font-mono text-base"
           :label="DICE_FORMULA_LABELS.decreaseModifierButton"
           :title="DICE_FORMULA_LABELS.decreaseModifier"
           @click.left.exact.prevent="handleDecrease"
@@ -238,8 +226,7 @@
           color="neutral"
           variant="soft"
           :icon="DICE_ICONS.dropLast"
-          class="justify-center px-1"
-          :class="$style.key"
+          class="min-h-11 justify-center px-1"
           :title="DICE_FORMULA_LABELS.dropLast"
           :aria-label="DICE_FORMULA_LABELS.dropLast"
           @click.left.exact.prevent="dropLast"
@@ -316,48 +303,12 @@
         </button>
       </div>
     </div>
-  </DiceOrnatePanel>
+  </DiceToolPanel>
 </template>
 
 <style module lang="scss">
-  /* Главная кнопка страницы: мягкое свечение акцентом, чтобы взгляд находил
-     её раньше клавиатуры костей */
-  .roll {
-    box-shadow: 0 4px 18px -4px
-      color-mix(in oklab, var(--ui-primary) 55%, transparent);
-    transition:
-      transform 0.15s ease-out,
-      box-shadow 0.15s ease-out;
-
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 8px 22px -4px
-        color-mix(in oklab, var(--ui-primary) 70%, transparent);
-    }
-
-    &:active {
-      transform: translateY(0);
-    }
-  }
-
-  /* Клавиша клавиатуры костей: одной высоты у костей и у правок формулы */
-  .key {
-    min-height: 3.5rem;
-    transition:
-      transform 0.15s ease-out,
-      background-color 0.15s ease-out;
-
-    &:hover {
-      transform: translateY(-2px);
-    }
-
-    &:active {
-      transform: translateY(0) scale(0.96);
-    }
-  }
-
   /* Цвет включённого переключателя приходит из `--toggle-color`: он свой
-     у каждой кнопки, поэтому свечение описано один раз, а не по разу на цвет */
+     у каждой кнопки, поэтому рамка описана один раз, а не по разу на цвет */
   .toggle {
     color: var(--ui-text-muted);
 
@@ -367,41 +318,7 @@
 
     &[aria-pressed='true'] {
       color: var(--toggle-color);
-      animation: glow 1.8s ease-in-out infinite;
-    }
-  }
-
-  @keyframes glow {
-    0%,
-    100% {
-      box-shadow:
-        inset 0 0 0 1px var(--toggle-color),
-        0 0 3px 0 color-mix(in oklab, var(--toggle-color) 40%, transparent);
-    }
-
-    50% {
-      box-shadow:
-        inset 0 0 0 1.5px var(--toggle-color),
-        0 0 14px 1px color-mix(in oklab, var(--toggle-color) 70%, transparent);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .roll,
-    .key {
-      transition: none;
-
-      &:hover,
-      &:active {
-        transform: none;
-      }
-    }
-
-    .toggle[aria-pressed='true'] {
-      box-shadow:
-        inset 0 0 0 1.5px var(--toggle-color),
-        0 0 8px 0 color-mix(in oklab, var(--toggle-color) 55%, transparent);
-      animation: none;
+      box-shadow: inset 0 0 0 1.5px var(--toggle-color);
     }
   }
 </style>

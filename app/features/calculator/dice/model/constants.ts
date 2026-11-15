@@ -9,18 +9,19 @@ export const DICE_CALCULATOR_TITLE = 'Калькулятор бросков';
 /** Иконка инструмента в меню. */
 export const DICE_CALCULATOR_ICON = 'tabler:dice';
 
-/** Иконки страницы калькулятора: по одной на панель и на действие. */
+/** Иконки кнопок калькулятора. */
 export const DICE_ICONS = {
-  hero: 'ttg:dice-d20',
-  formula: 'tabler:wand',
-  tray: 'tabler:dice-5',
+  close: 'tabler:x',
+  roll: 'ttg:dice-d20',
   analysis: 'tabler:chart-histogram',
   help: 'tabler:book-2',
-  roll: 'ttg:dice-d20',
   clear: 'tabler:x',
   dropLast: 'tabler:backspace',
   expand: 'tabler:chevron-down',
 } as const;
+
+/** Куда ведёт кнопка закрытия, когда возвращаться по истории некуда. */
+export const DICE_CALCULATOR_CLOSE_ROUTE = '/';
 
 /** Заголовок и описание страницы для поисковиков. */
 export const DICE_CALCULATOR_SEO = {
@@ -63,17 +64,6 @@ export const D20_SIDES = 20;
 export const QUICK_DICE_SIDES: ReadonlyArray<number> = [
   4, 6, 8, 10, 12, 20, 100,
 ];
-
-/** Контуры кубиков для кнопок быстрого добавления. */
-export const DICE_SHAPE_PATHS: Readonly<Record<number, string>> = {
-  4: 'M12 3 21 20H3z',
-  6: 'M5 5h14v14H5z',
-  8: 'M12 2 21 12l-9 10L3 12z',
-  10: 'M12 2l9 8-9 12L3 10z',
-  12: 'M12 2l9.5 7-3.6 11h-11.8L2.5 9z',
-  20: 'M12 2l8.7 5v10L12 22 3.3 17V7z',
-  100: 'M12 2l8.7 5v10L12 22 3.3 17V7z',
-};
 
 /** Поле рисунка двадцатигранника — эмблемы калькулятора. */
 export const D20_EMBLEM_VIEW_BOX = '0 0 200 200';

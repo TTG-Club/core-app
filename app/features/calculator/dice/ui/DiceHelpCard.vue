@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { useDiceCalculator } from '../composables';
   import { DICE_HELP_LABELS, DICE_HELP_ROWS, DICE_ICONS } from '../model';
-  import DiceOrnatePanel from './DiceOrnatePanel.vue';
+  import DiceToolPanel from './DiceToolPanel.vue';
 
   const { setFormula } = useDiceCalculator();
 </script>
@@ -9,7 +9,7 @@
 <template>
   <!-- Ширину строк справки решает сама панель (`@container`): в колонке она
     узкая, на планшете — во всю ширину, и окно браузера тут ни о чём не говорит -->
-  <DiceOrnatePanel class="@container">
+  <DiceToolPanel class="@container">
     <UCollapsible class="flex flex-col gap-2">
       <UButton
         :label="DICE_HELP_LABELS.title"
@@ -50,5 +50,5 @@
         </dl>
       </template>
     </UCollapsible>
-  </DiceOrnatePanel>
+  </DiceToolPanel>
 </template>

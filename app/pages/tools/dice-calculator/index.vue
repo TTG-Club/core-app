@@ -2,7 +2,7 @@
   import { DICE_CALCULATOR_SEO } from '~calculator/dice/model';
   import {
     DiceAnalysisCard,
-    DiceCalculatorHero,
+    DiceCalculatorHeader,
     DiceFormulaCard,
     DiceHelpCard,
     DiceResultCard,
@@ -17,10 +17,10 @@
 <template>
   <NuxtLayout name="default">
     <div class="flex flex-col gap-3 pt-4 lg:gap-4 lg:pt-0">
-      <DiceCalculatorHero />
+      <DiceCalculatorHeader />
 
       <ClientOnly>
-        <!-- С `lg` — две колонки: слева формула и справка, справа поднос
+        <!-- С `lg` — две колонки: слева формула и справка, справа результат
           и анализ. Ниже колонки растворяются (`contents`), и порядок задаёт
           `order`: результат броска должен идти сразу за формулой, а справка —
           последней -->

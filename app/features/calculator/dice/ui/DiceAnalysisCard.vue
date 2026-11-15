@@ -8,13 +8,12 @@
     createHistogram,
     CRITICAL_OUTCOME_LABEL,
     DICE_ANALYSIS_LABELS,
-    DICE_ICONS,
     EMPTY_VALUE_PLACEHOLDER,
     formatProbability,
     formatRollNumber,
   } from '../model';
   import DiceDistributionChart from './DiceDistributionChart.vue';
-  import DiceOrnatePanel from './DiceOrnatePanel.vue';
+  import DiceToolPanel from './DiceToolPanel.vue';
 
   const { analysis, chanceThreshold, isAnalysisOpen, result } =
     useDiceCalculator();
@@ -134,10 +133,9 @@
 </script>
 
 <template>
-  <DiceOrnatePanel
+  <DiceToolPanel
     v-if="isAnalysisOpen && analysis && histogram"
     :label="DICE_ANALYSIS_LABELS.title"
-    :icon="DICE_ICONS.analysis"
     :aria-label="DICE_ANALYSIS_LABELS.section"
   >
     <div
@@ -219,5 +217,5 @@
     </div>
 
     <p class="text-xs text-muted">{{ note }}</p>
-  </DiceOrnatePanel>
+  </DiceToolPanel>
 </template>

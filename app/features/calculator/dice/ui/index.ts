@@ -1,10 +1,9 @@
 export { default as DiceAnalysisCard } from './DiceAnalysisCard.vue';
-export { default as DiceCalculatorHero } from './DiceCalculatorHero.vue';
+export { default as DiceCalculatorHeader } from './DiceCalculatorHeader.vue';
 export { default as DiceDistributionChart } from './DiceDistributionChart.vue';
-export { default as DiceFaceIcon } from './DiceFaceIcon.vue';
 export { default as DiceFormulaCard } from './DiceFormulaCard.vue';
 export { default as DiceHelpCard } from './DiceHelpCard.vue';
-export { default as DiceOrnatePanel } from './DiceOrnatePanel.vue';
 export { default as DicePresetPrompt } from './DicePresetPrompt.vue';
 export { default as DiceResultCard } from './DiceResultCard.vue';
+export { default as DiceToolPanel } from './DiceToolPanel.vue';
 export { default as DiceTwentyEmblem } from './DiceTwentyEmblem.vue';
