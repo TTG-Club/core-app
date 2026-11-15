@@ -1,11 +1,18 @@
 <script setup lang="ts">
   import type { DropdownMenuItem } from '@nuxt/ui';
 
-  import type { Character, SavedCharacterSheet } from '../../model';
+  import type {
+    Character,
+    SavedCharacterSheet,
+    SheetPdfVariant,
+  } from '../../model';
 
   import { ConfirmDialog } from '~initiative/ui-kit';
 
-  import { useCharacterSheetPdf } from '../../composables';
+  import {
+    useCharacterSheetPdf,
+    useCharacterSheetShare,
+  } from '../../composables';
   import { CharacterSheetDrawer } from '../../drawer';
   import {
     CHARACTER_SHEET_ROUTE,
@@ -122,10 +129,19 @@
     }
   }
 
-  /** Экспорт в PDF — собирается из того же документа карточки. */
-  function handleDownloadPdf(): void {
+  const { getShareUrlByToken } = useCharacterSheetShare();
+
+  /**
+   * Экспорт в PDF — в QR-код уходит ссылка, по которой лист сохранён.
+   *
+   * @param variant вид листа, выбранный в подменю.
+   */
+  function handleDownloadPdf(variant: SheetPdfVariant): void {
     if (sheet.data) {
-      void exportToPdf(sheet.data);
+      void exportToPdf(sheet.data, {
+        shareUrl: getShareUrlByToken(sheet.shareToken),
+        variant,
+      });
     }
   }
 

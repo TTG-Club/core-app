@@ -6,6 +6,7 @@
     PreparedSpellKind,
     ProficiencyGroupKey,
     SavingThrowRow,
+    SheetPdfVariant,
     SheetRollContext,
     SkillRow,
     SpellDamageRoll,
@@ -196,8 +197,13 @@
   // `viewedShareToken` — токен, по которому открыт чужой лист: им меню
   // сохраняет его к себе.
   // `isEditorAccess` — лист чужой, но открыт по праву редактора.
-  const { viewedShareToken, isSheetShared, isEditorAccess } =
-    useCharacterSheetShare();
+  const {
+    viewedShareToken,
+    isSheetShared,
+    isEditorAccess,
+    getShareUrl,
+    getShareUrlByToken,
+  } = useCharacterSheetShare();
 
   const isShared = computed(() => isSheetShared(character.value.id));
 
@@ -292,9 +298,21 @@
   // собственное состояние загрузки.
   const { isExporting: isPdfExporting, exportToPdf } = useCharacterSheetPdf();
 
-  /** Экспорт открытого листа в PDF. */
-  function handleDownloadPdf(): void {
-    void exportToPdf(character.value);
+  /**
+   * Экспорт открытого листа в PDF. В QR-код уходит ссылка владельца (у своего
+   * листа без ссылки экспорт её включает), а у листа, открытого по ссылке, —
+   * та самая ссылка, по которой его открыли.
+   *
+   * @param variant вид листа, выбранный в подменю.
+   */
+  function handleDownloadPdf(variant: SheetPdfVariant): void {
+    void exportToPdf(character.value, {
+      shareUrl:
+        getShareUrl(character.value.id)
+        ?? getShareUrlByToken(viewedShareToken.value),
+      ensureShare: isOwnSheet.value,
+      variant,
+    });
   }
 
   const overlay = useOverlay();

@@ -48,6 +48,7 @@ import type {
   ResourceRecoveryMode,
   RollMode,
   RollModeSourceMode,
+  SheetPdfVariant,
   SheetReadonlyReason,
   SheetSaveStatus,
   SheetTab,
@@ -223,11 +224,39 @@ export const SHEET_DOWNLOAD_PDF_LABEL = 'Скачать PDF';
 /** Пояснение к пункту «скачать PDF» в меню действий. */
 export const SHEET_DOWNLOAD_PDF_HINT = 'Лист для печати';
 
+/**
+ * Пункты выбора вида PDF листа в подменю «Скачать PDF»: порядок массива —
+ * порядок пунктов.
+ */
+export const SHEET_PDF_VARIANT_OPTIONS: ReadonlyArray<{
+  variant: SheetPdfVariant;
+  label: string;
+  description: string;
+}> = [
+  {
+    variant: 'ttg',
+    label: 'Лист TTG',
+    description: 'Раскладка сайта со справочником',
+  },
+  {
+    variant: 'phb',
+    label: 'Лист из PHB',
+    description: 'Как в Книге игрока 2024',
+  },
+];
+
 /** MIME-тип файла листа в PDF. */
 export const SHEET_PDF_MIME_TYPE = 'application/pdf';
 
 /** Заголовок тоста при сбое сборки PDF. */
 export const SHEET_PDF_ERROR_TITLE = 'Не удалось собрать PDF листа';
+
+/** Заголовок тоста: экспорт PDF сам включил доступ по ссылке ради QR-кода. */
+export const SHEET_PDF_SHARE_ENABLED_TITLE = 'Доступ по ссылке включён';
+
+/** Пояснение тоста о включённом при экспорте доступе. */
+export const SHEET_PDF_SHARE_ENABLED_DESCRIPTION =
+  'QR-код в PDF ведёт на лист. Отключить ссылку можно в меню «Поделиться листом».';
 
 /** Подписи и иконки статусов автосохранения листа. */
 export const SHEET_SAVE_STATUS_META: Record<

@@ -4,6 +4,7 @@
   import type {
     Character,
     SheetEditStatus,
+    SheetPdfVariant,
     SheetReadonlyReason,
     SheetSaveStatus,
   } from '../../model';
@@ -80,7 +81,7 @@
   const emit = defineEmits<{
     'close': [];
     'download': [];
-    'download-pdf': [];
+    'download-pdf': [variant: SheetPdfVariant];
     'duplicate': [];
     'expand': [];
     'remove': [];
@@ -131,7 +132,7 @@
       isLocked: props.locked,
       isPdfLoading: props.pdfLoading,
       onDownload: () => emit('download'),
-      onDownloadPdf: () => emit('download-pdf'),
+      onDownloadPdf: (variant) => emit('download-pdf', variant),
       onDuplicate: () => emit('duplicate'),
       onRemove: () => emit('remove'),
       onSettings: () => emit('edit-settings'),

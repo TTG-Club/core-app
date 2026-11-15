@@ -4474,6 +4474,12 @@ export type SheetSaveStatus = 'saved' | 'saving' | 'error';
  */
 export type SheetReadonlyReason = 'shared' | 'admin';
 
+/**
+ * Вид PDF листа: `ttg` — собственная раскладка сайта, `phb` — двухстраничный
+ * лист по образцу официального листа из Книги игрока 2024.
+ */
+export type SheetPdfVariant = 'ttg' | 'phb';
+
 /** Лист персонажа в списке пользователя. */
 export interface CharacterSheetListItem {
   id: string;
