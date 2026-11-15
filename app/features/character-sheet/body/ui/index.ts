@@ -64,6 +64,7 @@ export { default as SheetPanel } from './SheetPanel.vue';
 export { default as SheetPersonalityDescriptionModal } from './SheetPersonalityDescriptionModal.vue';
 export { default as SheetPersonalityModal } from './SheetPersonalityModal.vue';
 export { default as SheetPersonalityTab } from './SheetPersonalityTab.vue';
+export { default as SheetPickedFeatChoices } from './SheetPickedFeatChoices.vue';
 export { default as SheetPreparedSpellsModal } from './SheetPreparedSpellsModal.vue';
 export { default as SheetProficienciesPanel } from './SheetProficienciesPanel.vue';
 export { default as SheetProficiencyGroupsModal } from './SheetProficiencyGroupsModal.vue';

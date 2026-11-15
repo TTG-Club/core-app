@@ -18,7 +18,7 @@
   } from '~items/model';
   import { ItemPreview } from '~items/preview';
   import { EditorBaseInfo } from '~ui/editor';
-  import { MarkupEditor } from '~ui/markup-editor';
+  import { MARKUP_IMAGE_SECTIONS, MarkupEditor } from '~ui/markup-editor';
   import { UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
   import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
@@ -218,6 +218,7 @@
             >
               <MarkupEditor
                 v-model="state.description"
+                :image-section="MARKUP_IMAGE_SECTIONS.items"
                 :placeholder="ITEM_FORM_LABELS.descriptionPlaceholder"
               />
             </UFormField>

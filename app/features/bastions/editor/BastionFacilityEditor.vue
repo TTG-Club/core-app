@@ -10,7 +10,7 @@
     getDefaultFacilityFurniture,
   } from '~bastion-game/model';
   import { EditorBaseInfo } from '~ui/editor';
-  import { MarkupEditor } from '~ui/markup-editor';
+  import { MARKUP_IMAGE_SECTIONS, MarkupEditor } from '~ui/markup-editor';
   import { useWorkshopForm } from '~workshop/composable';
   import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
   import { WorkshopEditorFormControls } from '~workshop/revision/ui';
@@ -315,6 +315,7 @@
       >
         <MarkupEditor
           v-model="state.description"
+          :image-section="MARKUP_IMAGE_SECTIONS.bastions"
           :placeholder="BASTION_EDITOR_LABELS.descriptionPlaceholder"
         />
       </UFormField>

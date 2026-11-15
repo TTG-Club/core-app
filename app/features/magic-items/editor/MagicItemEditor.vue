@@ -6,7 +6,7 @@
   import { ActiveEffects } from '~active-effects/editor';
   import { EFFECT_ACTIVATION_MODE, EFFECT_ORIGIN } from '~active-effects/model';
   import { EditorBaseInfo } from '~ui/editor';
-  import { MarkupEditor } from '~ui/markup-editor';
+  import { MARKUP_IMAGE_SECTIONS, MarkupEditor } from '~ui/markup-editor';
   import { SelectItem } from '~ui/select';
   import { UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
@@ -233,6 +233,7 @@
               <UFormField name="description">
                 <MarkupEditor
                   v-model="state.description"
+                  :image-section="MARKUP_IMAGE_SECTIONS.magicItems"
                   :placeholder="MAGIC_ITEM_FORM_LABELS.descriptionPlaceholder"
                 />
               </UFormField>

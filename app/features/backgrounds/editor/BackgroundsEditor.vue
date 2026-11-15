@@ -19,7 +19,7 @@
     ORIGIN_FEAT_CATEGORIES,
   } from '~feats/model';
   import { EditorBaseInfo, StartingEquipmentEditor } from '~ui/editor';
-  import { MarkupEditor } from '~ui/markup-editor';
+  import { MARKUP_IMAGE_SECTIONS, MarkupEditor } from '~ui/markup-editor';
   import {
     SelectAbilities,
     SelectClass,
@@ -163,6 +163,7 @@
           <UFormField name="description">
             <MarkupEditor
               v-model="state.description"
+              :image-section="MARKUP_IMAGE_SECTIONS.backgrounds"
               :placeholder="BACKGROUND_MAIN_TAB_LABELS.descriptionPlaceholder"
             />
           </UFormField>

@@ -4,6 +4,8 @@
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectHabitat, SelectTreasure } from '~ui/select';
 
+  import { CREATURE_UPLOAD_SECTION } from '../constants';
+
   const model = defineModel<CreateSection>({ required: true });
 </script>
 
@@ -86,6 +88,7 @@
         >
           <MarkupEditor
             v-model="model.description"
+            :image-section="CREATURE_UPLOAD_SECTION"
             placeholder="Введи описание"
           />
         </UFormField>

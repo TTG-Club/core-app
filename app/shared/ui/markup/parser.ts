@@ -7,6 +7,7 @@ import type {
 
 import { MARKER_ALIASES, MARKER_ALIASES_LOWERCASE, MARKER_MAP } from './config';
 import { LEADING_CHARACTER, MAX_DEPTH, MAX_STRING_LENGTH } from './consts';
+import { IMAGE_BLOCK_TYPE } from './image';
 import { logError } from './utils';
 
 export function parse(text: string): RenderNode[] {
@@ -160,7 +161,10 @@ function convertMarker(string: string, depth: number): MarkerNode {
   // оформления, например `| color:...`). Разбираем локально: иначе проверка
   // `if (!text)` ниже бросит «must have text», и разделитель потеряется при
   // разборе строки-исходника (в узловой форме он приходит без текста).
-  if (marker === 'separator') {
+  //
+  // Картинка `{@image | url:…}` устроена так же: всё, что о ней известно,
+  // лежит в атрибутах.
+  if (marker === 'separator' || marker === IMAGE_BLOCK_TYPE) {
     return { type: marker, attrs: safeAttrs(splitByPipeBase(rest).params) };
   }
 

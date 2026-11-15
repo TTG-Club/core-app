@@ -31,6 +31,7 @@
   import SheetAbilityImprovementChoice from './SheetAbilityImprovementChoice.vue';
   import SheetLevelUpStep from './SheetLevelUpStep.vue';
   import SheetLevelUpStepsRail from './SheetLevelUpStepsRail.vue';
+  import SheetPickedFeatChoices from './SheetPickedFeatChoices.vue';
 
   /**
    * Состояние пункта рельсы относительно текущего шага.
@@ -87,6 +88,8 @@
     selectSubclass,
     choiceControl,
     getFeatureRowPendingCount,
+    pickedFeatControls,
+    getPickedFeatPendingCount,
     retrySpellPool,
     featOptions,
     selectedFeat,
@@ -244,6 +247,11 @@
     () => drafts.value[currentDraftIndex.value] ?? null,
   );
 
+  /** Ответы пикеров текущего шага: среди них и ответы на выборы взятых черт. */
+  const currentSelections = computed(
+    () => currentDraft.value?.selections ?? {},
+  );
+
   const isAbilitiesView = computed(
     () => currentView.value?.key === 'abilities',
   );
@@ -280,6 +288,8 @@
             featAbilities:
               currentDraft.value?.featChoices[choice.id]?.abilities ?? [],
             featureId: feature.id,
+            // Черта вместо прибавок спрашивает и свои выборы
+            pickedFeatControls: pickedFeatControls(choice.id),
           };
         }),
       );
@@ -402,6 +412,18 @@
     const draft = currentDraft.value;
 
     return draft ? getFeatureRowPendingCount(row, draft) : 0;
+  }
+
+  /**
+   * Сколько собственных выборов взятой черты на текущем шаге ещё не сделано.
+   *
+   * @param choiceId идентификатор выбора черты.
+   * @returns число незакрытых выборов черты.
+   */
+  function currentPickedFeatPendingCount(choiceId: string): number {
+    const draft = currentDraft.value;
+
+    return draft ? getPickedFeatPendingCount(choiceId, draft) : 0;
   }
 
   /**
@@ -539,6 +561,16 @@
 
   function handleSelection(choiceId: string, values: string[]) {
     setSelection(currentDraftIndex.value, choiceId, values);
+  }
+
+  /**
+   * Ответ на выбор самой взятой черты: лежит среди ответов того же шага.
+   *
+   * @param choice выбор черты.
+   * @param values выбранные значения.
+   */
+  function handlePickedFeatSelection(choice: ClassChoice, values: string[]) {
+    setSelection(currentDraftIndex.value, choice.id, values);
   }
 
   function handleNote(featureId: string, value: string) {
@@ -915,7 +947,14 @@
               @update:feat="handleFeat(block.featureId, block.id, $event)"
               @update:feat-ability="handleFeatAbility(block.id, $event)"
               @reset="handleImprovementReset(block.id)"
-            />
+            >
+              <SheetPickedFeatChoices
+                :controls="block.pickedFeatControls"
+                :selections="currentSelections"
+                @update:selection="handlePickedFeatSelection"
+                @retry="handleSpellPoolRetry"
+              />
+            </SheetAbilityImprovementChoice>
           </div>
 
           <SheetLevelUpStep
@@ -927,6 +966,8 @@
             :abilities="character.abilities"
             :choice-control="choiceControl"
             :feature-row-pending-count="currentFeatureRowPendingCount"
+            :picked-feat-controls="pickedFeatControls"
+            :picked-feat-pending-count="currentPickedFeatPendingCount"
             :feat-options="currentFeatOptions"
             :selected-feat="currentSelectedFeat"
             :is-feats-loading="isFeatsLoading"

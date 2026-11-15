@@ -8,8 +8,8 @@ export type FaceHighlight = 'none' | 'max' | 'min';
 /** Классы кости по её подсветке. */
 const FACE_HIGHLIGHT_CLASSES: Readonly<Record<FaceHighlight, string>> = {
   none: 'text-highlighted ring-accented',
-  max: 'text-success ring-success',
-  min: 'text-error ring-error',
+  max: 'text-success ring-success bg-success/10',
+  min: 'text-error ring-error bg-error/10',
 };
 
 /** Классы кости, которая не идёт в счёт. */
@@ -20,6 +20,54 @@ const CHECK_SUCCESS_CLASS = 'text-success';
 
 /** Класс подписи неудачного исхода проверки. */
 const CHECK_FAILURE_CLASS = 'text-error';
+
+/** Настроение подноса: обычный бросок, удача или неудача. */
+export type RollTone = 'neutral' | 'success' | 'failure';
+
+/** Цвет кости и свечения подноса по настроению броска. */
+export const ROLL_TONE_COLORS: Readonly<Record<RollTone, string>> = {
+  neutral: 'var(--ui-primary)',
+  success: 'var(--ui-success)',
+  failure: 'var(--ui-error)',
+};
+
+/** Классы ленты исхода по настроению броска. */
+export const ROLL_BANNER_CLASSES: Readonly<Record<RollTone, string>> = {
+  neutral: 'text-muted ring-accented',
+  success: 'text-success ring-success/60',
+  failure: 'text-error ring-error/60',
+};
+
+/**
+ * Кегль числа на кости по его длине: первое подходящее правило побеждает.
+ * Двузначное число занимает грань целиком, длинные — ужимаются, чтобы
+ * не вылезать за контур.
+ */
+const RESULT_VALUE_SIZE_RULES: ReadonlyArray<readonly [number, string]> = [
+  [2, 'text-6xl sm:text-7xl'],
+  [3, 'text-5xl sm:text-6xl'],
+  [5, 'text-4xl sm:text-5xl'],
+];
+
+/** Кегль числа, которое длиннее всех правил. */
+const RESULT_VALUE_SMALLEST_SIZE_CLASS = 'text-2xl sm:text-3xl';
+
+/**
+ * Подбирает кегль числа результата под кость.
+ *
+ * @param value - Число результата в том виде, в каком оно показано
+ * @returns Классы размера шрифта
+ *
+ * @example
+ * getResultValueSizeClass('17'); // 'text-6xl sm:text-7xl'
+ */
+export function getResultValueSizeClass(value: string): string {
+  const rule = RESULT_VALUE_SIZE_RULES.find(
+    ([maxLength]) => value.length <= maxLength,
+  );
+
+  return rule ? rule[1] : RESULT_VALUE_SMALLEST_SIZE_CLASS;
+}
 
 /** Одна кость в разборе броска, готовая к показу. */
 export interface FaceView {

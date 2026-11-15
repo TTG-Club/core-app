@@ -5,8 +5,17 @@ import type {
 } from '@nuxt/ui';
 import type { Editor } from '@tiptap/vue-3';
 
+import type { ImageFloat } from '~ui/markup';
+
 import type { MarkupEditorPreset, MarkupTag } from './tags';
 
+import { IMAGE_DEFAULT_ALIGN, IMAGE_WIDTH_PRESETS } from '~ui/markup';
+
+import {
+  MARKUP_IMAGE_ICON,
+  MARKUP_IMAGE_MENU,
+  MARKUP_IMAGE_UPLOAD_LABEL,
+} from './constants';
 import {
   BASIC_TAG_KEYS,
   BLOCK_TAGS,
@@ -21,6 +30,11 @@ import {
 } from './tiptap/constants';
 import { FORMAT_SPECS } from './tiptap/marks';
 import { hasMarkerAtom } from './tiptap/node-utils';
+import {
+  getImageAt,
+  getSelectedImagePosition,
+  updateImageAt,
+} from './tiptap/ttg-image';
 
 /** Колбэки для тегов, которые открывают панель ввода вместо прямой вставки. */
 export interface ToolbarHandlers {
@@ -32,6 +46,15 @@ export interface ToolbarHandlers {
   onDice: (tag: MarkupTag) => void;
   /** Подпись таблицы — открыть панель ввода (пишет атрибут caption). */
   onCaption: () => void;
+  /**
+   * Картинка — открыть выбор файла. Не задан — картинки в этом редакторе
+   * выключены, и кнопки нет.
+   */
+  onImage?: () => void;
+  /** Подпись под выделенной картинкой — открыть панель ввода. */
+  onImageCaption: () => void;
+  /** Текст-описание выделенной картинки — открыть панель ввода. */
+  onImageAlt: () => void;
 }
 
 /** Кнопка-переключатель форматирующей марки: имя марки (из marks.ts) + вид. */
@@ -386,6 +409,16 @@ function readAlign(editor: Editor, nodeName: string): string | undefined {
 
 /** Текущее выравнивание блока под курсором (ячейка таблицы → заголовок → абзац). */
 function activeAlign(editor: Editor): string | undefined {
+  const imagePosition = getSelectedImagePosition(editor);
+
+  // Картинка: обтекаемая стоит у своей стороны, отдельно стоящая — по
+  // выравниванию (середина — положение по умолчанию).
+  if (imagePosition !== undefined) {
+    const image = getImageAt(editor, imagePosition);
+
+    return image?.float ?? image?.align ?? IMAGE_DEFAULT_ALIGN;
+  }
+
   if (editor.isActive('tableCell')) {
     return readAlign(editor, 'tableCell');
   }
@@ -411,8 +444,23 @@ function activeAlign(editor: Editor): string | undefined {
  * таблицы — абзацу/заголовку: там `left` — значение по умолчанию, поэтому храним
  * его как `null` (обычный абзац-строка без `{@p}`). `updateAttributes` для узла не
  * под курсором — no-op, поэтому все вызовы безопасны.
+ *
+ * Выделенная картинка встаёт к выбранному краю ОТДЕЛЬНЫМ блоком: обтекание
+ * снимается, иначе сторону продолжал бы задавать `float` и выравнивание не
+ * было бы видно. Середина — положение по умолчанию, хранится как `null`.
  */
 function setAlign(editor: Editor, align: 'left' | 'center' | 'right'): void {
+  const imagePosition = getSelectedImagePosition(editor);
+
+  if (imagePosition !== undefined) {
+    updateImageAt(editor, imagePosition, {
+      float: null,
+      align: align === IMAGE_DEFAULT_ALIGN ? null : align,
+    });
+
+    return;
+  }
+
   const chain = editor.chain().focus();
 
   if (editor.isActive('tableCell') || editor.isActive('tableHeader')) {
@@ -482,7 +530,7 @@ function headingDropdown(editor: Editor): EditorToolbarItem {
 
 /**
  * Выпадающее меню выравнивания (единое, «как H»): работает и для ячеек таблицы, и
- * для абзацев/заголовков — «любой текст». Раньше выравнивание жило только в меню
+ * для абзацев/заголовков — «любой текст», — и для выделенной картинки. Раньше выравнивание жило только в меню
  * таблицы; теперь вынесено на общую панель тулбара.
  */
 function alignDropdown(editor: Editor): EditorToolbarItem {
@@ -623,6 +671,85 @@ function tableDropdown(
 }
 
 /**
+ * Кнопка картинки. Пока картинка не выделена — обычная кнопка: открывает выбор
+ * файла. Когда выделена — меню её настроек: обтекание, ширина, подписи,
+ * удаление (настройки — атрибуты узла, как подпись и выравнивание у таблицы).
+ *
+ * @param editor - Экземпляр TipTap
+ * @param handlers - Колбэки панелей ввода
+ * @param onImage - Открывает выбор файла для загрузки
+ * @returns Пункт тулбара
+ */
+function imageItem(
+  editor: Editor,
+  handlers: ToolbarHandlers,
+  onImage: () => void,
+): EditorToolbarItem {
+  const position = getSelectedImagePosition(editor);
+
+  const image =
+    position === undefined ? undefined : getImageAt(editor, position);
+
+  if (position === undefined || !image) {
+    return {
+      'icon': MARKUP_IMAGE_ICON,
+      'tooltip': kbdTooltip(MARKUP_IMAGE_UPLOAD_LABEL),
+      'aria-label': MARKUP_IMAGE_UPLOAD_LABEL,
+      'onClick': onImage,
+    };
+  }
+
+  const floatItem = (
+    float: ImageFloat | null,
+    menuItem: { label: string; icon: string },
+  ): DropdownMenuItem => ({
+    ...menuItem,
+    active: (image.float ?? null) === float,
+    onClick: () => updateImageAt(editor, position, { float }),
+  });
+
+  const widthItem = (width: number): DropdownMenuItem => ({
+    label: `${MARKUP_IMAGE_MENU.width.label} ${width}%`,
+    icon: MARKUP_IMAGE_MENU.width.icon,
+    active: image.width === width,
+    onClick: () => updateImageAt(editor, position, { width }),
+  });
+
+  return {
+    'icon': MARKUP_IMAGE_ICON,
+    'tooltip': kbdTooltip(MARKUP_IMAGE_MENU.settings),
+    'aria-label': MARKUP_IMAGE_MENU.settings,
+    'active': true,
+    'ui': { content: TOOLBAR_LAYER_CLASS },
+    'items': [
+      [
+        floatItem('left', MARKUP_IMAGE_MENU.floatLeft),
+        floatItem(null, MARKUP_IMAGE_MENU.floatNone),
+        floatItem('right', MARKUP_IMAGE_MENU.floatRight),
+      ],
+      IMAGE_WIDTH_PRESETS.map((width) => widthItem(width)),
+      [
+        {
+          ...MARKUP_IMAGE_MENU.caption,
+          onClick: () => handlers.onImageCaption(),
+        },
+        {
+          ...MARKUP_IMAGE_MENU.alt,
+          onClick: () => handlers.onImageAlt(),
+        },
+      ],
+      [
+        { ...MARKUP_IMAGE_MENU.upload, onClick: onImage },
+        {
+          ...MARKUP_IMAGE_MENU.remove,
+          onClick: () => editor.chain().focus().deleteSelection().run(),
+        },
+      ],
+    ],
+  };
+}
+
+/**
  * Строит пункт блочного тега: списки — нативный переключатель, цитата — нативный
  * blockquote, таблица — выпадающее меню операций, разделитель — блочный чип,
  * остальное — {@...}-чип отдельным блоком. Заголовки сюда НЕ попадают — они собраны
@@ -659,10 +786,12 @@ function blockItem(
  * инлайновые/интерактивные теги → ссылки на разделы.
  *
  * Базовый пресет оставляет только оформление текста (см. BASIC_TAG_KEYS): без
- * выравнивания, доменных вставок и ссылок на разделы.
+ * выравнивания, доменных вставок и ссылок на разделы. Картинка — в обоих
+ * наборах, когда форма её включила.
  *
  * @param editor - Экземпляр TipTap из слота UEditor
  * @param handlers - Колбэки панелей ввода (раздел/ссылка/кубик/подпись таблицы)
+ *   и загрузки картинки
  * @param preset - Набор кнопок: полный или базовый
  * @returns Массив групп пунктов тулбара
  */
@@ -674,15 +803,23 @@ export function buildToolbarItems(
   // Заголовки собраны в headingDropdown, поэтому из блочной группы их убираем.
   const blockTags = BLOCK_TAGS.filter((tag) => !tag.key.startsWith('heading-'));
 
+  const { onImage } = handlers;
+
+  // Кнопка картинки есть в обоих наборах, если форма включила картинки.
+  const imageItems = onImage ? [imageItem(editor, handlers, onImage)] : [];
+
   if (preset === 'basic') {
     return [
       FORMAT_MARK_ITEMS.filter((item) => BASIC_TAG_KEYS.has(item.key)).map(
         (item) => markItem(editor, item),
       ),
       [headingDropdown(editor)],
-      blockTags
-        .filter((tag) => BASIC_TAG_KEYS.has(tag.key))
-        .map((tag) => blockItem(editor, tag, handlers)),
+      [
+        ...blockTags
+          .filter((tag) => BASIC_TAG_KEYS.has(tag.key))
+          .map((tag) => blockItem(editor, tag, handlers)),
+        ...imageItems,
+      ],
       [
         lineBreakItem(editor),
         ...INLINE_TAGS.filter((tag) => BASIC_TAG_KEYS.has(tag.key)).map((tag) =>
@@ -695,7 +832,10 @@ export function buildToolbarItems(
   return [
     FORMAT_MARK_ITEMS.map((item) => markItem(editor, item)),
     [headingDropdown(editor), alignDropdown(editor)],
-    blockTags.map((tag) => blockItem(editor, tag, handlers)),
+    [
+      ...blockTags.map((tag) => blockItem(editor, tag, handlers)),
+      ...imageItems,
+    ],
     [
       lineBreakItem(editor),
       ...INLINE_TAGS.map((tag) => inlineItem(editor, tag, handlers)),

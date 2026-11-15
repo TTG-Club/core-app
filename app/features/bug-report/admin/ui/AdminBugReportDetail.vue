@@ -7,6 +7,8 @@
     BugReportType,
   } from '../../model';
 
+  import { MarkupEditor } from '~ui/markup-editor';
+
   import {
     BUG_REPORT_ANONYMOUS_USER,
     BUG_REPORT_COMMENT_SAVE_BUTTON_LABEL,
@@ -17,9 +19,11 @@
     BUG_REPORT_DETAIL_DEFAULT_TAB,
     BUG_REPORT_DETAIL_TABS,
     BUG_REPORT_PLATFORM_LABELS,
+    BUG_REPORT_STATUS_COMMENT_IMAGE_SECTION,
     BUG_REPORT_STATUS_COMMENT_MAX_LENGTH,
     BUG_REPORT_STATUS_COMMENT_PLACEHOLDER,
     BUG_REPORT_STATUS_COMMENT_PUBLIC_HINT,
+    BUG_REPORT_STATUS_COMMENT_TOO_LONG_ERROR,
     BUG_REPORT_STATUS_UPDATE_ERROR_DESC,
     BUG_REPORT_STATUS_UPDATE_ERROR_TITLE,
     BUG_REPORT_STATUS_UPDATE_SUCCESS_TITLE,
@@ -39,6 +43,8 @@
     getBugReportStatusLabel,
     parseBugReportDiagnostics,
     resolveBugReportType,
+    toBugReportCommentEditorValue,
+    toBugReportCommentSource,
   } from '../../model';
   import { AdminBugReportContent, AdminBugReportDiagnostics } from './';
 
@@ -65,9 +71,28 @@
   const currentTargetStatus = ref<BugReportStatus | null>(null);
 
   /**
-   * Текст комментария — инициализируется из существующего statusComment.
+   * Ответ в редакторе разметки — инициализируется из существующего
+   * statusComment. Значение редактора — не то, что уходит на сервер: см.
+   * statusCommentSource.
    */
-  const statusCommentInput = ref(props.bugReport.statusComment ?? '');
+  const statusCommentInput = ref(
+    toBugReportCommentEditorValue(props.bugReport.statusComment),
+  );
+
+  /** Ответ в том виде, в каком он уходит на сервер: исходник разметки. */
+  const statusCommentSource = computed(() =>
+    toBugReportCommentSource(statusCommentInput.value),
+  );
+
+  /** Ответ вместе с разметкой не помещается в колонку базы. */
+  const isCommentTooLong = computed(
+    () =>
+      statusCommentSource.value.length > BUG_REPORT_STATUS_COMMENT_MAX_LENGTH,
+  );
+
+  const commentError = computed(() =>
+    isCommentTooLong.value ? BUG_REPORT_STATUS_COMMENT_TOO_LONG_ERROR : false,
+  );
 
   const isSavingComment = ref(false);
 
@@ -113,11 +138,21 @@
    * Проверяет, отличается ли текущий введённый комментарий от сохранённого на сервере.
    */
   const isCommentChanged = computed<boolean>(() => {
-    const currentComment = statusCommentInput.value.trim();
-    const originalComment = (props.bugReport.statusComment ?? '').trim();
+    const originalComment = toBugReportCommentSource(
+      toBugReportCommentEditorValue(props.bugReport.statusComment),
+    );
 
-    return currentComment !== originalComment;
+    return statusCommentSource.value !== originalComment;
   });
+
+  /** Смена статуса отправляет и ответ, поэтому слишком длинный её блокирует. */
+  const isStatusUpdateDisabled = computed(
+    () => isUpdating.value || isCommentTooLong.value,
+  );
+
+  const isCommentSaveDisabled = computed(
+    () => isStatusUpdateDisabled.value || !isCommentChanged.value,
+  );
 
   interface StatusButtonOption {
     status: BugReportStatus;
@@ -163,7 +198,7 @@
     isUpdating.value = true;
     currentTargetStatus.value = targetStatus;
 
-    const comment = statusCommentInput.value.trim() || undefined;
+    const comment = statusCommentSource.value || undefined;
 
     try {
       const updatedBug = await requestFetch<BugReportResponse>(
@@ -182,7 +217,9 @@
         statusComment: updatedBug.statusComment ?? undefined,
       });
 
-      statusCommentInput.value = updatedBug.statusComment ?? '';
+      statusCommentInput.value = toBugReportCommentEditorValue(
+        updatedBug.statusComment,
+      );
 
       toast.add({
         title: BUG_REPORT_STATUS_UPDATE_SUCCESS_TITLE,
@@ -212,7 +249,7 @@
     isUpdating.value = true;
     isSavingComment.value = true;
 
-    const comment = statusCommentInput.value.trim() || undefined;
+    const comment = statusCommentSource.value || undefined;
 
     try {
       const updatedBug = await requestFetch<BugReportResponse>(
@@ -231,7 +268,9 @@
         statusComment: updatedBug.statusComment ?? undefined,
       });
 
-      statusCommentInput.value = updatedBug.statusComment ?? '';
+      statusCommentInput.value = toBugReportCommentEditorValue(
+        updatedBug.statusComment,
+      );
 
       toast.add({
         title: BUG_REPORT_COMMENT_SAVE_SUCCESS_TITLE,
@@ -296,7 +335,7 @@
   watch(
     () => props.bugReport.statusComment,
     (newComment) => {
-      statusCommentInput.value = newComment ?? '';
+      statusCommentInput.value = toBugReportCommentEditorValue(newComment);
     },
   );
 
@@ -415,7 +454,7 @@
           ]"
           size="sm"
           :loading="isUpdating && currentTargetStatus === button.status"
-          :disabled="isUpdating"
+          :disabled="isStatusUpdateDisabled"
           @click.left.exact.prevent="handleStatusUpdate(button.status)"
         />
 
@@ -430,7 +469,7 @@
           size="sm"
           icon="tabler:device-floppy"
           :loading="isSavingComment"
-          :disabled="isUpdating || !isCommentChanged"
+          :disabled="isCommentSaveDisabled"
           @click.left.exact.prevent="handleSaveComment"
         />
       </div>
@@ -457,14 +496,16 @@
         </span>
       </p>
 
-      <UTextarea
-        v-model="statusCommentInput"
-        :placeholder="BUG_REPORT_STATUS_COMMENT_PLACEHOLDER"
-        :maxlength="BUG_REPORT_STATUS_COMMENT_MAX_LENGTH"
-        :rows="3"
-        size="sm"
-        :disabled="isUpdating"
-      />
+      <!-- Ответ с оформлением и картинками: автор увидит его таким же -->
+      <UFormField :error="commentError">
+        <MarkupEditor
+          v-model="statusCommentInput"
+          preset="basic"
+          tall
+          :image-section="BUG_REPORT_STATUS_COMMENT_IMAGE_SECTION"
+          :placeholder="BUG_REPORT_STATUS_COMMENT_PLACEHOLDER"
+        />
+      </UFormField>
 
       <!-- Комментарий уходит автору репорта — служебным заметкам здесь не место -->
       <p class="flex items-center gap-1.5 text-xs text-warning">

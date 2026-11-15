@@ -39,6 +39,8 @@ export interface Group {
 
 export interface RenderResult {
   isSingle: boolean;
+  /** В описании есть картинки — группы рисуются в обёртке с блочным потоком. */
+  hasImage?: boolean;
   vnodes?: VNode[];
   groups?: Group[];
 }

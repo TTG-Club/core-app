@@ -2,7 +2,7 @@
   import type { RoadmapRequest } from '~roadmap/types';
 
   import { RoadmapPreview } from '~roadmap/preview';
-  import { MarkupEditor } from '~ui/markup-editor';
+  import { MARKUP_IMAGE_SECTIONS, MarkupEditor } from '~ui/markup-editor';
 
   const { url = undefined } = defineProps<{
     url?: string;
@@ -101,6 +101,7 @@
         >
           <MarkupEditor
             v-model="state.description"
+            :image-section="MARKUP_IMAGE_SECTIONS.roadmap"
             placeholder="Введи описание"
           />
         </UFormField>

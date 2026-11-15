@@ -4,6 +4,8 @@ import type { S3UploadFile } from '#server/domain/s3';
 
 import { StatusCodes } from 'http-status-codes';
 
+import { S3_TEAM_FOLDER, S3_TEAM_SECTIONS } from '#shared/consts';
+
 /**
  * Папка служебных файлов сервера (ключи внешних сервисов и т. п.). Её не
  * отдаёт, не копирует и не удаляет публичный роут `/s3/**`, и загрузки
@@ -21,6 +23,30 @@ export function isPrivateS3Key(key: string): boolean {
     .replace(/^\/+/, '')
     .toLowerCase()
     .startsWith(S3_PRIVATE_KEY_PREFIX);
+}
+
+/**
+ * Командный ли раздел хранилища: его файлы лежат в общей папке команды, и
+ * распоряжаются ими только модераторы и администраторы.
+ *
+ * @param section Раздел сайта — первый сегмент ключа файла.
+ */
+export function isTeamS3Section(section: string | undefined): boolean {
+  return section !== undefined && S3_TEAM_SECTIONS.includes(section);
+}
+
+/**
+ * Папка файла внутри раздела: в командном разделе — общая папка команды, в
+ * остальных — папка пользователя.
+ *
+ * @param section Раздел сайта.
+ * @param username Логин того, кто загружает или копирует файл.
+ */
+export function getS3OwnerFolder(
+  section: string | undefined,
+  username: string | undefined,
+): string | undefined {
+  return isTeamS3Section(section) ? S3_TEAM_FOLDER : username;
 }
 
 /**

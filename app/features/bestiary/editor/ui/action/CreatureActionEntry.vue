@@ -21,6 +21,7 @@
     CREATURE_ACTION_LABELS,
     CREATURE_ACTION_SECTIONS,
     CREATURE_SAVE_SUCCESS_PER_DAY_MIN,
+    CREATURE_UPLOAD_SECTION,
   } from '../../constants';
   import CreatureActionCombat from './CreatureActionCombat.vue';
 
@@ -159,6 +160,7 @@
   >
     <MarkupEditor
       v-model="model.description"
+      :image-section="CREATURE_UPLOAD_SECTION"
       :placeholder="CREATURE_ACTION_LABELS.descriptionPlaceholder"
     />
   </UFormField>

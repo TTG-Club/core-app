@@ -34,6 +34,7 @@
   } from '../../model';
   import SheetChoicePickerField from './SheetChoicePickerField.vue';
   import SheetFeatChoiceField from './SheetFeatChoiceField.vue';
+  import SheetPickedFeatChoices from './SheetPickedFeatChoices.vue';
 
   /** Выбор черты внутри умения с пулом и ответом игрока. */
   interface FeatPicker {
@@ -43,6 +44,12 @@
     options: FeatSelectOption[];
     selected: FeatSelectOption | null;
     abilities: (AbilityKey | null)[];
+
+    /** Выборы самой взятой черты — список, заговоры, заклинание. */
+    ownControls: SheetChoiceControl[];
+
+    /** Сколько выборов самой черты ещё не сделано. */
+    ownPending: number;
   }
 
   const {
@@ -53,6 +60,8 @@
     abilities,
     choiceControl,
     featureRowPendingCount,
+    pickedFeatControls,
+    pickedFeatPendingCount,
     featOptions,
     selectedFeat,
     isFeatsLoading = false,
@@ -84,6 +93,12 @@
 
     /** Сколько выборов умения на этом шаге ещё не сделано. */
     featureRowPendingCount: (row: ClassFeatureRow) => number;
+
+    /** Собственные выборы черты, взятой выбором черты, для единого пикера. */
+    pickedFeatControls: (choiceId: string) => SheetChoiceControl[];
+
+    /** Сколько собственных выборов взятой черты ещё не сделано. */
+    pickedFeatPendingCount: (choiceId: string) => number;
 
     /** Черты, доступные выбору черты в умении. */
     featOptions: (choice: ClassChoice) => FeatSelectOption[];
@@ -227,8 +242,9 @@
   const collapsedFeatureIds = ref(new Set<string>());
 
   /**
-   * Незаполненные выборы черт умения: без черты либо с пустым слотом
-   * характеристики. Сбой каталога черт требование снимает — как в мастере.
+   * Незаполненные выборы черт умения: без черты, с пустым слотом
+   * характеристики либо с неотвеченными выборами самой черты. Сбой каталога
+   * черт требование снимает — как в мастере.
    *
    * @param pickers выборы черт умения.
    * @returns сколько выборов черт ещё не заполнено.
@@ -239,7 +255,10 @@
     }
 
     return pickers.filter(
-      (picker) => !picker.selected || picker.abilities.includes(null),
+      (picker) =>
+        !picker.selected
+        || picker.abilities.includes(null)
+        || picker.ownPending > 0,
     ).length;
   }
 
@@ -276,6 +295,8 @@
           options: featOptions(choice),
           selected: selectedFeat(choice.id),
           abilities: draft.featChoices[choice.id]?.abilities ?? [],
+          ownControls: pickedFeatControls(choice.id),
+          ownPending: pickedFeatPendingCount(choice.id),
         }));
 
         const pending =
@@ -336,6 +357,16 @@
 
   function handleSpellPoolRetry(choice: ClassChoice) {
     emit('retry-spell-pool', choice);
+  }
+
+  /**
+   * Ответ на выбор самой взятой черты: лежит среди ответов того же шага.
+   *
+   * @param choice выбор черты.
+   * @param values выбранные значения.
+   */
+  function handlePickedFeatSelection(choice: ClassChoice, values: string[]) {
+    emit('update:selection', choice.id, values);
   }
 
   function handleNote(featureId: string, value: string) {
@@ -567,20 +598,30 @@
             @retry="handleSpellPoolRetry(control.choice)"
           />
 
-          <SheetFeatChoiceField
+          <template
             v-for="picker in feature.featPickers"
             :key="picker.choice.id"
-            :title="picker.title"
-            :modal-subtitle="picker.modalSubtitle"
-            :options="picker.options"
-            :selected="picker.selected"
-            :abilities="picker.abilities"
-            :scores="abilities"
-            :is-loading="isFeatsLoading"
-            :has-error="hasFeatsError"
-            @update:feat="handleFeat(feature.id, picker.choice.id, $event)"
-            @update:ability="handleFeatAbility(picker.choice.id, $event)"
-          />
+          >
+            <SheetFeatChoiceField
+              :title="picker.title"
+              :modal-subtitle="picker.modalSubtitle"
+              :options="picker.options"
+              :selected="picker.selected"
+              :abilities="picker.abilities"
+              :scores="abilities"
+              :is-loading="isFeatsLoading"
+              :has-error="hasFeatsError"
+              @update:feat="handleFeat(feature.id, picker.choice.id, $event)"
+              @update:ability="handleFeatAbility(picker.choice.id, $event)"
+            />
+
+            <SheetPickedFeatChoices
+              :controls="picker.ownControls"
+              :selections="draft.selections"
+              @update:selection="handlePickedFeatSelection"
+              @retry="handleSpellPoolRetry"
+            />
+          </template>
 
           <UInput
             v-if="feature.hasNote"

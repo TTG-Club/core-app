@@ -7,6 +7,11 @@ import {
   THEMATIC_BREAK_REGEXP,
 } from './consts';
 import { unescapeEditorMarkdown } from './editor-markdown';
+import {
+  buildImageMarker,
+  IMAGE_BLOCK_TYPE,
+  readImageAttributes,
+} from './image';
 import { parse } from './parser';
 import { isBlockNode, isMarkerNode, isSimpleTextNode } from './utils';
 
@@ -74,6 +79,15 @@ function serializeMarker(node: MarkerNode): string {
   // нативным blockquote (см. ttg-quote.ts).
   if (node.type === 'quote') {
     return serializeQuote(node);
+  }
+
+  // Картинка: текста нет, только атрибуты. Собирает её тот же код, что и
+  // редактор, — иначе запись с бэкенда и свежая вставка расходились бы на
+  // пробел, и форма считалась бы изменённой сразу после загрузки.
+  if (node.type === IMAGE_BLOCK_TYPE) {
+    const image = readImageAttributes(node.attrs);
+
+    return image ? buildImageMarker(image) : '';
   }
 
   // Контент маркера — инлайновый, соединяем без разделителя.

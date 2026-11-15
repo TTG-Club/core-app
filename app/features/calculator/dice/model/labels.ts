@@ -197,12 +197,30 @@ export const DICE_FORMULA_LABELS = {
   roll: 'Бросить',
   analyze: 'Анализ',
   diceGroup: 'Быстрое добавление костей',
+  diceCaption: 'Кости',
   increaseModifier: 'Увеличить модификатор',
   decreaseModifier: 'Уменьшить модификатор',
   increaseModifierButton: '+1',
   decreaseModifierButton: '−1',
   dropLast: 'Убрать последний элемент',
-  presetGroup: 'Готовые формулы и переключатели броска',
+  presetGroup: 'Готовые формулы',
+  presetCaption: 'Заготовки',
+  toggleGroup: 'Переключатели броска',
+  toggleCaption: 'Условия броска',
+} as const;
+
+/** Подписи шапки страницы. */
+export const DICE_HEADER_LABELS = {
+  eyebrow: 'Инструменты · D&D 5',
+  lead: 'Бросок костей по формуле с расчётом шансов попадания, среднего урона и распределения результатов.',
+  close: 'Закрыть',
+} as const;
+
+/** Подписи панели с результатом броска. */
+export const DICE_RESULT_LABELS = {
+  section: 'Результат броска',
+  emptyHint: 'Соберите формулу и нажмите «Бросить» — результат появится здесь',
+  breakdown: 'Что выпало',
 } as const;
 
 /** Сообщения об ошибках формулы. */

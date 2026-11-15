@@ -944,6 +944,7 @@
       <UFormField name="content">
         <MarkupEditor
           v-model="state.content"
+          :image-section="ARTICLE_IMAGE_SECTION"
           placeholder="Введи тело статьи"
         />
       </UFormField>

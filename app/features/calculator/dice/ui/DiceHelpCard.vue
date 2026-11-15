@@ -1,17 +1,20 @@
 <script setup lang="ts">
   import { useDiceCalculator } from '../composables';
-  import { DICE_HELP_LABELS, DICE_HELP_ROWS } from '../model';
+  import { DICE_HELP_LABELS, DICE_HELP_ROWS, DICE_ICONS } from '../model';
+  import DiceToolPanel from './DiceToolPanel.vue';
 
   const { setFormula } = useDiceCalculator();
 </script>
 
 <template>
-  <section class="rounded-xl border border-default bg-muted p-4">
+  <!-- Ширину строк справки решает сама панель (`@container`): в колонке она
+    узкая, на планшете — во всю ширину, и окно браузера тут ни о чём не говорит -->
+  <DiceToolPanel class="@container">
     <UCollapsible class="flex flex-col gap-2">
       <UButton
         :label="DICE_HELP_LABELS.title"
-        icon="tabler:help-circle"
-        trailing-icon="tabler:chevron-down"
+        :icon="DICE_ICONS.help"
+        :trailing-icon="DICE_ICONS.expand"
         color="neutral"
         variant="ghost"
         size="sm"
@@ -28,14 +31,14 @@
           <div
             v-for="row in DICE_HELP_ROWS"
             :key="row.syntax"
-            class="flex flex-col gap-1 border-t border-default py-2 sm:flex-row sm:gap-4"
+            class="flex flex-col gap-1 border-t border-default py-2 @2xl:flex-row @2xl:gap-4"
           >
-            <dt class="sm:w-64 sm:shrink-0">
+            <dt class="@2xl:w-64 @2xl:shrink-0">
               <UButton
                 color="primary"
                 variant="soft"
                 size="xs"
-                class="font-mono"
+                class="max-w-full font-mono break-all"
                 :label="row.syntax"
                 :title="DICE_HELP_LABELS.insert"
                 @click.left.exact.prevent="setFormula(row.syntax)"
@@ -47,5 +50,5 @@
         </dl>
       </template>
     </UCollapsible>
-  </section>
+  </DiceToolPanel>
 </template>

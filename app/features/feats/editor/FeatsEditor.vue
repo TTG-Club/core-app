@@ -6,7 +6,7 @@
   import { ActiveEffects } from '~active-effects/editor';
   import { EFFECT_FORM_CONTEXT, EFFECT_ORIGIN } from '~active-effects/model';
   import { EditorBaseInfo } from '~ui/editor';
-  import { MarkupEditor } from '~ui/markup-editor';
+  import { MARKUP_IMAGE_SECTIONS, MarkupEditor } from '~ui/markup-editor';
   import { SelectFeatCategory } from '~ui/select';
   import { InfoTooltip } from '~ui/tooltip';
   import { useWorkshopForm } from '~workshop/composable';
@@ -182,6 +182,7 @@
             >
               <MarkupEditor
                 v-model="state.description"
+                :image-section="MARKUP_IMAGE_SECTIONS.feats"
                 :placeholder="FEAT_MAIN_TAB_LABELS.descriptionPlaceholder"
               />
             </UFormField>

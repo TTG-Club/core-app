@@ -2,6 +2,7 @@ export { ttgFormatMarks } from './marks';
 export { transformPastedMarkupHtml } from './paste-html';
 export { TtgBlockMarker } from './ttg-block-marker';
 export { ttgHeadingExtensions } from './ttg-heading';
+export { insertImageNode, TtgImage } from './ttg-image';
 export { TtgKeymap } from './ttg-keymap';
 export { ttgListExtensions } from './ttg-list';
 export { TtgMarker } from './ttg-marker';

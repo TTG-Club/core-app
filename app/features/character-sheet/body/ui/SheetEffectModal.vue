@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { ActiveEffect } from '~active-effects/model';
 
+  import { cloneDeep } from 'es-toolkit';
+
   import { ActiveEffectItem } from '~active-effects/editor';
   import {
     createEmptyActiveEffect,
@@ -25,13 +27,19 @@
   // Снимок эффекта на момент открытия: модалка размонтируется при закрытии, и
   // setup выполняется заново на каждое открытие. Правки применяются по кнопке,
   // поэтому реактивность снимку не нужна.
+  //
+  // Копия — `cloneDeep`, а не `structuredClone(toRaw(...))`: `toRaw` снимает
+  // обёртку Vue только сверху, а форма, собирая массивы из реактивного черновика,
+  // оставляет обёртки во вложенных полях. На них `structuredClone` бросает
+  // DataCloneError, окно не открывается, и с ним перестают открываться все окна
+  // эффектов.
   const editedEffect = effectId
     ? customEffects.value.find((effect) => effect.id === effectId)
     : undefined;
 
   const draft = ref<ActiveEffect>(
     editedEffect
-      ? structuredClone(toRaw(editedEffect))
+      ? cloneDeep(editedEffect)
       : createEmptyActiveEffect(
           EFFECT_ORIGIN.manual,
           EFFECT_FORM_CONTEXT.ownEffects,
@@ -42,8 +50,9 @@
     effectId ? SHEET_EFFECT_LABELS.edit : SHEET_EFFECT_LABELS.add,
   );
 
+  /** Сохраняет эффект в лист: уходит чистая копия, а не реактивный черновик формы. */
   function handleApply() {
-    saveEffect(draft.value);
+    saveEffect(cloneDeep(draft.value));
     emit('close');
   }
 

@@ -2,7 +2,7 @@
   import type { ClassFeatureScalingCreate } from '../../../model';
 
   import { EditorNestedSection } from '~ui/editor';
-  import { MarkupEditor } from '~ui/markup-editor';
+  import { MARKUP_IMAGE_SECTIONS, MarkupEditor } from '~ui/markup-editor';
   import { SelectLevel } from '~ui/select';
 
   import {
@@ -128,6 +128,7 @@
         >
           <MarkupEditor
             v-model="row.description"
+            :image-section="MARKUP_IMAGE_SECTIONS.classes"
             :placeholder="CLASS_FEATURE_SCALING_EDITOR.descriptionPlaceholder"
           />
         </UFormField>

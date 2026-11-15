@@ -24,6 +24,12 @@
     'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     'Liberation Mono', 'Courier New', monospace;
 
+  /* Наборная антиква для крупных заголовков и чисел там, где странице нужен
+     книжный, фэнтезийный характер (калькулятор бросков). Мелким текстом
+     не набирать: штрихи тонкие. */
+  --font-display:
+    'Cormorant Garamond', ui-serif, Georgia, 'Times New Roman', serif;
+
   --color-hover: var(--color-hover);
 
   /* Плавное появление содержимого на месте прежнего (`animate-appear`):

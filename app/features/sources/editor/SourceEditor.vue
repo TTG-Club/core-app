@@ -13,7 +13,7 @@
   import { DatePicker } from '~ui/date-picker';
   import { EditorFormControls } from '~ui/editor';
   import { InputUrl } from '~ui/input';
-  import { MarkupEditor } from '~ui/markup-editor';
+  import { MARKUP_IMAGE_SECTIONS, MarkupEditor } from '~ui/markup-editor';
   import { UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
 
@@ -274,6 +274,7 @@
         >
           <MarkupEditor
             v-model="state.description"
+            :image-section="MARKUP_IMAGE_SECTIONS.sources"
             placeholder="Введи описание"
           />
         </UFormField>

@@ -8,7 +8,11 @@ import type {
   BugReportTypeTab,
 } from './types';
 
-import { BUG_REPORT_TYPE_LABELS, SOURCE_PLATFORM_LABELS } from '#shared/consts';
+import {
+  BUG_REPORT_REPLY_IMAGE_SECTION,
+  BUG_REPORT_TYPE_LABELS,
+  SOURCE_PLATFORM_LABELS,
+} from '#shared/consts';
 
 /** Предустановленные цвета кисти для рисования на скриншоте */
 export const BRUSH_COLORS: ReadonlyArray<BrushColor> = [
@@ -438,6 +442,24 @@ export const BUG_REPORT_STATUS_COMMENT_PLACEHOLDER =
 
 /** Максимальная длина комментария (ограничение API) */
 export const BUG_REPORT_STATUS_COMMENT_MAX_LENGTH = 2000;
+
+/** Ошибка валидации: ответ модератора длиннее лимита API */
+export const BUG_REPORT_STATUS_COMMENT_TOO_LONG_ERROR = `Ответ вместе с разметкой не должен превышать ${BUG_REPORT_STATUS_COMMENT_MAX_LENGTH} символов`;
+
+/**
+ * Раздел хранилища для картинок в ответе модератора (первый сегмент ключа в
+ * S3). Отдельный от снимков экрана самих репортов и командный: сервер кладёт
+ * его файлы в общую папку, без логина модератора в адресе.
+ */
+export const BUG_REPORT_STATUS_COMMENT_IMAGE_SECTION =
+  BUG_REPORT_REPLY_IMAGE_SECTION;
+
+/**
+ * Переносы строк в сохранённом ответе. Ответы, написанные до появления
+ * оформления, — обычный текст с одиночными переносами; редактору каждый такой
+ * перенос отдаётся границей абзаца.
+ */
+export const BUG_REPORT_STATUS_COMMENT_LINE_BREAK_REGEXP = /\n+/g;
 
 /** Значение фильтра «Все» для статуса, платформы, автора и исполнителя */
 export const ADMIN_BUGS_FILTER_ALL = 'ALL';

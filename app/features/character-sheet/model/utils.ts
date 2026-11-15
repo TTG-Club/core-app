@@ -10129,10 +10129,15 @@ export function getFeatUrlFromFeatureId(featureId: string): string | null {
  * должен давать скорость полёта на первом. Владения ведутся тем же правилом
  * (см. `collectSpeciesProficiencies`).
  *
+ * Ответы игрока на выборы умения кладутся в запись снимком, как у умения
+ * класса: по ним лист находит названный игроком тип урона — «Сопротивление
+ * урону» драконорождённого берёт его из выбора «Наследия драконов».
+ *
  * @param species деталь вида.
  * @param lineage деталь подвида; null — подвида нет.
  * @param choices выборы игрока по идентификаторам особенностей.
  * @param characterLevel уровень персонажа — по нему открываются умения.
+ * @param answers ответы игрока на выборы умений по id выбора.
  * @returns особенности персонажа для вкладки «Особенности».
  */
 export function buildCharacterFeatures(
@@ -10140,6 +10145,7 @@ export function buildCharacterFeatures(
   lineage: SpeciesSummary | null,
   choices: Record<string, string>,
   characterLevel: number,
+  answers: Record<string, string[]> = {},
 ): CharacterFeature[] {
   const toFeatures = (
     summary: SpeciesSummary,
@@ -10173,13 +10179,16 @@ export function buildCharacterFeatures(
           isUnlocked ? feature.modifiers : null,
           isUnlocked ? feature.counters : [],
         ),
+        ...withChoiceAnswersSnapshot(feature.choices, answers),
       };
     });
 
   return [
-    ...buildSpeciesOwnEffectFeature(species),
+    ...buildSpeciesOwnEffectFeature(species, 'species', answers),
     ...toFeatures(species, 'species'),
-    ...(lineage ? buildSpeciesOwnEffectFeature(lineage, 'lineage') : []),
+    ...(lineage
+      ? buildSpeciesOwnEffectFeature(lineage, 'lineage', answers)
+      : []),
     ...(lineage ? toFeatures(lineage, 'lineage') : []),
   ];
 }
@@ -10204,6 +10213,23 @@ function withSpeciesMechanicsSnapshot(
 }
 
 /**
+ * Ответы игрока на выборы записи — полем снимка. Запись без ответов пишется без
+ * поля: такой она была и до их появления.
+ *
+ * @param featureChoices выборы записи.
+ * @param answers ответы игрока по id выбора.
+ * @returns поле снимка с ответами по ключу выбора либо ничего.
+ */
+function withChoiceAnswersSnapshot(
+  featureChoices: ClassChoice[],
+  answers: Record<string, string[]>,
+): Pick<CharacterFeature, 'choiceAnswers'> {
+  const choiceAnswers = pickChoiceAnswers(featureChoices, answers);
+
+  return Object.keys(choiceAnswers).length ? { choiceAnswers } : {};
+}
+
+/**
  * Запись листа под дары самой записи вида или происхождения: эффекты,
  * постоянные модификаторы и счётчики ресурсов.
  *
@@ -10214,11 +10240,13 @@ function withSpeciesMechanicsSnapshot(
  *
  * @param summary деталь вида или происхождения.
  * @param origin происхождение записи; по умолчанию вид.
+ * @param answers ответы игрока на выборы самой записи по id выбора.
  * @returns одна запись листа либо пустой список.
  */
 function buildSpeciesOwnEffectFeature(
   summary: SpeciesSummary,
   origin: FeatureOrigin = 'species',
+  answers: Record<string, string[]> = {},
 ): CharacterFeature[] {
   if (
     summary.activeEffects.length === 0
@@ -10244,6 +10272,7 @@ function buildSpeciesOwnEffectFeature(
         : undefined,
       spellList: summary.spellList ?? undefined,
       ...withSpeciesMechanicsSnapshot(summary.modifiers, summary.counters),
+      ...withChoiceAnswersSnapshot(summary.choices, answers),
     },
   ];
 }
@@ -11207,6 +11236,51 @@ function getFeatureDefenseChoices(
 }
 
 /**
+ * Происхождения, у которых одна запись справочника ложится на лист несколькими
+ * умениями: вид, подвид и класс. Только у них выбор и защита по этому выбору
+ * бывают в разных умениях.
+ */
+const MULTI_FEATURE_ORIGINS = new Set<FeatureOrigin>([
+  'species',
+  'lineage',
+  'class',
+]);
+
+/**
+ * Ответ игрока на выбор по ключу — у самого умения, а если там его нет, у
+ * соседних умений той же записи справочника.
+ *
+ * У драконорождённого тип урона спрашивает «Наследие драконов», а даёт по нему
+ * сопротивление соседнее «Сопротивление урону»: ключ выбора общий на запись
+ * вида, а не на умение. У черты соседей нет: каждая черта — своя запись, и
+ * одинаковый ключ у двух черт ничего не значит.
+ *
+ * @param features особенности листа.
+ * @param feature умение, которому нужен ответ.
+ * @param choiceKey ключ выбора.
+ * @returns ответ игрока; пусто — на выбор не отвечали.
+ */
+function getRecordChoiceAnswer(
+  features: CharacterFeature[],
+  feature: CharacterFeature,
+  choiceKey: string,
+): string[] {
+  const own = feature.choiceAnswers?.[choiceKey];
+
+  if (own?.length || !MULTI_FEATURE_ORIGINS.has(feature.origin)) {
+    return own ?? [];
+  }
+
+  return features
+    .filter(
+      (candidate) =>
+        candidate.origin === feature.origin
+        && candidate.originName === feature.originName,
+    )
+    .flatMap((candidate) => candidate.choiceAnswers?.[choiceKey] ?? []);
+}
+
+/**
  * Типы урона, которые игрок назвал сам, — названиями и одного вида защиты.
  *
  * Ответы лежат в записи уже названиями (их так записал пикер), поэтому
@@ -11226,7 +11300,9 @@ function getChosenDamageDefences(
     feature.modifiers
       ? getFeatureDefenseChoices(feature.modifiers)
           .filter((choice) => choice.kind === kind)
-          .flatMap((choice) => feature.choiceAnswers?.[choice.choiceKey] ?? [])
+          .flatMap((choice) =>
+            getRecordChoiceAnswer(features, feature, choice.choiceKey),
+          )
           .filter((name) => DAMAGE_TYPE_NAME_SET.has(name))
       : [],
   );
@@ -14581,6 +14657,40 @@ export function collectFeatChoiceAnswers(
   }
 
   return answersByKey;
+}
+
+/**
+ * Ответы игрока на собственные выборы черты, взятой выбором черты в мастере, —
+ * в том виде, в каком их ждёт запись черты (`buildFeatFeature`): владения
+ * снимком, остальное ответом по ключу выбора, названная характеристика — для
+ * заклинаний черты. Так же отвечает окно добавления черты, поэтому черта из
+ * мастера ложится на лист той же записью.
+ *
+ * @param summary деталь выбранной черты.
+ * @param ownChoices собственные выборы черты (см. `getPickedFeatChoices`).
+ * @param answers ответы игрока по id выбора.
+ * @param proficientSkillNames навыки, которыми персонаж уже владеет.
+ * @returns поля записи черты, собранные из ответов.
+ */
+export function collectPickedFeatGrants(
+  summary: FeatSummary,
+  ownChoices: ClassChoice[],
+  answers: Record<string, string[]>,
+  proficientSkillNames: string[],
+): {
+  proficiencies: Partial<GrantedProficiencies>;
+  choiceAnswers: Record<string, string[]>;
+  spellcastingAbility: AbilityKey | null;
+} {
+  return {
+    proficiencies: collectChosenProficiencies(
+      ownChoices,
+      answers,
+      proficientSkillNames,
+    ),
+    choiceAnswers: collectFeatChoiceAnswers(ownChoices, answers),
+    spellcastingAbility: getFeatSpellcastingAbility(summary, answers),
+  };
 }
 
 /**

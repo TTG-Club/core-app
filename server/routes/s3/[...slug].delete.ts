@@ -1,6 +1,6 @@
 import { StatusCodes } from 'http-status-codes';
 
-import { isPrivateS3Key, S3Service } from '#server/domain/s3';
+import { isPrivateS3Key, isTeamS3Section, S3Service } from '#server/domain/s3';
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, 'slug');
@@ -13,9 +13,14 @@ export default defineEventHandler(async (event) => {
     throw createError(getErrorResponse(StatusCodes.FORBIDDEN));
   }
 
-  const [, username] = slug.split('/');
+  const [section, username] = slug.split('/');
 
-  if (!(await isUserHasAccess(event, username))) {
+  // Файлы командного раздела лежат в общей папке, а не в папке пользователя:
+  // проверка «это мой файл» к ним неприменима — пользователь с логином,
+  // совпавшим с именем папки, не должен получить к ним доступ.
+  if (isTeamS3Section(section)) {
+    assertAdminAccess(await getUserFromToken(event));
+  } else if (!(await isUserHasAccess(event, username))) {
     throw createError(getErrorResponse(StatusCodes.FORBIDDEN));
   }
 
