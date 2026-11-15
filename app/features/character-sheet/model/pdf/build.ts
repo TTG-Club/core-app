@@ -1,5 +1,5 @@
 import type { Character } from '../types';
-import type { PdfBuildContext } from './types';
+import type { PdfBuildContext, PdfBuildOptions } from './types';
 
 import { PDFDocument } from 'pdf-lib';
 
@@ -25,11 +25,16 @@ import { drawSpellsPage } from './page-spells';
  * их дозагружает `loadCatalogDescriptions`; отказ запроса лишает справочник одной
  * записи, но не срывает экспорт.
  *
+ * Если у листа включён доступ по ссылке, в шапку первой страницы ставится
+ * QR-код с этой ссылкой — бумажный лист ведёт к актуальной версии на сайте.
+ *
  * @param character персонаж.
+ * @param options ссылка на просмотр листа и прочее, чего нет в документе.
  * @returns байты готового PDF.
  */
 export async function buildCharacterSheetPdf(
   character: Character,
+  options: PdfBuildOptions = {},
 ): Promise<Uint8Array> {
   const document = await PDFDocument.create();
 
@@ -51,6 +56,7 @@ export async function buildCharacterSheetPdf(
     fonts,
     characterName: character.name,
     pages: [],
+    shareUrl: options.shareUrl ?? null,
   };
 
   drawMainPage(context, character);

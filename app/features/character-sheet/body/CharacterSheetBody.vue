@@ -196,8 +196,13 @@
   // `viewedShareToken` — токен, по которому открыт чужой лист: им меню
   // сохраняет его к себе.
   // `isEditorAccess` — лист чужой, но открыт по праву редактора.
-  const { viewedShareToken, isSheetShared, isEditorAccess } =
-    useCharacterSheetShare();
+  const {
+    viewedShareToken,
+    isSheetShared,
+    isEditorAccess,
+    getShareUrl,
+    getShareUrlByToken,
+  } = useCharacterSheetShare();
 
   const isShared = computed(() => isSheetShared(character.value.id));
 
@@ -292,9 +297,20 @@
   // собственное состояние загрузки.
   const { isExporting: isPdfExporting, exportToPdf } = useCharacterSheetPdf();
 
-  /** Экспорт открытого листа в PDF. */
+  /**
+   * Экспорт открытого листа в PDF. В QR-код уходит ссылка владельца (у своего
+   * сохранённого листа без ссылки экспорт её включает), а у листа, открытого по
+   * ссылке, — та самая ссылка, по которой его открыли. Редактор чужого листа
+   * доступ не выдаёт — это право владельца.
+   */
   function handleDownloadPdf(): void {
-    void exportToPdf(character.value);
+    void exportToPdf(character.value, {
+      shareUrl:
+        getShareUrl(character.value.id)
+        ?? getShareUrlByToken(viewedShareToken.value),
+      ensureShare:
+        isOwnSheet.value && character.value.id !== DRAFT_CHARACTER_ID,
+    });
   }
 
   const overlay = useOverlay();
