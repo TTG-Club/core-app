@@ -1,42 +1,29 @@
 <script setup lang="ts">
   import { DictionaryService } from '~/shared/api';
 
-  const { multiple = false } = defineProps<{
-    multiple?: boolean;
-  }>();
+  import {
+    SOURCE_OFFICIALITIES_DATA_KEY,
+    SOURCE_OFFICIALITY_SELECT_PLACEHOLDER,
+  } from '../../types';
 
-  const model = defineModel<string | Array<string>>();
+  const model = defineModel<string>();
 
-  const { data, status, refresh } = await useAsyncData(
-    'dictionaries-source-officialities',
+  const { data: officialities, status } = await useAsyncData(
+    SOURCE_OFFICIALITIES_DATA_KEY,
     () => DictionaryService.sourceOfficialities(),
+    { dedupe: 'defer' },
   );
 
-  const placeholder = computed(() => {
-    if (multiple) {
-      return 'Выбери степени официальности';
-    }
+  const officialityOptions = computed(() => officialities.value ?? []);
 
-    return 'Выбери степень официальности';
-  });
-
-  function handleDropdownOpening(state: boolean) {
-    if (!state) {
-      return;
-    }
-
-    refresh();
-  }
+  const isPending = computed(() => status.value === 'pending');
 </script>
 
 <template>
   <USelect
     v-model="model"
-    :loading="status === 'pending'"
-    :items="data || []"
-    :multiple="multiple"
-    :placeholder
-    searchable
-    @open="handleDropdownOpening(true)"
+    :placeholder="SOURCE_OFFICIALITY_SELECT_PLACEHOLDER"
+    :loading="isPending"
+    :items="officialityOptions"
   />
 </template>

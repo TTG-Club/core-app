@@ -325,6 +325,12 @@ class Dictionaries {
     });
   };
 
+  /**
+   * Степени официальности источника: официальный, UA, третьи лица, хомбрю.
+   *
+   * @param config - Параметры запроса
+   * @returns Варианты для выпадающего списка
+   */
   public sourceOfficialities = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
@@ -334,6 +340,12 @@ class Dictionaries {
     });
   };
 
+  /**
+   * Категории источника: основные правила, сеттинг, приключения.
+   *
+   * @param config - Параметры запроса
+   * @returns Варианты для выпадающего списка
+   */
   public sourceCategories = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {

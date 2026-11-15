@@ -1,42 +1,29 @@
 <script setup lang="ts">
   import { DictionaryService } from '~/shared/api';
 
-  const { multiple = false } = defineProps<{
-    multiple?: boolean;
-  }>();
+  import {
+    SOURCE_CATEGORIES_DATA_KEY,
+    SOURCE_CATEGORY_SELECT_PLACEHOLDER,
+  } from '../../types';
 
-  const model = defineModel<string | Array<string>>();
+  const model = defineModel<string>();
 
-  const { data, status, refresh } = await useAsyncData(
-    'dictionaries-source-categories',
+  const { data: categories, status } = await useAsyncData(
+    SOURCE_CATEGORIES_DATA_KEY,
     () => DictionaryService.sourceCategories(),
+    { dedupe: 'defer' },
   );
 
-  const placeholder = computed(() => {
-    if (multiple) {
-      return 'Выбери категории источника';
-    }
+  const categoryOptions = computed(() => categories.value ?? []);
 
-    return 'Выбери категорию источника';
-  });
-
-  function handleDropdownOpening(state: boolean) {
-    if (!state) {
-      return;
-    }
-
-    refresh();
-  }
+  const isPending = computed(() => status.value === 'pending');
 </script>
 
 <template>
   <USelect
     v-model="model"
-    :loading="status === 'pending'"
-    :items="data || []"
-    :multiple="multiple"
-    :placeholder
-    searchable
-    @open="handleDropdownOpening(true)"
+    :placeholder="SOURCE_CATEGORY_SELECT_PLACEHOLDER"
+    :loading="isPending"
+    :items="categoryOptions"
   />
 </template>
