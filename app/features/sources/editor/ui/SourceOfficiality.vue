@@ -8,16 +8,16 @@
   const model = defineModel<string | Array<string>>();
 
   const { data, status, refresh } = await useAsyncData(
-    'dictionaries-source-types',
-    () => DictionaryService.sourceTypes(),
+    'dictionaries-source-officialities',
+    () => DictionaryService.sourceOfficialities(),
   );
 
   const placeholder = computed(() => {
     if (multiple) {
-      return 'Выбери типы источника';
+      return 'Выбери степени официальности';
     }
 
-    return 'Выбери тип источника';
+    return 'Выбери степень официальности';
   });
 
   function handleDropdownOpening(state: boolean) {

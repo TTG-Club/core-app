@@ -2,7 +2,8 @@ import type { EditorBaseInfoState } from '~ui/editor';
 
 export interface SourceCreate extends EditorBaseInfoState {
   acronym: string; // начальные буквы из английского названия
-  type: string; // тип источника
+  officiality: string; // степень официальности: OFFICIAL, TEST, THIRD_PARTY, HOMEBREW
+  category: string; // категория: CORE, SETTING, ADVENTURE
   publisher: {
     name: string | undefined; // название издательства
     date: string | undefined; // дата публикации

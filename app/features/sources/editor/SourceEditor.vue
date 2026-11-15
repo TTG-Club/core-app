@@ -17,7 +17,7 @@
   import { UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
 
-  import { SourceType } from './ui';
+  import { SourceCategory, SourceOfficiality } from './ui';
 
   function getInitialState(): SourceCreate {
     return {
@@ -28,7 +28,8 @@
         alt: [],
       },
       acronym: '',
-      type: '',
+      officiality: '',
+      category: '',
       image: '',
       source: {
         url: undefined,
@@ -116,6 +117,8 @@
       tags: z.array(z.string().trim().nonempty()).optional(),
       name: nameSchema,
       acronym: z.string().trim().nonempty(),
+      officiality: z.string().nonempty(),
+      category: z.string().nonempty(),
     }),
   );
 </script>
@@ -210,12 +213,21 @@
 
       <div class="grid grid-cols-12 gap-6">
         <UFormField
-          class="col-span-full"
-          label="Тип источника"
-          name="type"
+          class="col-span-6"
+          label="Официальность"
+          name="officiality"
           required
         >
-          <SourceType v-model="state.type" />
+          <SourceOfficiality v-model="state.officiality" />
+        </UFormField>
+
+        <UFormField
+          class="col-span-6"
+          label="Категория"
+          name="category"
+          required
+        >
+          <SourceCategory v-model="state.category" />
         </UFormField>
 
         <UFormField
