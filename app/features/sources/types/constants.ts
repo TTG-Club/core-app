@@ -10,3 +10,17 @@ export const SOURCE_ACRONYM_RESTORE_LABEL = 'Собрать из английс�
 
 /** Значок той же кнопки */
 export const SOURCE_ACRONYM_RESTORE_ICON = 'tabler:refresh';
+
+/** Ключ справочника степеней официальности источника */
+export const SOURCE_OFFICIALITIES_DATA_KEY =
+  'dictionaries-source-officialities';
+
+/** Подсказка в пустом поле степени официальности */
+export const SOURCE_OFFICIALITY_SELECT_PLACEHOLDER =
+  'Выбери степень официальности';
+
+/** Ключ справочника категорий источника */
+export const SOURCE_CATEGORIES_DATA_KEY = 'dictionaries-source-categories';
+
+/** Подсказка в пустом поле категории */
+export const SOURCE_CATEGORY_SELECT_PLACEHOLDER = 'Выбери категорию источника';

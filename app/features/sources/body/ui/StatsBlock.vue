@@ -2,19 +2,31 @@
   import type { SourceDetailResponse } from '~sources/types';
 
   defineProps<
-    Pick<SourceDetailResponse, 'type' | 'publisher' | 'translation'>
+    Pick<
+      SourceDetailResponse,
+      'officiality' | 'category' | 'publisher' | 'translation'
+    >
   >();
 </script>
 
 <template>
   <div :class="$style.stats">
     <div
-      v-if="type"
+      v-if="officiality"
       :class="$style.item"
     >
-      <span :class="$style.name">Тип:</span>
+      <span :class="$style.name">Официальность:</span>
 
-      <span>{{ type }}</span>
+      <span>{{ officiality }}</span>
+    </div>
+
+    <div
+      v-if="category"
+      :class="$style.item"
+    >
+      <span :class="$style.name">Категория:</span>
+
+      <span>{{ category }}</span>
     </div>
 
     <template v-if="publisher?.date || publisher?.name">

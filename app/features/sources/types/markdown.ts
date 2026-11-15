@@ -12,7 +12,7 @@ export function getSourceMarkdown(source: SourceDetailResponse): string {
   return buildMarkdownEntity({
     name: source.name.rus,
     nameEng: source.name.eng,
-    subtitle: source.type,
+    subtitle: joinStat([source.officiality, source.category], ', '),
     stats: [
       [
         'Издатель',
