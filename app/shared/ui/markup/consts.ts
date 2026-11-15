@@ -52,24 +52,29 @@ export const GROUP_SPACING_AFTER_SEPARATOR = 'mt-0! mb-2';
 // готового класса Tailwind под него нет.
 export const IMAGE_WIDTH_VARIABLE = '--markup-image-width';
 
+// CSS-переменная с шириной картинки в узкой колонке (см. getImageNarrowWidth).
+export const IMAGE_NARROW_WIDTH_VARIABLE = '--markup-image-narrow-width';
+
 // Классы картинки по стороне обтекания. Всё, что зависит от ширины колонки,
 // стоит под контейнерным запросом `@md:` к обёртке MarkupRender: в узкой колонке
-// (телефон, дровер) картинка занимает всю ширину и текст её не обтекает. Свою
-// сторону картинка «очищает», чтобы две подряд вставали друг под другом, а не
-// лесенкой.
+// (телефон, дровер) текст картинку не обтекает — рядом с ней осталась бы
+// полоска в три слова, — и она встаёт по центру в своём размере. Свою сторону
+// картинка «очищает», чтобы две подряд вставали друг под другом, а не лесенкой.
 export const IMAGE_FLOAT_CLASSES = {
-  left: 'w-full @md:float-left @md:clear-left @md:mr-4 @md:w-(--markup-image-width)',
+  left: 'mx-auto w-(--markup-image-narrow-width) @md:float-left @md:clear-left @md:mr-4 @md:ml-0 @md:w-(--markup-image-width)',
   right:
-    'w-full @md:float-right @md:clear-right @md:ml-4 @md:w-(--markup-image-width)',
+    'mx-auto w-(--markup-image-narrow-width) @md:float-right @md:clear-right @md:mr-0 @md:ml-4 @md:w-(--markup-image-width)',
 } as const;
 
 // Классы отдельно стоящей картинки (без обтекания) по выравниванию: к левому
-// краю, по центру или к правому. Текст идёт под ней. В узкой колонке картинка
-// занимает всю ширину, и выравнивать нечего.
+// краю, по центру или к правому. Текст идёт под ней. В узкой колонке
+// выравнивание сохраняется, меняется только ширина.
 export const IMAGE_ALIGN_CLASSES = {
-  left: 'clear-both mr-auto w-full @md:w-(--markup-image-width)',
-  center: 'clear-both mx-auto w-full @md:w-(--markup-image-width)',
-  right: 'clear-both ml-auto w-full @md:w-(--markup-image-width)',
+  left: 'clear-both mr-auto w-(--markup-image-narrow-width) @md:w-(--markup-image-width)',
+  center:
+    'clear-both mx-auto w-(--markup-image-narrow-width) @md:w-(--markup-image-width)',
+  right:
+    'clear-both ml-auto w-(--markup-image-narrow-width) @md:w-(--markup-image-width)',
 } as const;
 
 // Обёртка описания с картинками. Блочный поток вместо флекс-колонки родителя:

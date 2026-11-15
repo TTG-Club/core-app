@@ -27,6 +27,13 @@ const IMAGE_MIN_WIDTH = 10;
 /** Наибольшая ширина картинки, % — вся ширина текста. */
 const IMAGE_MAX_WIDTH = 100;
 
+/**
+ * Ширина колонки текста на широком экране, px. От неё считается размер картинки
+ * в узкой колонке: там картинка держит тот же размер в пикселях, что и на
+ * широком экране, а не долю ширины.
+ */
+const IMAGE_REFERENCE_COLUMN_WIDTH = 720;
+
 /** Ширина по умолчанию у картинки, которую текст обтекает, %. */
 const IMAGE_FLOAT_DEFAULT_WIDTH = 40;
 
@@ -186,6 +193,24 @@ export function getImageWidth(image: ImageAttributes): number {
   }
 
   return image.float ? IMAGE_FLOAT_DEFAULT_WIDTH : IMAGE_MAX_WIDTH;
+}
+
+/**
+ * Ширина картинки в узкой колонке (телефон, дровер) — значение CSS. Доля от
+ * ширины там не годится: четверть экрана телефона — картинка с марку, а вся
+ * ширина раздувает маленькую картинку в несколько раз. Поэтому картинка держит
+ * размер, который у неё был бы в широкой колонке, и сжимается, только когда
+ * не помещается.
+ *
+ * @param image - Настройки картинки
+ * @returns Значение `width`: не шире колонки и не шире размера на широком экране
+ */
+export function getImageNarrowWidth(image: ImageAttributes): string {
+  const wideColumnPixels = Math.round(
+    (getImageWidth(image) / IMAGE_MAX_WIDTH) * IMAGE_REFERENCE_COLUMN_WIDTH,
+  );
+
+  return `min(100%, ${wideColumnPixels}px)`;
 }
 
 /**

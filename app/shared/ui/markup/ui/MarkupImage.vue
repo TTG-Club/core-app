@@ -10,9 +10,11 @@
   import {
     IMAGE_ALIGN_CLASSES,
     IMAGE_FLOAT_CLASSES,
+    IMAGE_NARROW_WIDTH_VARIABLE,
     IMAGE_WIDTH_VARIABLE,
   } from '../consts';
   import {
+    getImageNarrowWidth,
     getImageWidth,
     IMAGE_DEFAULT_ALIGN,
     readImageAttributes,
@@ -29,10 +31,10 @@
   // остальной текст остаётся на месте.
   const image = computed(() => readImageAttributes(node.attrs));
 
-  // Обтекание и ширина включаются только в широкой колонке (контейнерный запрос
-  // к обёртке MarkupRender). В узкой — телефон, дровер, карточка в списке —
-  // картинка встаёт на всю ширину, иначе рядом с ней осталась бы полоска текста
-  // в три слова.
+  // Обтекание и ширина в процентах включаются только в широкой колонке
+  // (контейнерный запрос к обёртке MarkupRender). В узкой — телефон, дровер,
+  // карточка в списке — текст картинку не обтекает, а сама она держит размер
+  // широкой колонки, пока помещается (см. getImageNarrowWidth).
   const figureClass = computed(() =>
     image.value?.float
       ? IMAGE_FLOAT_CLASSES[image.value.float]
@@ -46,7 +48,10 @@
 
   const figureStyle = computed(() =>
     image.value
-      ? { [IMAGE_WIDTH_VARIABLE]: `${getImageWidth(image.value)}%` }
+      ? {
+          [IMAGE_WIDTH_VARIABLE]: `${getImageWidth(image.value)}%`,
+          [IMAGE_NARROW_WIDTH_VARIABLE]: getImageNarrowWidth(image.value),
+        }
       : undefined,
   );
 </script>
