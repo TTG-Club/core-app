@@ -1,4 +1,4 @@
-import type { Character } from '../model';
+import type { Character, SheetPdfVariant } from '../model';
 
 import {
   downloadCharacterPdf,
@@ -20,6 +20,9 @@ export interface SheetPdfExportOptions {
    * владельца.
    */
   ensureShare?: boolean;
+
+  /** Вид листа; по умолчанию — лист TTG. */
+  variant?: SheetPdfVariant;
 }
 
 /**
@@ -94,7 +97,7 @@ export function useCharacterSheetPdf() {
 
       isShareEnabled = isEnabledNow;
 
-      await downloadCharacterPdf(character, url);
+      await downloadCharacterPdf(character, url, options.variant);
     } catch (error) {
       toast.add({
         title: SHEET_PDF_ERROR_TITLE,

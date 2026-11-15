@@ -1,5 +1,7 @@
 import type { Color, PDFDocument, PDFFont, PDFPage } from 'pdf-lib';
 
+import type { SheetPdfVariant } from '../types';
+
 /** Встроенные в документ шрифты. */
 export interface PdfFonts {
   /** Основной текст и значения. */
@@ -37,6 +39,9 @@ export interface PdfBuildContext {
 export interface PdfBuildOptions {
   /** Ссылка на просмотр листа — попадёт в QR-код на первой странице. */
   shareUrl?: string | null;
+
+  /** Вид листа; по умолчанию — лист TTG. */
+  variant?: SheetPdfVariant;
 }
 
 /** Выравнивание текста внутри заданной ширины. */

@@ -6,6 +6,7 @@
     PreparedSpellKind,
     ProficiencyGroupKey,
     SavingThrowRow,
+    SheetPdfVariant,
     SheetRollContext,
     SkillRow,
     SpellDamageRoll,
@@ -302,14 +303,17 @@
    * сохранённого листа без ссылки экспорт её включает), а у листа, открытого по
    * ссылке, — та самая ссылка, по которой его открыли. Редактор чужого листа
    * доступ не выдаёт — это право владельца.
+   *
+   * @param variant вид листа, выбранный в подменю.
    */
-  function handleDownloadPdf(): void {
+  function handleDownloadPdf(variant: SheetPdfVariant): void {
     void exportToPdf(character.value, {
       shareUrl:
         getShareUrl(character.value.id)
         ?? getShareUrlByToken(viewedShareToken.value),
       ensureShare:
         isOwnSheet.value && character.value.id !== DRAFT_CHARACTER_ID,
+      variant,
     });
   }
 
