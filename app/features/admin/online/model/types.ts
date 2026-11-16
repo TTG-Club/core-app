@@ -126,3 +126,68 @@ export interface AdminOnlinePreferenceSection {
   /** Вариантов много и подписи длинные — сводка идёт строкой во всю ширину панели */
   wide?: boolean;
 }
+
+/**
+ * Посещаемость площадки за одни сутки. Сутки без данных — сервис ещё не копил
+ * или лежал — приходят с датой и `null` в числах: на графике это разрыв, а не ноль.
+ */
+export interface AdminOnlineHistoryDay {
+  /** Средний онлайн за сутки по замерам сервиса */
+  averageOnline: number | null;
+  /** Дата суток в формате `YYYY-MM-DD` */
+  date: string;
+  guests: number | null;
+  /** Самый большой онлайн за сутки */
+  peakOnline: number | null;
+  /** Когда случился пик, ISO-время */
+  peakAt: string | null;
+  registered: number | null;
+  /** Сколько разных людей заходило за сутки: гости и вошедшие вместе */
+  visitors: number | null;
+}
+
+/** История посещаемости одной площадки, от старых суток к новым. */
+export interface AdminOnlineHistorySite {
+  days: AdminOnlineHistoryDay[];
+  siteId: string;
+}
+
+export interface AdminOnlineHistoryResponse {
+  sites: AdminOnlineHistorySite[];
+  /** Все площадки вместе: посетители — объединение, а не сумма */
+  total: Pick<AdminOnlineHistorySite, 'days'>;
+}
+
+/** Что показывает график посещаемости. */
+export type AdminOnlineHistoryMetric =
+  | 'averageOnline'
+  | 'peakOnline'
+  | 'visitors';
+
+/** Показатель посещаемости: подпись плитки, подсказка и то, как его сводить за период. */
+export interface AdminOnlineHistoryMetricSection {
+  hint: string;
+  label: string;
+  metric: AdminOnlineHistoryMetric;
+  /** Что говорит плитка за период: среднее по суткам или лучшие сутки */
+  summary: 'average' | 'maximum';
+}
+
+/** Плитка-переключатель показателя: итог за период и подпись к нему. */
+export interface AdminOnlineHistoryMetricTile extends AdminOnlineHistoryMetricSection {
+  /** Пояснение под числом: за какие сутки или «в среднем за сутки» */
+  caption: string;
+  value: string;
+}
+
+/** Плитка показателя в панели: с признаком выбора и классами под него. */
+export interface AdminOnlineHistoryMetricView extends AdminOnlineHistoryMetricTile {
+  className: string;
+  isActive: boolean;
+}
+
+/** Точка графика: сутки и значение показателя, `null` — разрыв линии. */
+export interface AdminOnlineHistoryPoint {
+  day: AdminOnlineHistoryDay;
+  value: number | null;
+}

@@ -1,6 +1,9 @@
 <script setup lang="ts">
   import type { AdminCharacterSheetStats } from '~admin/character-sheets/model';
-  import type { AdminOnlineStatsResponse } from '~admin/online/model';
+  import type {
+    AdminOnlineHistoryResponse,
+    AdminOnlineStatsResponse,
+  } from '~admin/online/model';
   import type { AdminSubscription } from '~admin/subscription-stats/model';
 
   import { FetchStatus } from '~/shared/consts';
@@ -34,11 +37,16 @@
   } from '~admin/navigation/model';
   import {
     ADMIN_ONLINE_DM_SCREEN_USAGE,
+    ADMIN_ONLINE_HISTORY_API_URL,
+    ADMIN_ONLINE_HISTORY_DATA_KEY,
+    ADMIN_ONLINE_HISTORY_REQUEST_DAYS,
     ADMIN_ONLINE_STATS_API_URL,
     ADMIN_ONLINE_STATS_DATA_KEY,
+    parseAdminOnlineHistory,
     parseAdminOnlineStats,
   } from '~admin/online/model';
   import {
+    AdminOnlineHistoryPanel,
     AdminOnlinePreferencesPanel,
     AdminOnlineSitesPanel,
     AdminOnlineSummary,
@@ -92,6 +100,39 @@
       lazy: true,
     },
   );
+
+  // Историю берём сразу за самый длинный период: короткие — её хвост.
+  const {
+    data: onlineHistory,
+    error: onlineHistoryError,
+    refresh: refreshOnlineHistory,
+    status: onlineHistoryStatus,
+  } = await useAsyncData<AdminOnlineHistoryResponse>(
+    ADMIN_ONLINE_HISTORY_DATA_KEY,
+    async () =>
+      parseAdminOnlineHistory(
+        await requestFetch(ADMIN_ONLINE_HISTORY_API_URL, {
+          query: { days: ADMIN_ONLINE_HISTORY_REQUEST_DAYS },
+        }),
+      ),
+    { server: false, lazy: true },
+  );
+
+  const isOnlineHistoryLoading = computed(
+    () => onlineHistoryStatus.value === FetchStatus.Pending,
+  );
+
+  // Как у подписок: до старта запроса на клиенте статус 'idle', и пустота тогда —
+  // ещё не ответ, а ожидание.
+  const isOnlineHistoryPending = computed(
+    () =>
+      isOnlineHistoryLoading.value
+      || onlineHistoryStatus.value === FetchStatus.Idle,
+  );
+
+  const hasOnlineHistoryError = computed(() => !!onlineHistoryError.value);
+
+  const resolvedOnlineHistory = computed(() => onlineHistory.value ?? null);
 
   const isOnlineStatsLoading = computed(
     () => onlineStatsStatus.value === 'pending',
@@ -201,6 +242,7 @@
   const isStatsLoading = computed(
     () =>
       isOnlineStatsLoading.value
+      || isOnlineHistoryLoading.value
       || isUsersTotalLoading.value
       || isSheetStatsLoading.value
       || isGameStatisticsLoading.value
@@ -213,6 +255,7 @@
   async function handleStatsRefresh(): Promise<void> {
     await Promise.all([
       refreshOnlineStats(),
+      refreshOnlineHistory(),
       refreshSheetStats(),
       refreshGameStatistics(),
       refreshSubscriptions(),
@@ -320,6 +363,12 @@
             :is-pending="isOnlineStatsPending"
           />
         </div>
+
+        <AdminOnlineHistoryPanel
+          :history="resolvedOnlineHistory"
+          :is-pending="isOnlineHistoryPending"
+          :has-error="hasOnlineHistoryError"
+        />
       </section>
 
       <section class="space-y-3">
