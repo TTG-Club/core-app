@@ -147,7 +147,18 @@ const creatureLinkSchema = z.object({
   url: z.string(),
   name: z.object({ rus: z.string().catch('') }),
   challengeRailing: z.string().catch(''),
+  experience: z.number().nullish().catch(null),
+  experienceInLair: z.number().nullish().catch(null),
 });
+
+/**
+ * Приводит опыт из поиска бестиария к числу: отсутствующее или отрицательное
+ * значение (так бэкенд помечает неизвестный опыт) даёт `undefined`.
+ * @param value Сырое значение опыта.
+ */
+function toExperience(value: number | null | undefined): number | undefined {
+  return typeof value === 'number' && value >= 0 ? value : undefined;
+}
 
 /** Ответ поиска бестиария: плоский массив или страница `{ value, Count }`. */
 const creatureSearchResponseSchema = z
@@ -171,6 +182,8 @@ export function parseCreatureOptions(input: unknown): Array<CreatureOption> {
     url: creature.url,
     label: creature.name.rus,
     challengeRating: creature.challengeRailing,
+    experience: toExperience(creature.experience),
+    experienceInLair: toExperience(creature.experienceInLair),
   }));
 }
 
