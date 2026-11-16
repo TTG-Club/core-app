@@ -158,6 +158,12 @@ export interface CreatureOption {
   url: string;
   label: string;
   challengeRating: string;
+
+  /** Опыт за существо; нет — бэкенд его не прислал или он неизвестен. */
+  experience?: number;
+
+  /** Опыт за существо в его логове; нет — логова у существа нет. */
+  experienceInLair?: number;
 }
 
 /**
