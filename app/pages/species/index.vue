@@ -12,8 +12,15 @@
   import { useListView } from '~infrastructure/list-presentation/composable';
   import { SpeciesBody } from '~species/body';
   import { SpeciesLink } from '~species/link';
-  import { getSpeciesMarkdown } from '~species/model';
+  import {
+    getSpeciesGroupLabel,
+    getSpeciesMarkdown,
+    sortSpeciesByGroup,
+    SPECIES_LIST_GROUP_FIELD,
+    SPECIES_LIST_GROUP_SORT,
+  } from '~species/model';
   import { UiDetailPane, UiDetailPaneEmpty } from '~ui/detail-pane';
+  import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkBig } from '~ui/skeleton';
 
@@ -49,6 +56,18 @@
     },
   );
 
+  // Виды в порядке экрана — по группам: по нему панель листает соседние
+  const orderedSpecies = computed(() =>
+    data.value ? sortSpeciesByGroup(data.value) : undefined,
+  );
+
+  const listResetKey = computed(() =>
+    JSON.stringify({
+      filter: filterQuery.value,
+      search: search.value ?? '',
+    }),
+  );
+
   const {
     detailUrl,
     detailData: detailSpecies,
@@ -62,12 +81,9 @@
   } = useSectionDetail<SpeciesDetailResponse>({
     sectionPath: '/species',
     apiBasePath: '/api/v2/species',
-    items: data,
+    items: orderedSpecies,
     getParentUrl: (detail) => detail.parent?.url ?? detail.species?.url,
   });
-
-  // На телефоне страница вида листает соседние виды списка
-  useSectionNeighbours('/species', () => data.value?.map((link) => link.url));
 
   const markdown = useEntityMarkdown(detailSpecies, getSpeciesMarkdown);
 
@@ -116,16 +132,20 @@
           />
         </PageGrid>
 
-        <PageGrid
-          v-else-if="status === 'success' && data?.length"
+        <GroupedList
+          v-else-if="status === 'success' && orderedSpecies?.length"
           :columns="listColumns"
+          :items="orderedSpecies"
+          :reset-key="listResetKey"
+          :field="SPECIES_LIST_GROUP_FIELD"
+          :separator-label="getSpeciesGroupLabel"
+          :group-sort="SPECIES_LIST_GROUP_SORT"
+          :active-item-key="detailUrl"
         >
-          <SpeciesLink
-            v-for="link in data"
-            :key="link.url"
-            :species="link"
-          />
-        </PageGrid>
+          <template #default="{ item: species }">
+            <SpeciesLink :species />
+          </template>
+        </GroupedList>
 
         <PageResult
           v-else
