@@ -2,6 +2,7 @@ import type {
   EncounterBudget,
   EncounterDifficulty,
   EncounterState,
+  GenerationDifficulty,
 } from './types';
 
 /** Префикс страницы существа в бестиарии. */
@@ -143,3 +144,56 @@ export const SEGMENT_CLASSES = {
   moderate: { track: 'bg-warning/15', fill: 'bg-warning' },
   high: { track: 'bg-error/15', fill: 'bg-error' },
 } as const;
+
+/** Сложность, которую генератор берёт по умолчанию. */
+export const DEFAULT_GENERATION_DIFFICULTY: GenerationDifficulty = 'moderate';
+
+/** Сложности, до которых умеет добирать генератор. */
+export const GENERATION_DIFFICULTY_OPTIONS: Array<{
+  value: GenerationDifficulty;
+  label: string;
+}> = [
+  { value: 'low', label: 'Низкая' },
+  { value: 'moderate', label: 'Умеренная' },
+  { value: 'high', label: 'Высокая' },
+];
+
+/**
+ * Нижняя граница низкой сложности для генератора — доля бюджета низкой
+ * сложности: бой на пару десятков опыта генерировать бессмысленно.
+ */
+export const GENERATION_LOW_FLOOR_RATIO = 0.5;
+
+/** Сколько попыток собрать столкновение делает генератор. */
+export const GENERATION_ATTEMPTS = 40;
+
+/** Шанс остановиться, когда опыт уже попал в нужную сложность. */
+export const GENERATION_STOP_CHANCE = 0.35;
+
+/** Шанс добавить ещё одну копию уже выбранного существа, а не новое. */
+export const GENERATION_REPEAT_CHANCE = 0.6;
+
+/** Сколько разных существ генератор кладёт в одно столкновение. */
+export const GENERATION_MAX_KINDS = 3;
+
+/** Доля бюджета, от которой существо годится в «главари» столкновения. */
+export const GENERATION_LEADER_RATIO = 0.25;
+
+/** Сколько существ генератор добавляет на одного персонажа (и сверху). */
+export const GENERATION_CREATURES_PER_CHARACTER = 2;
+export const GENERATION_MIN_CREATURES = 4;
+export const GENERATION_MAX_CREATURES = 12;
+
+/** Среда обитания, подходящая для любой местности. */
+export const HABITAT_ANY = 'ANY';
+
+/** Тексты уведомлений генератора. */
+export const GENERATION_BUDGET_SPENT_TITLE = 'Бюджет сложности уже потрачен';
+export const GENERATION_BUDGET_SPENT_DESCRIPTION =
+  'Опыт добавленных существ уже достиг выбранной сложности. Очистите список или выберите сложность выше.';
+export const GENERATION_NOT_FOUND_TITLE = 'Подходящих существ не нашлось';
+export const GENERATION_NOT_FOUND_DESCRIPTION =
+  'Попробуйте другую среду обитания или сложность.';
+export const GENERATION_ERROR_TITLE = 'Не удалось сгенерировать столкновение';
+export const GENERATION_ERROR_DESCRIPTION =
+  'Бестиарий не ответил. Попробуйте ещё раз.';

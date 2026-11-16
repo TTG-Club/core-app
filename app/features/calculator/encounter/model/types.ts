@@ -90,3 +90,30 @@ export interface EncounterBudgetSegment {
   /** Насколько зона заполнена потраченным опытом, от 0 до 1. */
   fill: number;
 }
+
+/** Сложность, до которой добирает генератор. */
+export type GenerationDifficulty = Exclude<
+  EncounterDifficulty,
+  'none' | 'beyond'
+>;
+
+/** Диапазон опыта, который генератор должен добавить, включительно. */
+export interface GenerationWindow {
+  min: number;
+  max: number;
+}
+
+/** Существо-кандидат генератора с известным опытом. */
+export interface GenerationCandidate {
+  url: string;
+  label: string;
+  challengeRating: string;
+  experience: number;
+  experienceInLair?: number;
+}
+
+/** Одно существо в результате генерации и сколько его добавить. */
+export interface GeneratedCreature {
+  candidate: GenerationCandidate;
+  count: number;
+}

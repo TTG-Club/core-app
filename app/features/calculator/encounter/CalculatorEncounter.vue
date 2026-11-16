@@ -1,7 +1,8 @@
 <script setup lang="ts">
-  import { useEncounterCalculator } from './composables';
+  import { useEncounterCalculator, useEncounterGenerator } from './composables';
   import {
     EncounterCreaturesCard,
+    EncounterGeneratorCard,
     EncounterPartyCard,
     EncounterSummary,
   } from './ui';
@@ -20,6 +21,12 @@
     removeCreature,
     clearCreatures,
   } = useEncounterCalculator();
+
+  const { isGenerating, generate } = useEncounterGenerator(result, addCreature);
+
+  const canGenerate = computed(
+    () => canAddCreature.value && result.value.characterCount > 0,
+  );
 </script>
 
 <template>
@@ -35,14 +42,22 @@
         @remove="removePartyRow"
       />
 
-      <EncounterCreaturesCard
-        :creatures="creatures"
-        :can-add="canAddCreature"
-        @add="addCreature"
-        @update="updateCreature"
-        @remove="removeCreature"
-        @clear="clearCreatures"
-      />
+      <div class="flex flex-col gap-6">
+        <EncounterGeneratorCard
+          :loading="isGenerating"
+          :disabled="!canGenerate"
+          @generate="generate"
+        />
+
+        <EncounterCreaturesCard
+          :creatures="creatures"
+          :can-add="canAddCreature"
+          @add="addCreature"
+          @update="updateCreature"
+          @remove="removeCreature"
+          @clear="clearCreatures"
+        />
+      </div>
     </div>
   </div>
 </template>
