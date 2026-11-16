@@ -197,3 +197,6 @@ export const GENERATION_NOT_FOUND_DESCRIPTION =
 export const GENERATION_ERROR_TITLE = 'Не удалось сгенерировать столкновение';
 export const GENERATION_ERROR_DESCRIPTION =
   'Бестиарий не ответил. Попробуйте ещё раз.';
+
+/** Фильтры бестиария: в них отмечены источники, включённые в профиле. */
+export const BESTIARY_FILTERS_PATH = '/api/v2/bestiary/filters';

@@ -3,7 +3,10 @@
 
   import type { EncounterCreature } from '../model';
 
-  import { useCreatureSearch } from '~initiative/composables';
+  import {
+    useCreatureDrawer,
+    useCreatureSearch,
+  } from '~initiative/composables';
 
   import {
     BESTIARY_PAGE_PREFIX,
@@ -28,6 +31,7 @@
   }>();
 
   const { searchTerm, options, isLoading } = useCreatureSearch();
+  const { openCreature } = useCreatureDrawer();
 
   const selected = ref<CreatureOption | undefined>(undefined);
   const batchCount = ref(MIN_ROW_COUNT);
@@ -183,8 +187,8 @@
         <div class="flex min-w-40 flex-1 flex-col">
           <NuxtLink
             :to="row.href"
-            target="_blank"
             class="font-medium text-highlighted hover:text-primary"
+            @click.left.exact.prevent="openCreature(row.url)"
           >
             {{ row.name }}
           </NuxtLink>
