@@ -5,27 +5,38 @@ import { describe, expect, it } from 'vitest';
 import {
   appendScreenWindow,
   arrangeScreenWindows,
+  centerScreenView,
+  clampScreenView,
+  DM_SCREEN_FIELD,
   DM_SCREEN_GAP,
   DM_SCREEN_HALVES_LAYOUT,
   DM_SCREEN_LAYOUTS,
   DM_SCREEN_MARGIN,
   DM_SCREEN_WINDOW_MIN_SIZE,
   DM_SCREEN_WINDOW_SIZE,
+  DM_SCREEN_ZOOM,
   findScreenSplitters,
+  fitScreenView,
   fitScreenWindowSize,
+  getScreenBounds,
   getScreenEdgeTarget,
   getScreenSplitterPointer,
+  getScreenVisibleRect,
   getScreenZoneRect,
   isScreenLayoutFitting,
   isScreenPickerBand,
-  keepScreenWindowReachable,
+  isScreenRectVisible,
+  keepScreenWindowOnField,
   magnetScreenWindow,
   moveScreenSplitter,
   placeScreenWindow,
   resizeScreenWindow,
+  toScreenCanvasRect,
+  toScreenFieldPoint,
+  zoomScreenView,
 } from '~dm-screen/model';
 
-const BOARD = { width: 1600, height: 900 };
+const BOARD = { x: 0, y: 0, width: 1600, height: 900 };
 
 /**
  * Окно ширмы для тестов.
@@ -52,7 +63,9 @@ describe('fitScreenWindowSize', () => {
   });
 
   it('на тесном холсте окно ужимается, но не меньше наименьшего', () => {
-    expect(fitScreenWindowSize({ width: 400, height: 100 })).toEqual({
+    expect(
+      fitScreenWindowSize({ x: 0, y: 0, width: 400, height: 100 }),
+    ).toEqual({
       width: 400 - DM_SCREEN_MARGIN * 2,
       height: DM_SCREEN_WINDOW_MIN_SIZE.height,
     });
@@ -82,28 +95,6 @@ describe('placeScreenWindow', () => {
       x: BOARD.width - DM_SCREEN_MARGIN - size.width,
       y: BOARD.height - DM_SCREEN_MARGIN - size.height,
     });
-  });
-});
-
-describe('keepScreenWindowReachable', () => {
-  const size = { width: 480, height: 600 };
-
-  it('шапка окна не уходит выше холста и ниже его края', () => {
-    expect(keepScreenWindowReachable({ x: 100, y: -50 }, size, BOARD).y).toBe(
-      0,
-    );
-
-    expect(
-      keepScreenWindowReachable({ x: 100, y: 5000 }, size, BOARD).y,
-    ).toBeLessThan(BOARD.height);
-  });
-
-  it('сбоку от окна остаётся видимая часть', () => {
-    const left = keepScreenWindowReachable({ x: -5000, y: 0 }, size, BOARD);
-    const right = keepScreenWindowReachable({ x: 5000, y: 0 }, size, BOARD);
-
-    expect(left.x + size.width).toBeGreaterThan(0);
-    expect(right.x).toBeLessThan(BOARD.width);
   });
 });
 
@@ -250,18 +241,6 @@ describe('resizeScreenWindow', () => {
     expect(resized.y).toBe(start.y);
   });
 
-  it('верхняя сторона не уходит выше холста', () => {
-    const resized = resizeScreenWindow(
-      start,
-      { horizontal: 0, vertical: -1 },
-      { x: 0, y: -5000 },
-      BOARD,
-    );
-
-    expect(resized.y).toBe(0);
-    expect(resized.y + resized.height).toBe(start.y + start.height);
-  });
-
   it('сторона притягивается к краю соседа через промежуток', () => {
     const neighbour = { x: 1000, y: 300, width: 300, height: 400 };
 
@@ -312,7 +291,12 @@ describe('isScreenLayoutFitting', () => {
     expect(isScreenLayoutFitting(sixColumns, BOARD)).toBe(false);
 
     expect(
-      isScreenLayoutFitting(sixColumns, { width: 1856, height: 900 }),
+      isScreenLayoutFitting(sixColumns, {
+        x: 0,
+        y: 0,
+        width: 1856,
+        height: 900,
+      }),
     ).toBe(true);
   });
 
@@ -322,11 +306,21 @@ describe('isScreenLayoutFitting', () => {
     }
 
     expect(
-      isScreenLayoutFitting(sixByThree, { width: 1856, height: 900 }),
+      isScreenLayoutFitting(sixByThree, {
+        x: 0,
+        y: 0,
+        width: 1856,
+        height: 900,
+      }),
     ).toBe(true);
 
     expect(
-      isScreenLayoutFitting(sixByThree, { width: 1856, height: 400 }),
+      isScreenLayoutFitting(sixByThree, {
+        x: 0,
+        y: 0,
+        width: 1856,
+        height: 400,
+      }),
     ).toBe(false);
   });
 
@@ -408,7 +402,7 @@ describe('getScreenEdgeTarget', () => {
 
 describe('общие границы окон', () => {
   // На квадратном холсте четыре окна встают сеткой 2×2
-  const gridBoard = { width: 1200, height: 1200 };
+  const gridBoard = { x: 0, y: 0, width: 1200, height: 1200 };
 
   const grid: Array<ScreenTile> = arrangeScreenWindows(
     ['a', 'b', 'c', 'd'],
@@ -485,5 +479,129 @@ describe('общие границы окон', () => {
     const before = moved.tiles.find((tile) => tile.id === 'a');
 
     expect(before?.width).toBe(DM_SCREEN_WINDOW_MIN_SIZE.width);
+  });
+});
+
+describe('обзор поля', () => {
+  const canvas = { width: 1600, height: 900 };
+
+  it('отдалённое поле показывает больше, а окна встают в видимой части', () => {
+    const board = getScreenVisibleRect(
+      { x: 2000, y: -1000, zoom: 0.5 },
+      canvas,
+    );
+
+    expect(board).toEqual({ x: 2000, y: -1000, width: 3200, height: 1800 });
+
+    const position = placeScreenWindow(
+      board,
+      DM_SCREEN_WINDOW_SIZE,
+      undefined,
+      0,
+    );
+
+    expect(position.x).toBeGreaterThan(board.x);
+    expect(position.x).toBeLessThan(board.x + board.width);
+    expect(position.y).toBeGreaterThan(board.y);
+    expect(position.y).toBeLessThan(board.y + board.height);
+  });
+
+  it('точка холста и прямоугольник поля переводятся туда и обратно', () => {
+    const view = { x: 100, y: 200, zoom: 0.5 };
+
+    expect(toScreenFieldPoint({ x: 50, y: 50 }, view)).toEqual({
+      x: 200,
+      y: 300,
+    });
+
+    expect(
+      toScreenCanvasRect({ x: 200, y: 300, width: 400, height: 200 }, view),
+    ).toEqual({ x: 50, y: 50, width: 200, height: 100 });
+  });
+
+  it('масштаб меняется вокруг якоря и не выходит за пределы', () => {
+    const view = { x: 0, y: 0, zoom: 1 };
+    const anchor = { x: 400, y: 300 };
+    const zoomed = zoomScreenView(view, 0.5, anchor);
+
+    expect(toScreenFieldPoint(anchor, zoomed)).toEqual(
+      toScreenFieldPoint(anchor, view),
+    );
+
+    expect(zoomScreenView(view, 5, anchor).zoom).toBe(DM_SCREEN_ZOOM.max);
+    expect(zoomScreenView(view, 0.01, anchor).zoom).toBe(DM_SCREEN_ZOOM.min);
+  });
+
+  it('обзор подгоняется под все окна и ставит их по центру', () => {
+    const bounds = getScreenBounds([
+      { x: -1000, y: 0, width: 500, height: 500 },
+      { x: 3000, y: 1500, width: 500, height: 500 },
+    ]);
+
+    expect(bounds).toEqual({ x: -1000, y: 0, width: 4500, height: 2000 });
+
+    if (!bounds) {
+      throw new Error('У двух окон должны быть общие границы');
+    }
+
+    const view = fitScreenView(bounds, canvas, 0);
+    const board = getScreenVisibleRect(view, canvas);
+
+    expect(view.zoom).toBeLessThan(1);
+    expect(board.x).toBeLessThanOrEqual(bounds.x);
+
+    expect(board.x + board.width).toBeGreaterThanOrEqual(
+      bounds.x + bounds.width,
+    );
+
+    expect(getScreenBounds([])).toBeUndefined();
+  });
+
+  it('одно окно не приближается сверх обычного масштаба', () => {
+    expect(
+      fitScreenView({ x: 0, y: 0, width: 100, height: 100 }, canvas, 0).zoom,
+    ).toBe(DM_SCREEN_ZOOM.max);
+  });
+
+  it('обзор не уходит за края поля', () => {
+    const far = clampScreenView({ x: 1e6, y: -1e6, zoom: 1 }, canvas);
+
+    expect(far.x + canvas.width).toBe(
+      DM_SCREEN_FIELD.x + DM_SCREEN_FIELD.width,
+    );
+
+    expect(far.y).toBe(DM_SCREEN_FIELD.y);
+
+    const centered = centerScreenView(
+      { x: 0, y: 0, zoom: 1 },
+      { x: 800, y: 450 },
+      canvas,
+    );
+
+    expect(clampScreenView(centered, canvas)).toEqual(centered);
+  });
+
+  it('окно не уходит за край поля', () => {
+    const kept = keepScreenWindowOnField({
+      x: 1e6,
+      y: -1e6,
+      width: 480,
+      height: 600,
+    });
+
+    expect(kept.x + kept.width).toBe(DM_SCREEN_FIELD.x + DM_SCREEN_FIELD.width);
+    expect(kept.y).toBe(DM_SCREEN_FIELD.y);
+  });
+
+  it('окно за краем холста не считается видимым', () => {
+    const board = { x: 0, y: 0, ...canvas };
+
+    expect(
+      isScreenRectVisible({ x: 1500, y: 800, width: 480, height: 600 }, board),
+    ).toBe(true);
+
+    expect(
+      isScreenRectVisible({ x: 1700, y: 0, width: 480, height: 600 }, board),
+    ).toBe(false);
   });
 });

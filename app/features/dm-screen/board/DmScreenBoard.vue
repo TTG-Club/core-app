@@ -1,29 +1,53 @@
 <script setup lang="ts">
   import type { DropdownMenuItem } from '@nuxt/ui';
 
+  import type { ScreenPoint, ScreenView } from '../model';
+
   import { ConfirmDialog } from '~initiative/ui-kit';
 
-  import { useDmScreen, useDmScreenLayouts } from '../composables';
   import {
+    useDmScreen,
+    useDmScreenLayouts,
+    useDmScreenView,
+  } from '../composables';
+  import {
+    DM_SCREEN_BACKDROP,
     DM_SCREEN_BOARD_CLASS,
     DM_SCREEN_ICON,
     DM_SCREEN_ICONS,
+    DM_SCREEN_PANNING_CLASS,
     DM_SCREEN_PICKER_OPTIONS,
+    DM_SCREEN_POINTER_BUTTON,
     DM_SCREEN_TEXT,
     DM_SCREEN_TITLE,
+    DM_SCREEN_ZOOM,
+    getScreenBackdropStep,
+    getScreenFieldOffset,
+    isScreenRectVisible,
   } from '../model';
   import { DmScreenWindow } from '../window';
   import DmScreenDock from './DmScreenDock.vue';
   import DmScreenLayoutOverlay from './DmScreenLayoutOverlay.vue';
   import DmScreenList from './DmScreenList.vue';
+  import DmScreenNavigator from './DmScreenNavigator.vue';
   import DmScreenSearch from './DmScreenSearch.vue';
   import DmScreenSplitters from './DmScreenSplitters.vue';
 
+  /** Поле начали тянуть: где был указатель и какой был обзор. */
+  interface PanGesture {
+    pointer: ScreenPoint;
+    view: ScreenView;
+  }
+
   /**
    * Ширма Мастера: шапка с поиском и кнопками, под ней холст. На широком
-   * экране записи стоят на холсте окнами, на телефоне идут списком. Холст
-   * занимает всё место под шапкой и сам сообщает ширме свои размеры: окна
-   * считают место от его левого верхнего угла.
+   * экране записи стоят окнами на большом поле, а холст показывает его
+   * часть; на телефоне записи идут списком. Холст занимает всё место под
+   * шапкой и сам сообщает ширме свои размеры.
+   *
+   * Поле двигают, потянув за пустое место или средней кнопкой мыши где
+   * угодно, и отдаляют колёсиком: над пустым местом — сразу, над окном — с
+   * зажатым Ctrl (без него колёсико листает запись в окне).
    */
   defineSlots<{
     /** Подсказка под описанием пустой ширмы, например приглашение войти. */
@@ -43,6 +67,8 @@
   } = useDmScreen();
 
   const { pickerPlacement, setPickerPlacement } = useDmScreenLayouts();
+
+  const { view, board, toCanvasPoint, pan, zoomTo, fit } = useDmScreenView();
 
   const { isMobile } = useBreakpoints();
 
@@ -75,6 +101,133 @@
   onBeforeUnmount(() => {
     setBoard();
   });
+
+  const hasVisibleWindows = computed(() => visibleWindows.value.length > 0);
+
+  // Окна могли остаться вдали от сохранённого обзора (ширму аккаунта
+  // собрали на другом устройстве): тогда холст сразу показывает их все
+  whenever(
+    () => isWindowed.value && canvasWidth.value > 0 && hasVisibleWindows.value,
+    () => {
+      const isAnyVisible = visibleWindows.value.some((screenWindow) =>
+        isScreenRectVisible(screenWindow, board.value),
+      );
+
+      if (!isAnyVisible) {
+        fit(visibleWindows.value);
+      }
+    },
+    { once: true },
+  );
+
+  const fieldOffset = computed(() => getScreenFieldOffset(view.value));
+
+  // Слой поля: окна стоят в нём по координатам поля, а сдвиг и масштаб
+  // задаёт обзор
+  const fieldStyle = computed(() => ({
+    transform: `translate(${fieldOffset.value.x}px, ${fieldOffset.value.y}px) scale(${view.value.zoom})`,
+  }));
+
+  // Точки на пустом месте едут вместе с полем: видно, что оно двигается
+  const backdropStyle = computed(() => {
+    const step = getScreenBackdropStep(view.value.zoom);
+
+    return {
+      backgroundImage: DM_SCREEN_BACKDROP.image,
+      backgroundSize: `${step}px ${step}px`,
+      backgroundPosition: `${fieldOffset.value.x}px ${fieldOffset.value.y}px`,
+    };
+  });
+
+  const surface = useTemplateRef<HTMLElement>('surface');
+
+  /** Жест, которым сейчас тянут поле. */
+  let panGesture: PanGesture | undefined;
+
+  const isPanning = ref(false);
+
+  const canvasClass = computed(() =>
+    isPanning.value ? DM_SCREEN_PANNING_CLASS : '',
+  );
+
+  /**
+   * Поле начинают тянуть: основной кнопкой за пустое место или средней где
+   * угодно — когда окна закрывают холст целиком, пустого места нет.
+   * @param event - нажатие на холст
+   */
+  function startPan(event: PointerEvent): void {
+    const isSurfaceDrag =
+      event.button === DM_SCREEN_POINTER_BUTTON.main
+      && event.target === surface.value;
+
+    const isMiddleDrag = event.button === DM_SCREEN_POINTER_BUTTON.middle;
+
+    if (
+      !(isSurfaceDrag || isMiddleDrag)
+      || !(event.currentTarget instanceof HTMLElement)
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+
+    panGesture = {
+      pointer: { x: event.clientX, y: event.clientY },
+      view: view.value,
+    };
+
+    isPanning.value = true;
+  }
+
+  /**
+   * Поле тянут: оно едет за указателем.
+   * @param event - движение указателя
+   */
+  function movePan(event: PointerEvent): void {
+    if (!panGesture) {
+      return;
+    }
+
+    pan(panGesture.view, {
+      x: event.clientX - panGesture.pointer.x,
+      y: event.clientY - panGesture.pointer.y,
+    });
+  }
+
+  /** Поле отпустили. */
+  function endPan(): void {
+    panGesture = undefined;
+    isPanning.value = false;
+  }
+
+  /**
+   * Колёсико меняет масштаб вокруг указателя: над пустым местом — сразу,
+   * над окном — только с Ctrl, иначе оно листает запись в окне. Щипок на
+   * тачпаде браузер присылает тем же колёсиком с Ctrl.
+   * @param event - прокрутка колёсика
+   */
+  function zoomByWheel(event: WheelEvent): void {
+    if (!event.ctrlKey && event.target !== surface.value) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const distance =
+      event.deltaMode === WheelEvent.DOM_DELTA_LINE
+        ? event.deltaY * DM_SCREEN_ZOOM.wheelLineHeight
+        : event.deltaY;
+
+    zoomTo(
+      view.value.zoom * Math.exp(-distance * DM_SCREEN_ZOOM.wheelRate),
+      toCanvasPoint({ x: event.clientX, y: event.clientY }),
+    );
+  }
+
+  // Не через шаблон: страницу прокрутка двигать не должна, а отменить её
+  // можно только в непассивном обработчике
+  useEventListener(canvas, 'wheel', zoomByWheel, { passive: false });
 
   const isEmpty = computed(() => !windows.value.length);
 
@@ -239,7 +392,20 @@
       v-if="isWindowed"
       ref="canvas"
       class="relative min-h-0 flex-auto overflow-hidden"
+      :class="canvasClass"
+      @pointerdown="startPan"
+      @pointermove="movePan"
+      @pointerup="endPan"
+      @pointercancel="endPan"
     >
+      <!-- Пустое место поля: за него поле тянут -->
+      <div
+        ref="surface"
+        aria-hidden="true"
+        :style="backdropStyle"
+        class="absolute inset-0 cursor-grab touch-none"
+      />
+
       <div
         v-if="isEmpty"
         class="absolute inset-0 flex items-center justify-center overflow-y-auto p-4"
@@ -255,8 +421,15 @@
         </div>
       </div>
 
-      <!-- Свой слой: номера слоёв окон не спорят с остальной страницей -->
-      <div class="absolute inset-0 isolate">
+      <!--
+        Слой поля. Свой слой: номера слоёв окон не спорят с остальной
+        страницей. Сам слой места не занимает, поэтому не закрывает пустое
+        место поля от указателя
+      -->
+      <div
+        :style="fieldStyle"
+        class="absolute top-0 left-0 isolate origin-top-left"
+      >
         <DmScreenWindow
           v-for="screenWindow in visibleWindows"
           :key="screenWindow.id"
@@ -264,11 +437,19 @@
         />
       </div>
 
-      <DmScreenSplitters />
+      <!-- Общие границы — в координатах поля, но поверх всех окон -->
+      <div
+        :style="fieldStyle"
+        class="absolute top-0 left-0 origin-top-left"
+      >
+        <DmScreenSplitters />
+      </div>
 
       <DmScreenLayoutOverlay />
 
       <DmScreenDock />
+
+      <DmScreenNavigator />
     </div>
 
     <div

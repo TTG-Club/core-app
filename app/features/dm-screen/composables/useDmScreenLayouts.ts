@@ -17,6 +17,7 @@ import {
   screenPickerPlacementSchema,
 } from '../model';
 import { useDmScreen } from './useDmScreen';
+import { useDmScreenView } from './useDmScreenView';
 
 /** Подбор окон в оставшиеся места раскладки. */
 interface LayoutAssist {
@@ -48,7 +49,8 @@ function readPickerPlacement(storedText: string): ScreenPickerPlacement {
  * выбор хранится в localStorage.
  */
 export const useDmScreenLayouts = createSharedComposable(() => {
-  const { windows, board, toBoardPoint, restore, update } = useDmScreen();
+  const { windows, board, restore, update } = useDmScreen();
+  const { canvas, toCanvasPoint } = useDmScreenView();
 
   /** Окно, которое тащат сейчас. */
   const draggingId = ref<string>();
@@ -61,8 +63,10 @@ export const useDmScreenLayouts = createSharedComposable(() => {
 
   const assist = shallowRef<LayoutAssist>();
 
+  // Края и полоса панели считаются по холсту на экране, а не по полю:
+  // отдалённое поле их не раздвигает
   const pointer = computed(() =>
-    clientPointer.value ? toBoardPoint(clientPointer.value) : undefined,
+    clientPointer.value ? toCanvasPoint(clientPointer.value) : undefined,
   );
 
   const pickerPlacement = useLocalStorage<ScreenPickerPlacement>(
@@ -95,7 +99,10 @@ export const useDmScreenLayouts = createSharedComposable(() => {
     pickerHeight.value = height;
   }
 
-  /** Раскладки, чьи места на этом холсте не меньше наименьшего окна. */
+  /**
+   * Раскладки, чьи места на видимой части поля не меньше наименьшего окна:
+   * чем дальше поле, тем больше раскладок помещается.
+   */
   const fittingLayouts = computed(() =>
     DM_SCREEN_LAYOUTS.filter((layout) =>
       isScreenLayoutFitting(layout, board.value),
@@ -109,7 +116,7 @@ export const useDmScreenLayouts = createSharedComposable(() => {
       && fittingLayouts.value.length > 0
       && isScreenPickerBand(
         pointer.value,
-        board.value,
+        canvas.value,
         pickerPlacement.value,
         pickerHeight.value,
       ),
@@ -123,11 +130,11 @@ export const useDmScreenLayouts = createSharedComposable(() => {
 
     return isPickerVisible.value
       ? pickerTarget.value
-      : getScreenEdgeTarget(pointer.value, board.value);
+      : getScreenEdgeTarget(pointer.value, canvas.value);
   });
 
   /**
-   * Прямоугольник места раскладки на холсте.
+   * Прямоугольник места раскладки на видимой части поля.
    * @param layout - раскладка
    * @param zoneIndex - номер места в ней
    */

@@ -32,6 +32,19 @@ export const screenStateSchema = z.object({
 
 export type ScreenState = z.infer<typeof screenStateSchema>;
 
+/**
+ * Обзор ширмы: какая точка бесконечного поля стоит в левом верхнем углу
+ * холста и во сколько раз поле уменьшено. Хранится в браузере.
+ */
+export const screenViewSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+  /** Масштаб: `1` — как есть, меньше — поле отдалено. */
+  zoom: z.number().positive(),
+});
+
+export type ScreenView = z.infer<typeof screenViewSchema>;
+
 /** Из загруженной записи окну нужно только название. */
 export const screenEntryNameSchema = z.object({
   name: z.union([z.string(), z.object({ rus: z.string() })]),

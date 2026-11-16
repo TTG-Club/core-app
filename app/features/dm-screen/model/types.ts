@@ -1,6 +1,9 @@
 import type { ScreenPickerPlacement } from './schemas';
 
-/** Точка на холсте ширмы, px от его левого верхнего угла. */
+/**
+ * Точка в px: на бесконечном поле ширмы (место окон) либо на холсте — его
+ * видимой части, от её левого верхнего угла.
+ */
 export interface ScreenPoint {
   x: number;
   y: number;

@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { ScreenLayoutTarget, ScreenPoint } from '../model';
 
-  import { useDmScreenLayouts } from '../composables';
+  import { useDmScreenLayouts, useDmScreenView } from '../composables';
   import {
     DM_SCREEN_PICKER_CLASS,
     DM_SCREEN_TEXT,
@@ -37,6 +37,9 @@
     skip,
     stopAssist,
   } = useDmScreenLayouts();
+
+  // Места раскладок считаются на поле, а рисуются поверх холста
+  const { toCanvasRect } = useDmScreenView();
 
   /** Все места всех раскладок подряд: по номеру в списке их находят. */
   const pickerTargets = computed<Array<ScreenLayoutTarget>>(() =>
@@ -120,17 +123,21 @@
   );
 
   const previewStyle = computed(() =>
-    previewRect.value ? toScreenRectStyle(previewRect.value) : undefined,
+    previewRect.value
+      ? toScreenRectStyle(toCanvasRect(previewRect.value))
+      : undefined,
   );
 
   const assistStyle = computed(() =>
-    assistRect.value ? toScreenRectStyle(assistRect.value) : undefined,
+    assistRect.value
+      ? toScreenRectStyle(toCanvasRect(assistRect.value))
+      : undefined,
   );
 
   const queueStyles = computed(() =>
     assistQueueRects.value.map((rect) => ({
       key: `${rect.x}:${rect.y}`,
-      style: toScreenRectStyle(rect),
+      style: toScreenRectStyle(toCanvasRect(rect)),
     })),
   );
 

@@ -8,9 +8,10 @@
 
   /**
    * Плашки свёрнутых окон у левого нижнего угла холста: клик по плашке
-   * разворачивает окно поверх остальных, крестик убирает его с ширмы.
+   * разворачивает окно поверх остальных и подводит к нему обзор, если окно
+   * стоит за краем холста; крестик убирает его с ширмы.
    */
-  const { minimizedWindows, restore, close } = useDmScreen();
+  const { minimizedWindows, restore, reveal, close } = useDmScreen();
 
   const chips = computed(() =>
     minimizedWindows.value.map((screenWindow) => ({
@@ -21,6 +22,15 @@
       closeLabel: `${DM_SCREEN_TEXT.close}: ${screenWindow.title}`,
     })),
   );
+
+  /**
+   * Разворачивает окно и показывает его.
+   * @param id - окно
+   */
+  function restoreWindow(id: string): void {
+    restore(id);
+    reveal(id);
+  }
 </script>
 
 <template>
@@ -44,7 +54,7 @@
         size="sm"
         class="max-w-56"
         :ui="{ label: 'truncate', leadingIcon: 'text-primary' }"
-        @click.left.exact.prevent="restore(chip.id)"
+        @click.left.exact.prevent="restoreWindow(chip.id)"
       />
 
       <UButton

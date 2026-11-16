@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { ScreenSplitter, ScreenTile } from '../model';
 
-  import { useDmScreen } from '../composables';
+  import { useDmScreen, useDmScreenView } from '../composables';
   import {
     DM_SCREEN_SPLITTER_ACTIVE_CLASS,
     DM_SCREEN_SPLITTER_CLASS,
@@ -29,6 +29,7 @@
    * границу отпускают.
    */
   const { visibleWindows, setPreviewRects, updateRects } = useDmScreen();
+  const { view: screenView } = useDmScreenView();
 
   const splitters = computed(() => findScreenSplitters(visibleWindows.value));
 
@@ -91,12 +92,16 @@
       return;
     }
 
+    const pointer = getScreenSplitterPointer(active.splitter, {
+      x: event.clientX,
+      y: event.clientY,
+    });
+
+    // Указатель идёт по экрану, а граница — по полю: на отдалённом поле
+    // тот же путь указателя сдвигает её дальше
     const moved = moveScreenSplitter(
       active.splitter,
-      getScreenSplitterPointer(active.splitter, {
-        x: event.clientX,
-        y: event.clientY,
-      }) - active.origin,
+      (pointer - active.origin) / screenView.value.zoom,
       visibleWindows.value,
     );
 
