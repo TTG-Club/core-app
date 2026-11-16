@@ -13,6 +13,7 @@ export { default as SelectClass } from './SelectClass.vue';
 export { default as SelectClassCatalog } from './SelectClassCatalog.vue';
 export { default as SelectComparison } from './SelectComparison.vue';
 export { default as SelectCondition } from './SelectCondition.vue';
+export { default as SelectCreature } from './SelectCreature.vue';
 export { default as SelectCreatureType } from './SelectCreatureType.vue';
 export { default as SelectDamageType } from './SelectDamageType.vue';
 export { default as SelectDice } from './SelectDice.vue';

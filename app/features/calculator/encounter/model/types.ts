@@ -110,6 +110,21 @@ export interface GenerationCandidate {
   challengeRating: string;
   experience: number;
   experienceInLair?: number;
+
+  /** Коды типов существа (`HUMANOID`, `UNDEAD`). */
+  typeCodes: Array<string>;
+
+  /** Уточнение типа в нижнем регистре (`гоблиноид`); пусто — нет. */
+  subtype: string;
+
+  /** Семейство — секция бестиария в нижнем регистре (`гоблины`); пусто — нет. */
+  family: string;
+
+  /** Мировоззрение кодом (`CHAOTIC_EVIL`); пусто — неизвестно. */
+  alignment: string;
+
+  /** Слаги спутников — существ, с которыми это обычно встречается. */
+  companions: Array<string>;
 }
 
 /** Одно существо в результате генерации и сколько его добавить. */
