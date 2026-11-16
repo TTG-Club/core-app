@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import {
   generateCreatures,
   getAffordableExperienceValues,
+  getCompatibilityScore,
   getGenerationCreatureLimit,
   getGenerationWindow,
 } from '~calculator/encounter/model';
@@ -31,8 +32,23 @@ function seededRandom(seed: number): () => number {
   };
 }
 
-function candidate(url: string, experience: number): GenerationCandidate {
-  return { url, label: url, challengeRating: '', experience };
+function candidate(
+  url: string,
+  experience: number,
+  extra: Partial<GenerationCandidate> = {},
+): GenerationCandidate {
+  return {
+    url,
+    label: url,
+    challengeRating: '',
+    experience,
+    typeCodes: [],
+    subtype: '',
+    family: '',
+    alignment: '',
+    companions: [],
+    ...extra,
+  };
 }
 
 function totalOf(picks: Array<GeneratedCreature>): number {
@@ -141,5 +157,138 @@ describe('generateCreatures', () => {
     );
 
     expect(totalOf(picks)).toBe(1_800);
+  });
+});
+
+describe('совместимость свиты', () => {
+  const hobgoblin = candidate('hobgoblin-captain', 700, {
+    typeCodes: ['FEY'],
+    subtype: 'гоблиноид',
+    family: 'хобгоблины',
+    alignment: 'LAWFUL_EVIL',
+  });
+
+  const goblin = candidate('goblin-warrior', 50, {
+    typeCodes: ['FEY'],
+    subtype: 'гоблиноид',
+    family: 'гоблины',
+    alignment: 'CHAOTIC_NEUTRAL',
+  });
+
+  const mummy = candidate('mummy', 700, {
+    typeCodes: ['UNDEAD'],
+    family: 'мумии',
+    alignment: 'LAWFUL_EVIL',
+  });
+
+  const skeleton = candidate('skeleton', 50, {
+    typeCodes: ['UNDEAD'],
+    family: 'скелеты',
+    alignment: 'LAWFUL_EVIL',
+  });
+
+  const knight = candidate('knight', 700, {
+    typeCodes: ['HUMANOID'],
+    family: 'рыцари',
+    alignment: 'LAWFUL_GOOD',
+    companions: ['warhorse'],
+  });
+
+  const warhorse = candidate('warhorse', 100, {
+    typeCodes: ['BEAST'],
+    family: 'боевая лошадь',
+  });
+
+  const cultist = candidate('cultist', 25, {
+    typeCodes: ['HUMANOID'],
+    family: 'культисты',
+    alignment: 'NEUTRAL_EVIL',
+  });
+
+  const wolf = candidate('wolf', 50, {
+    typeCodes: ['BEAST'],
+    family: 'волки',
+  });
+
+  const pool = [
+    hobgoblin,
+    goblin,
+    mummy,
+    skeleton,
+    knight,
+    warhorse,
+    cultist,
+    wolf,
+  ];
+
+  it('ценит спутников выше семейства, подтипа и типа', () => {
+    expect(getCompatibilityScore(knight, warhorse)).toBeGreaterThan(
+      getCompatibilityScore(hobgoblin, goblin),
+    );
+
+    expect(getCompatibilityScore(hobgoblin, goblin)).toBeGreaterThan(
+      getCompatibilityScore(mummy, skeleton),
+    );
+
+    expect(getCompatibilityScore(mummy, skeleton)).toBeGreaterThan(0);
+  });
+
+  it('связь спутников работает в обе стороны', () => {
+    expect(getCompatibilityScore(warhorse, knight)).toBeGreaterThan(0);
+  });
+
+  it('не сводит добро и зло без явной связи', () => {
+    expect(getCompatibilityScore(knight, cultist)).toBe(0);
+  });
+
+  it('несвязанные существа несовместимы', () => {
+    expect(getCompatibilityScore(mummy, wolf)).toBe(0);
+  });
+
+  /**
+   * Генерирует группы с заданным главарём (единственным, кто тянет на
+   * главаря в окне) и собирает всех, кто попал к нему в свиту.
+   */
+  function collectRetinue(leader: GenerationCandidate): Set<string> {
+    const retinue = new Set<string>();
+    const others = pool.filter(({ experience }) => experience < 700);
+
+    for (let seed = 1; seed <= 100; seed += 1) {
+      const picks = generateCreatures(
+        [leader, ...others],
+        { min: 801, max: 1_100 },
+        8,
+        seededRandom(seed),
+      );
+
+      expect(picks[0]?.candidate.url).toBe(leader.url);
+
+      picks.slice(1).forEach(({ candidate: pick }) => retinue.add(pick.url));
+    }
+
+    return retinue;
+  }
+
+  it('хобгоблин водит гоблинов', () => {
+    expect([...collectRetinue(hobgoblin)]).toEqual(['goblin-warrior']);
+  });
+
+  it('мумия водит скелетов', () => {
+    expect([...collectRetinue(mummy)]).toEqual(['skeleton']);
+  });
+
+  it('рыцарь едет с боевыми конями', () => {
+    expect([...collectRetinue(knight)]).toEqual(['warhorse']);
+  });
+
+  it('без совместимых существ свита набирается из любых', () => {
+    const picks = generateCreatures(
+      [mummy, wolf],
+      { min: 801, max: 1_100 },
+      8,
+      seededRandom(5),
+    );
+
+    expect(totalOf(picks)).toBeGreaterThanOrEqual(801);
   });
 });

@@ -3,14 +3,10 @@ import type { LocationQuery } from 'vue-router';
 
 import type { CreatureOption } from '~initiative/model';
 
-import type {
-  EncounterResult,
-  GenerationCandidate,
-  GenerationDifficulty,
-} from '../model';
+import type { EncounterResult, GenerationDifficulty } from '../model';
 
 import { buildSearchQuery, parseFilter } from '~infrastructure/filter';
-import { BESTIARY_SEARCH_PATH, parseCreatureOptions } from '~initiative/model';
+import { BESTIARY_SEARCH_PATH } from '~initiative/model';
 
 import {
   BESTIARY_FILTERS_PATH,
@@ -22,25 +18,11 @@ import {
   GENERATION_NOT_FOUND_DESCRIPTION,
   GENERATION_NOT_FOUND_TITLE,
   getAffordableExperienceValues,
-  getExperienceByChallengeRating,
   getGenerationCreatureLimit,
   getGenerationWindow,
   HABITAT_ANY,
+  parseGenerationCandidates,
 } from '../model';
-
-/**
- * Превращает опцию поиска бестиария в кандидата генератора: опыт берём из
- * ответа, а если бэкенд его не прислал — по уровню опасности.
- * @param option Опция поиска бестиария.
- */
-function toCandidate(option: CreatureOption): GenerationCandidate {
-  return {
-    ...option,
-    experience:
-      option.experience
-      ?? getExperienceByChallengeRating(option.challengeRating),
-  };
-}
 
 /**
  * Источники, включённые у пользователя (профиль → «Настройка источников»):
@@ -123,7 +105,7 @@ export function useEncounterGenerator(
       });
 
       const picks = generateCreatures(
-        parseCreatureOptions(response).map(toCandidate),
+        parseGenerationCandidates(response),
         window,
         getGenerationCreatureLimit(result.value.characterCount),
       );
