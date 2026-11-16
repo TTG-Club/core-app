@@ -47,8 +47,11 @@ function isTableNode(node: MarkerNode): node is MarkupTableNode {
  * @returns плоский текст значения.
  */
 function getUnknownText(value: unknown): string {
+  // Ячейка — тоже разметка: маркеры в ней сводятся к своим подписям.
   if (typeof value === 'string') {
-    return value;
+    return toStringRuns(value, 'regular')
+      .map((run) => run.text)
+      .join('');
   }
 
   if (typeof value === 'number') {
@@ -89,6 +92,31 @@ function getRollLabel(node: MarkerNode): string {
 }
 
 /**
+ * Фрагменты строки разметки. Строки с маркерами встречаются не только на верхнем
+ * уровне описания, но и внутри узлов — в пунктах списка, ячейках, цитатах; сайт
+ * разбирает их на любой глубине, и PDF должен так же, иначе `{@b …}` и
+ * `{@glossary …}` печатались бы как есть.
+ *
+ * @param text строка разметки.
+ * @param style начертание, действующее на этом уровне.
+ * @returns фрагменты текста.
+ */
+function toStringRuns(text: string, style: PdfTextStyle): PdfTextRun[] {
+  const parsed = parse(text);
+
+  // Строка без маркеров разбирается сама в себя — дальше разбирать нечего.
+  if (parsed.length === 1 && parsed[0] === text) {
+    return [{ text, style }];
+  }
+
+  return parsed.flatMap((child) =>
+    typeof child === 'string'
+      ? [{ text: child, style }]
+      : toTextRuns(child, style),
+  );
+}
+
+/**
  * Фрагменты текста узла с сохранением начертания. Инлайновые маркеры (ссылки,
  * чипы разделов, бейджи) отдают свою подпись обычным текстом — в PDF им незачем
  * быть ссылками.
@@ -102,7 +130,7 @@ function toTextRuns(
   style: PdfTextStyle,
 ): PdfTextRun[] {
   if (typeof node === 'string') {
-    return [{ text: node, style }];
+    return toStringRuns(node, style);
   }
 
   if (Array.isArray(node)) {
