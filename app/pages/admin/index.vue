@@ -268,9 +268,32 @@
   <NuxtLayout
     name="detail"
     :title="ADMIN_DASHBOARD_PAGE_TITLE"
+    wide
   >
-    <div class="space-y-6">
-      <section class="space-y-3">
+    <!-- Разделы — то, ради чего в админку заходят, поэтому они не под
+         статистикой: до 2xl — над ней, на широком экране — колонкой справа -->
+    <div class="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_20rem] 2xl:items-start">
+      <section class="space-y-3 2xl:col-start-2 2xl:row-start-1">
+        <h2 class="text-sm font-semibold text-muted">
+          {{ ADMIN_DASHBOARD_SECTIONS_TITLE }}
+        </h2>
+
+        <div
+          class="grid items-start gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-1"
+        >
+          <AdminSectionGroup :group="ADMIN_USERS_SECTION_GROUP">
+            <SubscriptionSalesSwitch />
+          </AdminSectionGroup>
+
+          <AdminSectionGroup :group="ADMIN_CONTENT_SECTION_GROUP" />
+
+          <AdminSectionGroup :group="ADMIN_TOOLS_SECTION_GROUP" />
+
+          <AdminSectionGroup :group="ADMIN_VTTG_SECTION_GROUP" />
+        </div>
+      </section>
+
+      <section class="min-w-0 space-y-3 2xl:col-start-1 2xl:row-start-1">
         <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
           <h2 class="text-sm font-semibold text-muted">
             {{ ADMIN_DASHBOARD_STATS_TITLE }}
@@ -369,24 +392,6 @@
           :is-pending="isOnlineHistoryPending"
           :has-error="hasOnlineHistoryError"
         />
-      </section>
-
-      <section class="space-y-3">
-        <h2 class="text-sm font-semibold text-muted">
-          {{ ADMIN_DASHBOARD_SECTIONS_TITLE }}
-        </h2>
-
-        <div class="grid items-start gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <AdminSectionGroup :group="ADMIN_USERS_SECTION_GROUP">
-            <SubscriptionSalesSwitch />
-          </AdminSectionGroup>
-
-          <AdminSectionGroup :group="ADMIN_CONTENT_SECTION_GROUP" />
-
-          <AdminSectionGroup :group="ADMIN_TOOLS_SECTION_GROUP" />
-
-          <AdminSectionGroup :group="ADMIN_VTTG_SECTION_GROUP" />
-        </div>
       </section>
     </div>
   </NuxtLayout>

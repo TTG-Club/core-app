@@ -17,6 +17,7 @@
     backTo = undefined,
     sectionPath = undefined,
     swipePaths = undefined,
+    wide = false,
   } = defineProps<{
     title: string | undefined;
     copyText?: boolean;
@@ -32,6 +33,12 @@
      * без него листается список.
      */
     swipePaths?: Array<string>;
+    /**
+     * На 2xl колонка растёт до `--max-content-wide`, как на главной, и подвал
+     * вместе с ней: для плотных рабочих экранов (админ-панель), которым на
+     * 1320px тесно.
+     */
+    wide?: boolean;
   }>();
 
   const { format } = useDayjs();
@@ -51,6 +58,12 @@
   // Запись под пальцем уезжает вбок и не должна растягивать страницу
   const rootClass = computed(() =>
     sectionPath ? 'overflow-x-clip' : undefined,
+  );
+
+  const columnClass = computed(() =>
+    wide
+      ? 'max-w-(--max-content) 2xl:max-w-(--max-content-wide)'
+      : 'max-w-(--max-content)',
   );
 
   const formattedDateTime = computed(() => {
@@ -74,7 +87,8 @@
     >
       <div class="w-full shrink-0">
         <div
-          class="mx-auto flex w-full max-w-(--max-content) flex-col gap-1 p-4 md:pt-6"
+          class="mx-auto flex w-full flex-col gap-1 p-4 md:pt-6"
+          :class="columnClass"
         >
           <div class="flex items-center gap-1">
             <UButton
@@ -153,7 +167,8 @@
 
       <div class="w-full shrink-0">
         <div
-          class="mx-auto flex w-full max-w-(--max-content) flex-col gap-2 px-4 pb-8 lg:gap-3"
+          class="mx-auto flex w-full flex-col gap-2 px-4 pb-8 lg:gap-3"
+          :class="columnClass"
         >
           <slot name="default" />
 
@@ -163,6 +178,6 @@
       </div>
     </div>
 
-    <AppFooter />
+    <AppFooter :wide="wide" />
   </div>
 </template>

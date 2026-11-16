@@ -168,7 +168,7 @@
         >
           <button
             type="button"
-            class="flex h-full min-w-0 flex-col gap-1 border-b-2 px-3 py-3 text-left transition-colors sm:px-4"
+            class="flex h-full min-w-0 cursor-pointer flex-col gap-1 border-b-2 px-3 py-3 text-left transition-colors sm:px-4"
             :class="metricTile.className"
             :aria-pressed="metricTile.isActive"
             @click.left.exact.prevent="handleMetricSelect(metricTile.metric)"
