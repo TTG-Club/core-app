@@ -204,3 +204,23 @@ export const SPECIES_STATS_LABELS = {
   markdownDarkVision: 'Тёмное зрение',
   feet: 'фт.',
 } as const;
+
+/**
+ * Группы списка видов в порядке вывода. Ключ — метка группы источника
+ * (`source.group.label`) в нижнем регистре.
+ */
+export const SPECIES_LIST_GROUPS: ReadonlyArray<{
+  key: string;
+  label: string;
+}> = [
+  { key: 'basic', label: 'Официальные виды' },
+  { key: 'ua', label: 'Виды из UA' },
+  { key: '3rd', label: 'Виды от третьих лиц' },
+  { key: 'hb', label: 'Виды Homebrew' },
+];
+
+/** Поле вида, по которому список делится на группы. */
+export const SPECIES_LIST_GROUP_FIELD = 'source.group.label';
+
+/** Начало подписи группы, которой нет в `SPECIES_LIST_GROUPS`. */
+export const SPECIES_LIST_UNKNOWN_GROUP_LABEL_PREFIX = 'Виды: ';
