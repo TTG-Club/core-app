@@ -1,4 +1,5 @@
 import type { ComputedRef } from 'vue';
+import type { LocationQuery } from 'vue-router';
 
 import type { CreatureOption } from '~initiative/model';
 
@@ -8,9 +9,11 @@ import type {
   GenerationDifficulty,
 } from '../model';
 
+import { buildSearchQuery, parseFilter } from '~infrastructure/filter';
 import { BESTIARY_SEARCH_PATH, parseCreatureOptions } from '~initiative/model';
 
 import {
+  BESTIARY_FILTERS_PATH,
   generateCreatures,
   GENERATION_BUDGET_SPENT_DESCRIPTION,
   GENERATION_BUDGET_SPENT_TITLE,
@@ -40,8 +43,32 @@ function toCandidate(option: CreatureOption): GenerationCandidate {
 }
 
 /**
+ * Источники, включённые у пользователя (профиль → «Настройка источников»):
+ * бэкенд отмечает их в ответе фильтров бестиария, а поиск ждёт их параметром
+ * `source`. Если фильтры не загрузились, генерация идёт без ограничения по
+ * источникам — так же ведёт себя каталог листа персонажа.
+ */
+async function loadSourceQuery(): Promise<LocationQuery> {
+  try {
+    const response = await $fetch<unknown>(BESTIARY_FILTERS_PATH, {
+      method: 'GET',
+      retry: 0,
+    });
+
+    return buildSearchQuery({
+      filters: [],
+      sources: parseFilter(response).sources ?? [],
+    });
+  } catch (error) {
+    consola.warn('Не удалось загрузить источники бестиария:', error);
+
+    return {};
+  }
+}
+
+/**
  * Генератор столкновений: добирает случайных существ из бестиария до
- * выбранной сложности с учётом уже добавленных.
+ * выбранной сложности с учётом уже добавленных и источников профиля.
  * @param result Текущий итог калькулятора (бюджет и опыт).
  * @param addCreature Добавляет существо в калькулятор.
  */
@@ -81,9 +108,13 @@ export function useEncounterGenerator(
     isGenerating.value = true;
 
     try {
+      // Настройку источников могли поменять в соседней вкладке — берём свежую.
+      const sourceQuery = await loadSourceQuery();
+
       const response = await $fetch<unknown>(BESTIARY_SEARCH_PATH, {
         method: 'GET',
         query: {
+          ...sourceQuery,
           cr: getAffordableExperienceValues(window.max).join(','),
           // Существа «любой» среды обитания подходят к любой местности.
           habitat: habitat ? `${habitat},${HABITAT_ANY}` : undefined,
