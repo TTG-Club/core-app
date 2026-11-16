@@ -43,6 +43,11 @@ export const HOME_TOOLS: Array<HomeTool> = [
     to: '/calculators/abilities',
   },
   {
+    label: 'Калькулятор столкновений',
+    icon: 'tabler:scale',
+    to: '/calculators/encounter',
+  },
+  {
     label: DICE_CALCULATOR_TITLE,
     icon: DICE_CALCULATOR_ICON,
     to: DICE_CALCULATOR_ROUTE,

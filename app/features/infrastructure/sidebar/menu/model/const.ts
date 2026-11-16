@@ -165,6 +165,11 @@ export const MENU_SECTIONS: Array<MenuSection> = [
         icon: 'tabler:calculator',
       },
       {
+        href: '/calculators/encounter',
+        label: 'Калькулятор столкновений',
+        icon: 'tabler:scale',
+      },
+      {
         href: DICE_CALCULATOR_ROUTE,
         label: DICE_CALCULATOR_TITLE,
         icon: DICE_CALCULATOR_ICON,
