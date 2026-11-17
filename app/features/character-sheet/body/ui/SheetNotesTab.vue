@@ -9,6 +9,11 @@
     SHEET_TAB_EMPTY_LABELS,
   } from '../../model';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     'add-note': [];
     'edit-note': [noteId: string];
@@ -18,7 +23,8 @@
   // Добавлять и править заметки владелец может и на запертом листе — их ведут по
   // ходу игры, — а удаление требует снятого замка. Без прав кнопки прячутся, а
   // карточки заметок остаются на прежних местах.
-  const { character, editControlClass, gameControlClass } = useCharacterSheet();
+  const { character, editControlClass, gameControlClass } =
+    useCharacterSheet(sheetKey);
 
   // Заметки читаются, а не листаются, поэтому карточки развёрнуты по умолчанию;
   // свёрнутые запоминаются, пока вкладка открыта.

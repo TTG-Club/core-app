@@ -15,6 +15,9 @@
   import SheetPanel from './SheetPanel.vue';
 
   const props = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     resources: CharacterClassResource[];
   }>();
 
@@ -26,7 +29,9 @@
   // Шестерёнка настраивает состав ресурсов (правка листа), а ± тратят и
   // восстанавливают их (игровое действие): запертый лист оставляет ±, чужой —
   // не оставляет ничего.
-  const { character, editControlClass, gameControlClass } = useCharacterSheet();
+  const { character, editControlClass, gameControlClass } = useCharacterSheet(
+    props.sheetKey,
+  );
 
   const panelRef = useTemplateRef('panel');
 

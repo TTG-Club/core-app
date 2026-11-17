@@ -16,7 +16,10 @@
 
   // Поле, с которого начали правку (нажатием по плитке); null — карандаш на
   // рамке: тогда курсор никуда не ставится.
-  const { field } = defineProps<{
+  const { sheetKey, field } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     field: PersonalityFieldKey | null;
   }>();
 
@@ -24,7 +27,7 @@
     close: [];
   }>();
 
-  const { character, setPersonality } = useCharacterSheet();
+  const { character, setPersonality } = useCharacterSheet(sheetKey);
 
   // Тот же ключ, что и внутри SelectAlignment: запрос словаря не дублируется,
   // а список нужен здесь для соответствия значение ↔ русская подпись — лист

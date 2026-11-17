@@ -4,10 +4,13 @@
 
   import { CharacterSheetBody, CharacterSheetSkeleton } from '../body';
   import {
+    useCharacterSheet,
     useCharacterSheetAutosave,
+    useCharacterSheetList,
     useCharacterSheetLoader,
   } from '../composables';
   import {
+    createSheetKey,
     SHEET_HOST_LABELS,
     SHEET_NOT_FOUND_SUBTITLES,
     SHEET_NOT_FOUND_TITLES,
@@ -54,14 +57,25 @@
 
   const isShared = Boolean(shareToken);
 
-  const { status, load } = useCharacterSheetLoader(
-    () => shareToken || characterId,
-    { shared: isShared },
+  // Под этим ключом лежит всё состояние листа: тело и его окна получают
+  // ключ и работают со своим листом, сколько бы листов ни было открыто
+  const sheetKey = createSheetKey(
+    isShared
+      ? { source: 'shared', id: shareToken }
+      : { source: 'own', id: characterId },
   );
 
-  // Чужой лист по ссылке не правится, сохранять в нём нечего
+  const { status, load } = useCharacterSheetLoader(sheetKey);
+
+  // Чужой лист по ссылке не правится: сохранять в нём нечего, а в списке
+  // своих листов его нет
   if (!isShared) {
-    useCharacterSheetAutosave();
+    useCharacterSheetAutosave(sheetKey);
+
+    const { character } = useCharacterSheet(sheetKey);
+    const { syncOpenSheet } = useCharacterSheetList();
+
+    watch(character, syncOpenSheet);
   }
 
   const isPending = computed(
@@ -119,6 +133,7 @@
 
   <CharacterSheetBody
     v-else
+    :sheet-key
     :can-expand
     :can-close
     @close="handleClose"

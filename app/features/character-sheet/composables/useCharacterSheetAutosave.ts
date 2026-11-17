@@ -201,10 +201,11 @@ function moveBaseline(sheetId: string, data: Character, json: string): void {
  * сохранение не пишет в `character`, а повторное срабатывание с тем же JSON
  * отсеивается сравнением с базой последнего сохранённого состояния.
  *
+ * @param sheetKey ключ открытого листа.
  * @returns статус сохранения и повтор после ошибки.
  */
-export function useCharacterSheetAutosave() {
-  const { character, isReadonly, loadCharacter } = useCharacterSheet();
+export function useCharacterSheetAutosave(sheetKey: string) {
+  const { character, isReadonly, loadCharacter } = useCharacterSheet(sheetKey);
 
   const saveStatus = useCharacterSheetSaveStatus();
 

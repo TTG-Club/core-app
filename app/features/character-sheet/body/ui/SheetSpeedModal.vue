@@ -28,6 +28,11 @@
   } from '../../model';
   import SheetCustomBonusRows from './SheetCustomBonusRows.vue';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   /** Строка способа передвижения: всё, что рисуется рядом с его полем. */
   interface SpeedSettingsRow {
     key: SpeedTypeKey;
@@ -50,7 +55,7 @@
     close: [];
   }>();
 
-  const { character, setSpeed } = useCharacterSheet();
+  const { character, setSpeed } = useCharacterSheet(sheetKey);
 
   const draftSpeed = ref({
     ...character.value.speed,

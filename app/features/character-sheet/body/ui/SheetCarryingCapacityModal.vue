@@ -17,11 +17,16 @@
     WEIGHT_UNIT_LABEL,
   } from '../../model';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
 
-  const { character, setCarryingCapacity } = useCharacterSheet();
+  const { character, setCarryingCapacity } = useCharacterSheet(sheetKey);
 
   const draftSize = ref<string | null>(character.value.carryingCapacity.size);
 

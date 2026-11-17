@@ -25,6 +25,9 @@
     'bg-primary/10 ring-1 ring-primary/50 ring-inset';
 
   const props = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     /**
      * Группы навыков. Без группировки список приходит одной группой без
      * подписи — разметка строк у обоих режимов одна.
@@ -46,7 +49,7 @@
 
   // Шестерёнка ведёт в настройку навыков (правка листа): без прав она прячется,
   // а сам список навыков остаётся прежним.
-  const { editControlClass } = useCharacterSheet();
+  const { editControlClass } = useCharacterSheet(props.sheetKey);
 
   const displayGroups = computed(() => {
     const highlightedAbility = props.highlightedAbility ?? null;

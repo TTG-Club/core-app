@@ -21,6 +21,11 @@
   } from '../../model';
   import SheetCustomBonusRows from './SheetCustomBonusRows.vue';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   /** Строка спасброска в модалке: черновик записи и всё, что рисуется рядом. */
   interface SavingThrowSettingsRow {
     /** Запись черновика: её правят поля строки. */
@@ -48,7 +53,7 @@
     close: [];
   }>();
 
-  const { character, setSavingThrows } = useCharacterSheet();
+  const { character, setSavingThrows } = useCharacterSheet(sheetKey);
 
   // Черновик правится до «Применить»: копируются и сами записи, и списки их
   // бонусов — иначе правки уходили бы в лист мимо кнопки.

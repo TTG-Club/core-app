@@ -8,12 +8,14 @@
 
   import { SheetSettingsModal, SheetShareModal } from '../../body/ui';
   import {
+    isSheetSessionOpen,
     useCharacterSheetPdf,
     useCharacterSheetShare,
   } from '../../composables';
   import { CharacterSheetDrawer } from '../../drawer';
   import {
     CHARACTER_SHEET_ROUTE,
+    createSheetKey,
     downloadCharacterJson,
     getClassesDisplayLabel,
     getDisplayLevel,
@@ -152,7 +154,14 @@
 
   /** Настройки листа — модалка сохраняет их сама. */
   function handleSettings(): void {
-    settingsModal.open({ character });
+    // Лист, открытый рядом (панель или дровер), правится через своё
+    // состояние: ключ говорит окну настроек, что лист открыт
+    const sheetKey = createSheetKey({ source: 'own', id: character.id });
+
+    settingsModal.open({
+      character,
+      sheetKey: isSheetSessionOpen(sheetKey) ? sheetKey : undefined,
+    });
   }
 
   /** Запрос на удаление листа — подтверждение показывает диалог. */

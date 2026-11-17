@@ -12,6 +12,9 @@
   import SheetPanel from './SheetPanel.vue';
 
   const props = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     rows: SavingThrowRow[];
   }>();
 
@@ -23,7 +26,7 @@
 
   // Шестерёнка ведёт в настройку спасбросков (правка листа): без прав она
   // прячется, а сами спасброски остаются на месте.
-  const { editControlClass } = useCharacterSheet();
+  const { editControlClass } = useCharacterSheet(props.sheetKey);
 
   const displayRows = computed(() =>
     props.rows.map((row) => ({

@@ -16,6 +16,9 @@
   } from '../../model';
 
   const props = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     /**
      * Что настраивается: сколько заклинаний кругов 1+ либо заговоров можно
      * держать подготовленными.
@@ -27,7 +30,7 @@
     close: [];
   }>();
 
-  const { character, setPreparedSpells } = useCharacterSheet();
+  const { character, setPreparedSpells } = useCharacterSheet(props.sheetKey);
 
   const kindLabels = computed(() => PREPARED_KIND_LABELS[props.kind]);
 

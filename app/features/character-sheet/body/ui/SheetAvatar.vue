@@ -4,10 +4,15 @@
   import { useCharacterSheet, useSheetAvatar } from '../../composables';
   import { SHEET_AVATAR_LABELS } from '../../model';
 
-  const { character, canEdit, ensureEditable } = useCharacterSheet();
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
+  const { character, canEdit, ensureEditable } = useCharacterSheet(sheetKey);
 
   const { avatarUrl, isUploading, replaceAvatar, clearAvatar } =
-    useSheetAvatar();
+    useSheetAvatar(sheetKey);
 
   const overlay = useOverlay();
 

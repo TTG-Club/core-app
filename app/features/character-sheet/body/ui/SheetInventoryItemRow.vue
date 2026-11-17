@@ -159,6 +159,9 @@
   }
 
   const props = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     inventoryItem: CharacterInventoryItem;
   }>();
 
@@ -188,7 +191,7 @@
     editControlClass,
     gameControlClass,
     setInventoryItemAttackAbility,
-  } = useCharacterSheet();
+  } = useCharacterSheet(props.sheetKey);
 
   const categoryIcon = computed(
     () => INVENTORY_CATEGORY_ICONS[props.inventoryItem.category],

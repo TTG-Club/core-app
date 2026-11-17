@@ -18,6 +18,11 @@
     unionToolProficiencies,
   } from '../../model';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   interface ToolRow extends ToolCatalogEntry {
     /** Ключ владения: по нему хранится выбор черновика. */
     key: string;
@@ -38,7 +43,7 @@
 
   const overlay = useOverlay();
 
-  const { character, setToolProficiencies } = useCharacterSheet();
+  const { character, setToolProficiencies } = useCharacterSheet(sheetKey);
 
   const { groups, catalogItems, isEmpty, load } = useToolCatalog();
 

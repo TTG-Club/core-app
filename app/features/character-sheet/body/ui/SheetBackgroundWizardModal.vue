@@ -76,6 +76,11 @@
   import SheetSearchInput from './SheetSearchInput.vue';
   import SheetStartingEquipmentChoice from './SheetStartingEquipmentChoice.vue';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   type WizardStep = 'background' | 'review';
 
   const emit = defineEmits<{
@@ -86,7 +91,8 @@
 
   const overlay = useOverlay();
 
-  const { character, setBackground, removeBackground } = useCharacterSheet();
+  const { character, setBackground, removeBackground } =
+    useCharacterSheet(sheetKey);
 
   // Дроверы описаний с сайта; без destroyOnClose — повторный open() после
   // закрытия иначе падает («Overlay not found»).
@@ -107,7 +113,9 @@
   // Своя предыстория собирается в отдельной модалке поверх списка: сама она и
   // применяет её к листу, поэтому мастер после успеха только закрывается, а
   // отмена возвращает к списку каталога.
-  const customBackgroundModal = overlay.create(SheetCustomBackgroundModal);
+  const customBackgroundModal = overlay.create(SheetCustomBackgroundModal, {
+    props: { sheetKey },
+  });
 
   function handlePreview(url: string) {
     backgroundPreviewDrawer.open({ url });
@@ -679,6 +687,7 @@
    * тоже помечается.
    */
   const { getHints: choiceHints } = useChoiceHints({
+    sheetKey,
     choices: () => [...grantChoices.value, ...featChoices.value],
     selections,
   });

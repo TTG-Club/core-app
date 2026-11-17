@@ -119,6 +119,9 @@
     'border-default/50 bg-default/40 text-muted hover:border-primary/60';
 
   const props = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     spells: CharacterSpell[];
 
     /**
@@ -161,7 +164,7 @@
 
   // Пополнение книги, правка и удаление заклинаний меняют лист: без прав кнопки
   // прячутся, а ряды заклинаний и шапка вкладки остаются на прежних местах.
-  const { character, editControlClass } = useCharacterSheet();
+  const { character, editControlClass } = useCharacterSheet(props.sheetKey);
 
   // Урон и время накладывания живут в справочнике, а не в листе: подгружаем
   // их для всей вкладки — и для книги, и для заклинаний вне её. Уровень

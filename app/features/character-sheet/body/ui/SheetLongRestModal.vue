@@ -11,11 +11,17 @@
     RESOURCE_RECOVERY_ICONS,
   } from '../../model';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
 
-  const { character, maxHitPoints, completeLongRest } = useCharacterSheet();
+  const { character, maxHitPoints, completeLongRest } =
+    useCharacterSheet(sheetKey);
 
   const toast = useToast();
 

@@ -14,7 +14,10 @@
   import { SHEET_EFFECT_LABELS } from '../../model';
 
   // Идентификатор правимого эффекта; null — форма заводит новый.
-  const { effectId } = defineProps<{
+  const { sheetKey, effectId } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     effectId: string | null;
   }>();
 
@@ -22,7 +25,7 @@
     close: [];
   }>();
 
-  const { customEffects, saveEffect } = useSheetActiveEffects();
+  const { customEffects, saveEffect } = useSheetActiveEffects(sheetKey);
 
   // Снимок эффекта на момент открытия: модалка размонтируется при закрытии, и
   // setup выполняется заново на каждое открытие. Правки применяются по кнопке,

@@ -4,11 +4,16 @@
   import { useCharacterSheet } from '../../composables';
   import { SHEET_PERSONALITY_LABELS } from '../../model';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
 
-  const { character, setPersonality } = useCharacterSheet();
+  const { character, setPersonality } = useCharacterSheet(sheetKey);
 
   // Снимок личности на момент открытия: модалка размонтируется при закрытии, и
   // setup выполняется заново на каждое открытие — черновик всегда свежий.

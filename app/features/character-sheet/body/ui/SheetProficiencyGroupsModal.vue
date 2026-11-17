@@ -14,6 +14,9 @@
   } from '../../model';
 
   const props = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     /** Заголовок модалки. */
     title: string;
 
@@ -28,7 +31,7 @@
     close: [];
   }>();
 
-  const { character, setProficiencies } = useCharacterSheet();
+  const { character, setProficiencies } = useCharacterSheet(props.sheetKey);
 
   const catalogNames = new Set(
     props.groups.flatMap((group) => [group.all, ...group.items]),

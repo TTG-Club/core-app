@@ -18,6 +18,11 @@
   } from '../../model';
   import SheetPanel from './SheetPanel.vue';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     /** Правка примет; поле — то, с которого начали, у него и будет курсор. */
     'edit-appearance': [field: PersonalityFieldKey | null];
@@ -27,7 +32,7 @@
 
   // Правки открываются модалками из тела листа: без прав карандаши прячутся,
   // а сами плитки остаются на местах — читать личность можно и с чужого листа.
-  const { character, editControlClass } = useCharacterSheet();
+  const { character, editControlClass } = useCharacterSheet(sheetKey);
 
   const overlay = useOverlay();
 

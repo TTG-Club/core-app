@@ -62,6 +62,9 @@
   }
 
   const props = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     proficiencies: CharacterProficiencies;
   }>();
 
@@ -71,7 +74,7 @@
 
   // Шестерёнка на плашке группы — вход в правку владений: без прав она
   // прячется, а сама плашка остаётся прежней.
-  const { editControlClass } = useCharacterSheet();
+  const { editControlClass } = useCharacterSheet(props.sheetKey);
 
   const overlay = useOverlay();
 

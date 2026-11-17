@@ -16,6 +16,11 @@
     VISION_ORDER,
   } from '../../model';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   /** Строка редактора: своё значение и то, кем чувство выдано сверх него. */
   interface VisionField {
     key: VisionKey;
@@ -29,7 +34,7 @@
     close: [];
   }>();
 
-  const { character, setVision } = useCharacterSheet();
+  const { character, setVision } = useCharacterSheet(sheetKey);
 
   const draftVision = ref({ ...character.value.vision });
 

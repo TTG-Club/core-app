@@ -1,7 +1,4 @@
-export type {
-  SheetLoaderOptions,
-  SheetLoadStatus,
-} from './useCharacterSheetLoader';
+export type { SheetLoadStatus } from './useCharacterSheetLoader';
 
 export {
   useCatalogSourceQuery,
@@ -12,6 +9,12 @@ export {
   useCharacterSheetAutosave,
   useCharacterSheetSaveStatus,
 } from './useCharacterSheetAutosave';
+
+export {
+  acquireSheetSession,
+  isSheetSessionOpen,
+  releaseSheetSession,
+} from './useSheetSessions';
 
 export { useCharacterSheet } from './useCharacterSheet';
 export { useCharacterSheetDetail } from './useCharacterSheetDetail';

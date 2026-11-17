@@ -21,13 +21,18 @@
   } from '../../model';
   import SheetClassResourceModal from './SheetClassResourceModal.vue';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
 
   const overlay = useOverlay();
 
-  const { character, setClassResources } = useCharacterSheet();
+  const { character, setClassResources } = useCharacterSheet(sheetKey);
 
   // Ресурс правится в своём окне поверх списка: оно возвращает сохранённую
   // запись, а список остаётся черновиком до «Применить».
@@ -88,6 +93,7 @@
   /** Добавление ресурса: окно формы открывается с заготовкой нового счётчика. */
   async function handleAddResource() {
     const created = await resourceModal.open({
+      sheetKey,
       title: CLASS_RESOURCE_MODAL_TITLES.add,
       resource: toClassResourceDraft({
         id: crypto.randomUUID(),
@@ -126,6 +132,7 @@
     }
 
     const saved = await resourceModal.open({
+      sheetKey,
       title: CLASS_RESOURCE_MODAL_TITLES.edit,
       resource,
       bookResource,

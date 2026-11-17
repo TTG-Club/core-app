@@ -30,6 +30,9 @@
   } from '../../model';
 
   const props = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     features: CharacterFeature[];
   }>();
 
@@ -42,7 +45,7 @@
 
   // Добавление, правка и удаление особенностей меняют лист: без прав кнопка
   // «Добавить» прячется, а строчные кнопки правки и вовсе не разъезжаются.
-  const { canEdit, editControlClass } = useCharacterSheet();
+  const { canEdit, editControlClass } = useCharacterSheet(props.sheetKey);
 
   const addMenuItems = getFeaturesAddMenuItems({
     onAddFeature: () => emit('add-feature'),

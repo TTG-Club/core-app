@@ -47,6 +47,11 @@
   import SheetChoicePickerField from './SheetChoicePickerField.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
@@ -55,7 +60,7 @@
 
   const overlay = useOverlay();
 
-  const { character, addFeats } = useCharacterSheet();
+  const { character, addFeats } = useCharacterSheet(sheetKey);
 
   // Дровер описания черты с сайта; без destroyOnClose — повторный open()
   // после закрытия иначе падает («Overlay not found»).
@@ -331,6 +336,7 @@
    * и заклинание первого круга), поэтому взятое соседним выбором тоже видно.
    */
   const { getHints: choiceHints } = useChoiceHints({
+    sheetKey,
     choices: () => loadedSummaries.value.flatMap((summary) => summary.choices),
     selections: choiceAnswers,
   });

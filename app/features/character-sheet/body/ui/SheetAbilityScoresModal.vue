@@ -13,11 +13,16 @@
     getAbilitiesFromScores,
   } from '../../model';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
 
-  const { character, setAbilityScores } = useCharacterSheet();
+  const { character, setAbilityScores } = useCharacterSheet(sheetKey);
 
   // Набор из калькулятора приходит наверх как есть; пока в нём есть нули,
   // характеристика не назначена — записывать такой набор нечестно.

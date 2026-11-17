@@ -120,6 +120,7 @@ import {
   getSheetRollFlags,
   getSheetRollMode,
   getSheetRollModeSources,
+  getSheetStateKey,
   getSkillRowGroups,
   getSkillRows,
   getSpellcastingBreakdown,
@@ -265,22 +266,28 @@ function getFreshInventoryItems(
 /**
  * Состояние листа персонажа: реактивный персонаж, производные значения по
  * правилам D&D 2024 и экшены редактирования. Состояние разделяется между всеми
- * потребителями через `useState`.
+ * потребителями одного листа через `useState`: у каждого открытого листа
+ * свои ячейки, поэтому в одной вкладке могут быть открыты несколько листов.
  *
+ * @param sheetKey ключ открытого листа (`createSheetKey`).
  * @returns персонаж, производные строки блоков и экшены редактирования.
  */
-export function useCharacterSheet() {
+export function useCharacterSheet(sheetKey: string) {
   const toast = useToast();
 
   // Отдых катит формулу возврата зарядов предмета («1к6+4»): справочник задаёт
   // её строкой, а не числом.
   const { rollValue } = useDiceRoller();
 
-  const character = useState<Character>('character-sheet:character', () =>
-    structuredClone(DEFAULT_CHARACTER),
+  const character = useState<Character>(
+    getSheetStateKey('character', sheetKey),
+    () => structuredClone(DEFAULT_CHARACTER),
   );
 
-  const isLocked = useState<boolean>('character-sheet:locked', () => false);
+  const isLocked = useState<boolean>(
+    getSheetStateKey('locked', sheetKey),
+    () => false,
+  );
 
   /**
    * Почему открытый лист чужой и доступен только на просмотр: открыт по ссылке
@@ -289,7 +296,7 @@ export function useCharacterSheet() {
    * бэке ручек записи в чужой лист попросту нет.
    */
   const readonlyReason = useState<SheetReadonlyReason | null>(
-    'character-sheet:readonly-reason',
+    getSheetStateKey('readonly-reason', sheetKey),
     () => null,
   );
 

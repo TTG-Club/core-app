@@ -37,6 +37,11 @@
   import SheetItemPurchaseModal from './SheetItemPurchaseModal.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
@@ -46,7 +51,7 @@
   const overlay = useOverlay();
 
   const { character, addInventoryItems, purchaseInventoryItems } =
-    useCharacterSheet();
+    useCharacterSheet(sheetKey);
 
   // Дровер описания предмета; без destroyOnClose — повторный open()
   // после закрытия иначе падает («Overlay not found»).
@@ -432,6 +437,7 @@
     }
 
     const purchase = await purchaseModal.open({
+      sheetKey,
       items: [...draftItems.value.values()],
     }).result;
 

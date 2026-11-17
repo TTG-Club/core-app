@@ -396,12 +396,13 @@ interface LevelUpWizard {
  * пулы заклинаний и каталог черт (`isFeatsLoading`, `hasFeatsError`). Выбор
  * приходит и после `prepare` — со взятым вариантом умения или подклассом.
  *
+ * @param sheetKey ключ открытого листа.
  * @returns шаги мастера, действия по шагам и сборку итога для листа.
  */
-export function useLevelUpWizard(): LevelUpWizard {
+export function useLevelUpWizard(sheetKey: string): LevelUpWizard {
   const toast = useToast();
 
-  const { character } = useCharacterSheet();
+  const { character } = useCharacterSheet(sheetKey);
 
   // Кость хитов катится напрямую роллером: значение нужно здесь, чтобы
   // прибавить модификатор Телосложения именно к этому уровню.
@@ -714,6 +715,7 @@ export function useLevelUpWizard(): LevelUpWizard {
    * пометки предлагалось бы заново.
    */
   const { getHints: choiceHints } = useChoiceHints({
+    sheetKey,
     choices: allChoices,
     selections: allAnswers,
   });

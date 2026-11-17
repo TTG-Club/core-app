@@ -24,7 +24,10 @@
 
   // URL редактируемого заклинания; null — форма создаёт новое. Само заклинание
   // модалка достаёт из состояния листа (как `SheetFeatureEditModal`).
-  const { spellUrl = null } = defineProps<{
+  const { sheetKey, spellUrl = null } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     spellUrl?: string | null;
   }>();
 
@@ -32,7 +35,8 @@
     close: [];
   }>();
 
-  const { character, addCustomSpell, updateCustomSpell } = useCharacterSheet();
+  const { character, addCustomSpell, updateCustomSpell } =
+    useCharacterSheet(sheetKey);
 
   // Уровни для селекта: подписи те же, что у строк списка заклинаний.
   const levelOptions = SPELL_LEVELS.map((level) => ({

@@ -23,12 +23,17 @@
     SHEET_TAB_EMPTY_LABELS,
   } from '../../model';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     'add-effect': [];
     'edit-effect': [effectId: string];
   }>();
 
-  const { editControlClass } = useCharacterSheet();
+  const { editControlClass } = useCharacterSheet(sheetKey);
 
   const {
     customEffects,
@@ -40,7 +45,7 @@
     toggleEffectDisabled,
     toggleFeatureEffectDisabled,
     toggleCondition,
-  } = useSheetActiveEffects();
+  } = useSheetActiveEffects(sheetKey);
 
   /**
    * Строка списка эффектов. Что со строкой можно сделать, зависит от источника:

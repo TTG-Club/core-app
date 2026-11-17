@@ -114,7 +114,14 @@
   // (стандартный режим) и правая панель (широкий режим). «Закрыть» и
   // «развернуть» решает контейнер — тело лишь эмитит события. В drawer крестик
   // даёт стандартная шапка UiDrawer, поэтому свой скрывается через `canClose`.
-  const { canExpand = false, canClose = true } = defineProps<{
+  const {
+    sheetKey,
+    canExpand = false,
+    canClose = true,
+  } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     canExpand?: boolean;
     canClose?: boolean;
   }>();
@@ -179,7 +186,7 @@
     downloadCharacter,
     getRollMode,
     getRollModeSources,
-  } = useCharacterSheet();
+  } = useCharacterSheet(sheetKey);
 
   // Действия над листом целиком (копия и удаление) живут в общем состоянии
   // списка: оттуда же берётся остаток лимита активных листов, а список за
@@ -478,30 +485,48 @@
   // размонтируется после закрытия, поэтому черновики сбрасываются.
   const abilityModal = overlay.create(SheetAbilityModal, {
     props: {
+      sheetKey,
       abilityKey: 'strength',
     },
   });
 
   // Набор характеристик целиком (как в калькуляторе) — в отличие от модалки
   // одной характеристики, ему нечего передавать: всё нужное он берёт из листа.
-  const abilityScoresModal = overlay.create(SheetAbilityScoresModal);
+  const abilityScoresModal = overlay.create(SheetAbilityScoresModal, {
+    props: { sheetKey },
+  });
 
-  const speedModal = overlay.create(SheetSpeedModal);
+  const speedModal = overlay.create(SheetSpeedModal, {
+    props: { sheetKey },
+  });
 
-  const healthModal = overlay.create(SheetHealthModal);
+  const healthModal = overlay.create(SheetHealthModal, {
+    props: { sheetKey },
+  });
 
-  const healthQuickModal = overlay.create(SheetHealthQuickModal);
+  const healthQuickModal = overlay.create(SheetHealthQuickModal, {
+    props: { sheetKey },
+  });
 
-  const shortRestModal = overlay.create(SheetShortRestModal);
+  const shortRestModal = overlay.create(SheetShortRestModal, {
+    props: { sheetKey },
+  });
 
-  const longRestModal = overlay.create(SheetLongRestModal);
+  const longRestModal = overlay.create(SheetLongRestModal, {
+    props: { sheetKey },
+  });
 
-  const nameModal = overlay.create(SheetNameModal);
+  const nameModal = overlay.create(SheetNameModal, {
+    props: { sheetKey },
+  });
 
-  const visionModal = overlay.create(SheetVisionModal);
+  const visionModal = overlay.create(SheetVisionModal, {
+    props: { sheetKey },
+  });
 
   const rollModal = overlay.create(SheetRollModal, {
     props: {
+      sheetKey,
       title: '',
       modifier: 0,
       ability: 'strength',
@@ -510,31 +535,50 @@
 
   const damageModal = overlay.create(SheetDamageModal, {
     props: {
+      sheetKey,
       title: '',
       damage: EMPTY_DAMAGE_ROLL_SOURCE,
     },
   });
 
-  const experienceModal = overlay.create(SheetExperienceModal);
+  const experienceModal = overlay.create(SheetExperienceModal, {
+    props: { sheetKey },
+  });
 
-  const armorClassModal = overlay.create(SheetArmorClassModal);
+  const armorClassModal = overlay.create(SheetArmorClassModal, {
+    props: { sheetKey },
+  });
 
-  const classResourcesModal = overlay.create(SheetClassResourcesModal);
+  const classResourcesModal = overlay.create(SheetClassResourcesModal, {
+    props: { sheetKey },
+  });
 
-  const skillsSettingsModal = overlay.create(SheetSkillsSettingsModal);
+  const skillsSettingsModal = overlay.create(SheetSkillsSettingsModal, {
+    props: { sheetKey },
+  });
 
   const savingThrowsSettingsModal = overlay.create(
     SheetSavingThrowsSettingsModal,
+    {
+      props: { sheetKey },
+    },
   );
 
-  const currencyModal = overlay.create(SheetCurrencyModal);
+  const currencyModal = overlay.create(SheetCurrencyModal, {
+    props: { sheetKey },
+  });
 
-  const carryingCapacityModal = overlay.create(SheetCarryingCapacityModal);
+  const carryingCapacityModal = overlay.create(SheetCarryingCapacityModal, {
+    props: { sheetKey },
+  });
 
-  const attunementModal = overlay.create(SheetAttunementModal);
+  const attunementModal = overlay.create(SheetAttunementModal, {
+    props: { sheetKey },
+  });
 
   const proficiencyGroupsModal = overlay.create(SheetProficiencyGroupsModal, {
     props: {
+      sheetKey,
       title: '',
       target: 'armor',
       groups: [],
@@ -543,19 +587,32 @@
 
   const weaponProficienciesModal = overlay.create(
     SheetWeaponProficienciesModal,
+    {
+      props: { sheetKey },
+    },
   );
 
-  const toolProficienciesModal = overlay.create(SheetToolProficienciesModal);
+  const toolProficienciesModal = overlay.create(SheetToolProficienciesModal, {
+    props: { sheetKey },
+  });
 
-  const speciesWizardModal = overlay.create(SheetSpeciesWizardModal);
+  const speciesWizardModal = overlay.create(SheetSpeciesWizardModal, {
+    props: { sheetKey },
+  });
 
   // Клик по классу в шапке открывает СПИСОК классов персонажа: оттуда класс
   // меняют, добавляют второй (мультикласс) и удаляют ненужный.
-  const classesModal = overlay.create(SheetClassesModal);
+  const classesModal = overlay.create(SheetClassesModal, {
+    props: { sheetKey },
+  });
 
-  const backgroundWizardModal = overlay.create(SheetBackgroundWizardModal);
+  const backgroundWizardModal = overlay.create(SheetBackgroundWizardModal, {
+    props: { sheetKey },
+  });
 
-  const sizeModal = overlay.create(SheetSizeModal);
+  const sizeModal = overlay.create(SheetSizeModal, {
+    props: { sheetKey },
+  });
 
   const settingsModal = overlay.create(SheetSettingsModal, {
     props: {
@@ -569,20 +626,26 @@
     },
   });
 
-  const featureAddModal = overlay.create(SheetFeatureAddModal);
+  const featureAddModal = overlay.create(SheetFeatureAddModal, {
+    props: { sheetKey },
+  });
 
   const featureEditModal = overlay.create(SheetFeatureEditModal, {
     props: {
+      sheetKey,
       featureId: '',
     },
   });
 
-  const featAddModal = overlay.create(SheetFeatAddModal);
+  const featAddModal = overlay.create(SheetFeatAddModal, {
+    props: { sheetKey },
+  });
 
   // Одна модалка на добавление и правку заметки: идентификатор пустой — форма
   // создаёт новую запись.
   const noteModal = overlay.create(SheetNoteModal, {
     props: {
+      sheetKey,
       noteId: null,
     },
   });
@@ -591,6 +654,7 @@
   // заметка: пустой идентификатор означает новую запись.
   const effectModal = overlay.create(SheetEffectModal, {
     props: {
+      sheetKey,
       effectId: null,
     },
   });
@@ -599,26 +663,36 @@
   // курсор — null означает вход карандашом, без выделенного поля.
   const personalityModal = overlay.create(SheetPersonalityModal, {
     props: {
+      sheetKey,
       field: null,
     },
   });
 
   const personalityDescriptionModal = overlay.create(
     SheetPersonalityDescriptionModal,
+    {
+      props: { sheetKey },
+    },
   );
 
-  const spellAddModal = overlay.create(SheetSpellAddModal);
+  const spellAddModal = overlay.create(SheetSpellAddModal, {
+    props: { sheetKey },
+  });
 
   // Одна модалка на добавление и редактирование своего заклинания: URL пустой —
   // форма создаёт новое.
   const customSpellModal = overlay.create(SheetCustomSpellModal, {
     props: {
+      sheetKey,
       spellUrl: null,
     },
   });
 
   const spellcastingModal = overlay.create(SheetSpellcastingModal, {
-    props: { classUrl: '' },
+    props: {
+      sheetKey,
+      classUrl: '',
+    },
   });
 
   // Заклинание приходит нажатием пункта меню строки: значения при создании —
@@ -630,17 +704,25 @@
   // Вид подготовки приходит нажатием на плитку: значение при создании — лишь
   // отправная точка, `open()` подставляет нужное.
   const preparedSpellsModal = overlay.create(SheetPreparedSpellsModal, {
-    props: { kind: 'spells' },
+    props: {
+      sheetKey,
+      kind: 'spells',
+    },
   });
 
-  const itemAddModal = overlay.create(SheetItemAddModal);
+  const itemAddModal = overlay.create(SheetItemAddModal, {
+    props: { sheetKey },
+  });
 
-  const magicItemAddModal = overlay.create(SheetMagicItemAddModal);
+  const magicItemAddModal = overlay.create(SheetMagicItemAddModal, {
+    props: { sheetKey },
+  });
 
   // Одна модалка на добавление и редактирование своего предмета: идентификатор
   // пустой — форма создаёт новый.
   const customItemModal = overlay.create(SheetCustomItemModal, {
     props: {
+      sheetKey,
       inventoryItemId: null,
     },
   });
@@ -650,7 +732,7 @@
       return;
     }
 
-    abilityModal.open({ abilityKey });
+    abilityModal.open({ sheetKey, abilityKey });
   }
 
   function handleAbilityScoresEdit() {
@@ -663,6 +745,7 @@
 
   function handleAbilityRoll(abilityKey: AbilityKey) {
     rollModal.open({
+      sheetKey,
       title: `Проверка: ${ABILITY_LABELS[abilityKey]}`,
       modifier: getAbilityCheckValue(character.value, abilityKey),
       ability: abilityKey,
@@ -811,6 +894,7 @@
 
     if (group === 'armor') {
       proficiencyGroupsModal.open({
+        sheetKey,
         title: 'Владение бронёй',
         target: 'armor',
         groups: ARMOR_PROFICIENCY_GROUPS,
@@ -827,6 +911,7 @@
 
     if (group === 'languages') {
       proficiencyGroupsModal.open({
+        sheetKey,
         title: 'Владение языками',
         target: 'languages',
         groups: LANGUAGE_PROFICIENCY_GROUPS,
@@ -836,6 +921,7 @@
 
   function handleInitiativeRoll() {
     rollModal.open({
+      sheetKey,
       title: 'Инициатива',
       modifier: initiativeBonus.value,
       ability: 'dexterity',
@@ -846,6 +932,7 @@
 
   function handleSavingThrowRoll(row: SavingThrowRow) {
     rollModal.open({
+      sheetKey,
       title: `Спасбросок: ${ABILITY_LABELS[row.key]}`,
       modifier: row.value,
       // Характеристика строки, а не самого спасброска: от неё модалка считает
@@ -868,6 +955,7 @@
 
   function handleSkillRoll(row: SkillRow) {
     rollModal.open({
+      sheetKey,
       title: `Проверка: ${row.name}`,
       modifier: row.value,
       ability: row.ability,
@@ -908,6 +996,7 @@
     };
 
     rollModal.open({
+      sheetKey,
       title: `Атака: ${inventoryItem.name}`,
       modifier: attack.value,
       ability: attack.ability,
@@ -948,7 +1037,11 @@
       return;
     }
 
-    damageModal.open({ title: `Урон: ${inventoryItem.name}`, damage });
+    damageModal.open({
+      sheetKey,
+      title: `Урон: ${inventoryItem.name}`,
+      damage,
+    });
   }
 
   /**
@@ -959,6 +1052,7 @@
    */
   async function handleSpellDamageRoll(roll: SpellDamageRoll) {
     const isRolled = await damageModal.open({
+      sheetKey,
       title: roll.title,
       damage: roll.damage,
     }).result;
@@ -1041,7 +1135,7 @@
       return;
     }
 
-    featureEditModal.open({ featureId });
+    featureEditModal.open({ sheetKey, featureId });
   }
 
   function handleEffectAdd() {
@@ -1049,7 +1143,7 @@
       return;
     }
 
-    effectModal.open({ effectId: null });
+    effectModal.open({ sheetKey, effectId: null });
   }
 
   function handleEffectEdit(effectId: string) {
@@ -1057,7 +1151,7 @@
       return;
     }
 
-    effectModal.open({ effectId });
+    effectModal.open({ sheetKey, effectId });
   }
 
   // Заметки ведут по ходу игры, поэтому замок их не запирает — только чужой лист.
@@ -1066,7 +1160,7 @@
       return;
     }
 
-    noteModal.open({ noteId: null });
+    noteModal.open({ sheetKey, noteId: null });
   }
 
   function handleNoteEdit(noteId: string) {
@@ -1074,7 +1168,7 @@
       return;
     }
 
-    noteModal.open({ noteId });
+    noteModal.open({ sheetKey, noteId });
   }
 
   function handlePersonalityEdit(field: PersonalityFieldKey | null) {
@@ -1082,7 +1176,7 @@
       return;
     }
 
-    personalityModal.open({ field });
+    personalityModal.open({ sheetKey, field });
   }
 
   function handlePersonalityDescriptionEdit() {
@@ -1106,7 +1200,7 @@
       return;
     }
 
-    customSpellModal.open({ spellUrl: null });
+    customSpellModal.open({ sheetKey, spellUrl: null });
   }
 
   function handleSpellEdit(spellUrl: string) {
@@ -1114,7 +1208,7 @@
       return;
     }
 
-    customSpellModal.open({ spellUrl });
+    customSpellModal.open({ sheetKey, spellUrl });
   }
 
   /**
@@ -1166,7 +1260,7 @@
       return;
     }
 
-    spellcastingModal.open({ classUrl });
+    spellcastingModal.open({ sheetKey, classUrl });
   }
 
   function handlePreparedSpellsEdit(kind: PreparedSpellKind) {
@@ -1174,7 +1268,7 @@
       return;
     }
 
-    preparedSpellsModal.open({ kind });
+    preparedSpellsModal.open({ sheetKey, kind });
   }
 
   function handleSettingsEdit() {
@@ -1182,7 +1276,7 @@
       return;
     }
 
-    settingsModal.open({ character: character.value });
+    settingsModal.open({ character: character.value, sheetKey });
   }
 
   function handleItemAdd() {
@@ -1206,7 +1300,7 @@
       return;
     }
 
-    customItemModal.open({ inventoryItemId: null });
+    customItemModal.open({ sheetKey, inventoryItemId: null });
   }
 
   function handleItemEdit(inventoryItemId: string) {
@@ -1214,7 +1308,7 @@
       return;
     }
 
-    customItemModal.open({ inventoryItemId });
+    customItemModal.open({ sheetKey, inventoryItemId });
   }
 
   /** Копия каталожного предмета в лист — как и у заклинания, с дозагрузкой. */
@@ -1305,6 +1399,7 @@
 
     <template v-else>
       <SheetHeader
+        :sheet-key="sheetKey"
         :character="character"
         :locked="isLocked"
         :can-expand="canExpand"
@@ -1408,6 +1503,7 @@
             />
 
             <SheetSavingThrowsPanel
+              :sheet-key="sheetKey"
               :rows="savingThrowRows"
               class="max-sm:order-5 max-sm:col-span-full"
               @roll="handleSavingThrowRoll"
@@ -1416,6 +1512,7 @@
             />
 
             <SheetProficienciesPanel
+              :sheet-key="sheetKey"
               :proficiencies="character.proficiencies"
               class="max-sm:order-6 max-sm:col-span-full"
               @edit="handleProficienciesEdit"
@@ -1448,6 +1545,7 @@
             </div>
 
             <SheetClassResourcesPanel
+              :sheet-key="sheetKey"
               :resources="character.classResources"
               class="max-sm:order-3 max-sm:col-span-full"
               @adjust="adjustClassResource"
@@ -1455,6 +1553,7 @@
             />
 
             <SheetSkillsPanel
+              :sheet-key="sheetKey"
               :groups="skillGroups"
               :highlighted-ability="highlightedAbility"
               class="grow max-sm:order-4 max-sm:col-span-full"
@@ -1474,6 +1573,7 @@
           class="@5xl:col-span-6 @5xl:col-start-7 @5xl:row-start-1"
         >
           <SheetAbilitiesRow
+            :sheet-key="sheetKey"
             :rows="abilityRows"
             @roll="handleAbilityRoll"
             @settings="handleAbilityEdit"
@@ -1491,6 +1591,7 @@
         </div>
 
         <SheetInventoryTabs
+          :sheet-key="sheetKey"
           :currency="character.currency"
           :custom-currencies="character.customCurrencies"
           :inventory="character.inventory"

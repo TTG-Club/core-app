@@ -6,11 +6,16 @@
   import { useCharacterSheet } from '../../composables';
   import { SHEET_SIZE_MODAL_LABELS } from '../../model';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
 
-  const { character, setSize } = useCharacterSheet();
+  const { character, setSize } = useCharacterSheet(sheetKey);
 
   // Тот же ключ, что и внутри SelectSize: запрос словаря не дублируется,
   // а список нужен здесь для соответствия значение ↔ русская подпись.

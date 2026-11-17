@@ -64,7 +64,10 @@
 
   // Идентификатор редактируемого предмета; null — форма создаёт новый. Сам
   // предмет модалка достаёт из состояния листа (как `SheetCustomSpellModal`).
-  const { inventoryItemId = null } = defineProps<{
+  const { sheetKey, inventoryItemId = null } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     inventoryItemId?: string | null;
   }>();
 
@@ -73,7 +76,7 @@
   }>();
 
   const { character, addCustomInventoryItem, updateCustomInventoryItem } =
-    useCharacterSheet();
+    useCharacterSheet(sheetKey);
 
   // Снимок редактируемого предмета на момент открытия: модалка размонтируется
   // при закрытии, поэтому setup выполняется заново на каждое открытие — снимок

@@ -23,13 +23,18 @@
   } from '../../model';
   import SheetSearchInput from './SheetSearchInput.vue';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
 
   const overlay = useOverlay();
 
-  const { character, setSpells } = useCharacterSheet();
+  const { character, setSpells } = useCharacterSheet(sheetKey);
 
   // Дровер описания заклинания; без destroyOnClose — повторный open()
   // после закрытия иначе падает («Overlay not found»).

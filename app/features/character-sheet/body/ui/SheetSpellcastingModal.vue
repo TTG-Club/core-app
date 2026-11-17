@@ -19,7 +19,10 @@
     SPELLCASTING_STAT_LABELS,
   } from '../../model';
 
-  const { classUrl } = defineProps<{
+  const { sheetKey, classUrl } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     /** Класс, чью заклинательную характеристику настраивают. */
     classUrl: string;
   }>();
@@ -28,7 +31,7 @@
     close: [];
   }>();
 
-  const { character, setSpellcastingAbility } = useCharacterSheet();
+  const { character, setSpellcastingAbility } = useCharacterSheet(sheetKey);
 
   /** Настраиваемый класс: у мультикласса характеристика своя у каждого. */
   const targetClass = computed(

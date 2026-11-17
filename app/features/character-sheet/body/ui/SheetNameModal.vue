@@ -4,11 +4,16 @@
   import { useCharacterSheet } from '../../composables';
   import { SHEET_NAME_MODAL_LABELS } from '../../model';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
 
-  const { character, setName } = useCharacterSheet();
+  const { character, setName } = useCharacterSheet(sheetKey);
 
   const draftName = ref(character.value.name);
 

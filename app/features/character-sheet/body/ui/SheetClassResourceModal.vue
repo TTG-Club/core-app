@@ -38,6 +38,9 @@
   } from '../../model';
 
   const props = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     /** Заголовок окна: у добавления и правки он разный. */
     title: string;
 
@@ -56,7 +59,7 @@
     close: [resource?: CharacterClassResource];
   }>();
 
-  const { character } = useCharacterSheet();
+  const { character } = useCharacterSheet(props.sheetKey);
 
   // Форма правит копию: список ресурсов до сохранения меняться не должен.
   // Черновик живёт до закрытия — оверлей размонтирует модалку.

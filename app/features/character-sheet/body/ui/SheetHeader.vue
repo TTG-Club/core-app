@@ -35,6 +35,9 @@
   import SheetAvatar from './SheetAvatar.vue';
 
   const props = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     character: Character;
     locked: boolean;
     /** Показать кнопку «открыть на отдельной странице» (панель). */
@@ -294,7 +297,7 @@
     class="flex flex-col items-center gap-4 @2xl:flex-row @2xl:items-start @2xl:gap-6"
   >
     <div class="relative mb-2 shrink-0 @2xl:mb-0">
-      <SheetAvatar />
+      <SheetAvatar :sheet-key="sheetKey" />
 
       <div
         class="absolute -bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1"
