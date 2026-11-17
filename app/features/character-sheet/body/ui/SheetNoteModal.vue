@@ -6,7 +6,10 @@
   import { SHEET_NOTE_LABELS } from '../../model';
 
   // Идентификатор правимой заметки; null — форма создаёт новую запись.
-  const { noteId } = defineProps<{
+  const { sheetKey, noteId } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     noteId: string | null;
   }>();
 
@@ -14,7 +17,7 @@
     close: [];
   }>();
 
-  const { character, addNote, updateNote } = useCharacterSheet();
+  const { character, addNote, updateNote } = useCharacterSheet(sheetKey);
 
   // Снимок заметки на момент открытия. Модалка размонтируется при закрытии,
   // поэтому setup выполняется заново на каждое открытие — снимок всегда свежий,

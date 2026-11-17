@@ -9,7 +9,11 @@
   import { ACTION_LABELS } from '~/shared/consts';
   import { ItemDrawer } from '~items/drawer';
 
-  import { useCharacterSheet, useToolCatalog } from '../../composables';
+  import {
+    useCharacterSheet,
+    useSheetOverlay,
+    useToolCatalog,
+  } from '../../composables';
   import {
     CUSTOM_TOOL_NAME_MAX_LENGTH,
     findToolInCatalog,
@@ -17,6 +21,11 @@
     SHEET_TOOL_LABELS,
     unionToolProficiencies,
   } from '../../model';
+
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
 
   interface ToolRow extends ToolCatalogEntry {
     /** Ключ владения: по нему хранится выбор черновика. */
@@ -36,9 +45,9 @@
     close: [];
   }>();
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
-  const { character, setToolProficiencies } = useCharacterSheet();
+  const { character, setToolProficiencies } = useCharacterSheet(sheetKey);
 
   const { groups, catalogItems, isEmpty, load } = useToolCatalog();
 

@@ -1,19 +1,21 @@
 <script setup lang="ts">
   import type { DropdownMenuItem } from '@nuxt/ui';
 
-  import type { Character } from '../../model';
+  import type { Character, SheetPdfVariant } from '../../model';
 
   import { ACTION_LABELS } from '~/shared/consts';
   import { ConfirmDialog } from '~initiative/ui-kit';
 
   import { SheetSettingsModal, SheetShareModal } from '../../body/ui';
   import {
+    isSheetSessionOpen,
     useCharacterSheetPdf,
     useCharacterSheetShare,
   } from '../../composables';
   import { CharacterSheetDrawer } from '../../drawer';
   import {
     CHARACTER_SHEET_ROUTE,
+    createSheetKey,
     downloadCharacterJson,
     getClassesDisplayLabel,
     getDisplayLevel,
@@ -121,11 +123,28 @@
     downloadCharacterJson(character);
   }
 
+  const { isSheetShared, setShareToken, getShareUrlByToken } =
+    useCharacterSheetShare();
+
   const { isExporting, exportToPdf } = useCharacterSheetPdf();
 
-  /** Экспорт листа в PDF — собирается из того же документа карточки. */
-  function handleDownloadPdf(): void {
-    void exportToPdf(character);
+  /**
+   * Экспорт листа в PDF — собирается из того же документа карточки; токен
+   * доступа карточка знает из списка, он уходит в QR-код. Без ссылки экспорт
+   * её включает, и список перечитывается — у карточки появился токен.
+   *
+   * @param variant вид листа, выбранный в подменю.
+   */
+  function handleDownloadPdf(variant: SheetPdfVariant): void {
+    void exportToPdf(character, {
+      shareUrl: getShareUrlByToken(shareToken),
+      ensureShare: true,
+      variant,
+    }).then((isShareEnabled) => {
+      if (isShareEnabled) {
+        emit('share-change');
+      }
+    });
   }
 
   /** Запрос на копию листа — создаёт её список (у него лимит и обновление). */
@@ -135,15 +154,20 @@
 
   /** Настройки листа — модалка сохраняет их сама. */
   function handleSettings(): void {
-    settingsModal.open({ character });
+    // Лист, открытый рядом (панель или дровер), правится через своё
+    // состояние: ключ говорит окну настроек, что лист открыт
+    const sheetKey = createSheetKey({ source: 'own', id: character.id });
+
+    settingsModal.open({
+      character,
+      sheetKey: isSheetSessionOpen(sheetKey) ? sheetKey : undefined,
+    });
   }
 
   /** Запрос на удаление листа — подтверждение показывает диалог. */
   function handleRemove(): void {
     isDeleteOpen.value = true;
   }
-
-  const { isSheetShared, setShareToken } = useCharacterSheetShare();
 
   const isShared = computed(() => isSheetShared(character.id));
 

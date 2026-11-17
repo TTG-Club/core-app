@@ -1,5 +1,7 @@
 import type { Color, PDFDocument, PDFFont, PDFPage } from 'pdf-lib';
 
+import type { SheetPdfVariant } from '../types';
+
 /** Встроенные в документ шрифты. */
 export interface PdfFonts {
   /** Основной текст и значения. */
@@ -25,6 +27,21 @@ export interface PdfBuildContext {
 
   /** Созданные страницы в порядке добавления — для нумерации колонтитулов. */
   pages: PDFPage[];
+
+  /**
+   * Ссылка на просмотр листа для QR-кода в шапке; null — доступ по ссылке
+   * выключен, и кода в документе нет.
+   */
+  shareUrl: string | null;
+}
+
+/** Необязательные данные сборки, которых нет в самом документе листа. */
+export interface PdfBuildOptions {
+  /** Ссылка на просмотр листа — попадёт в QR-код на первой странице. */
+  shareUrl?: string | null;
+
+  /** Вид листа; по умолчанию — лист TTG. */
+  variant?: SheetPdfVariant;
 }
 
 /** Выравнивание текста внутри заданной ширины. */
@@ -99,6 +116,12 @@ export interface PdfFlow {
 
   /** Координата курсора от верха страницы. */
   readonly top: number;
+
+  /**
+   * Поток только меряет: курсор двигается как при отрисовке, а на страницу
+   * ничего не попадает.
+   */
+  readonly measuring?: boolean;
 
   /**
    * Гарантирует свободное место под блок высотой `height`; при нехватке

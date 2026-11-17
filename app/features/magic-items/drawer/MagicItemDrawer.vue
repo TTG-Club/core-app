@@ -14,13 +14,8 @@
     (e: 'close'): void;
   }>();
 
-  const { data: detail, status } = await useAsyncData(
-    computed(() => `magic-items-${url}`),
-    () => $fetch<MagicItemDetailResponse>(`/api/v2/magic-items/${url}`),
-    {
-      server: false,
-      immediate: true,
-    },
+  const { data: detail, status } = useEntityDetail<MagicItemDetailResponse>(
+    () => `/api/v2/magic-items/${url}`,
   );
 
   const isLoading = computed(() => status.value === 'pending');

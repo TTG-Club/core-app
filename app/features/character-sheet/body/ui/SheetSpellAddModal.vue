@@ -7,7 +7,11 @@
   import { FilterDrawer } from '~infrastructure/filter';
   import { SpellDrawer } from '~spells/drawer';
 
-  import { useCharacterSheet, useSpellCatalogSearch } from '../../composables';
+  import {
+    useCharacterSheet,
+    useSheetOverlay,
+    useSpellCatalogSearch,
+  } from '../../composables';
   import {
     getExpandedSpellListSpells,
     getFilterChipClass,
@@ -23,13 +27,18 @@
   } from '../../model';
   import SheetSearchInput from './SheetSearchInput.vue';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
-  const { character, setSpells } = useCharacterSheet();
+  const { character, setSpells } = useCharacterSheet(sheetKey);
 
   // Дровер описания заклинания; без destroyOnClose — повторный open()
   // после закрытия иначе падает («Overlay not found»).

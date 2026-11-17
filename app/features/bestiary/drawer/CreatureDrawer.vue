@@ -14,13 +14,8 @@
     (e: 'close'): void;
   }>();
 
-  const { data: detail, status } = await useAsyncData(
-    computed(() => `creature-${url}`),
-    () => $fetch<CreatureDetailResponse>(`/api/v2/bestiary/${url}`),
-    {
-      server: false,
-      immediate: true,
-    },
+  const { data: detail, status } = useEntityDetail<CreatureDetailResponse>(
+    () => `/api/v2/bestiary/${url}`,
   );
 
   const isLoading = computed(() => status.value === 'pending');

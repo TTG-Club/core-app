@@ -1,20 +1,17 @@
 <script setup lang="ts">
+  import type { SheetKeyTarget } from '~character-sheet/model';
+
   import { USER_TOKEN_COOKIE } from '#shared/consts';
-  import {
-    CharacterSheetBody,
-    CharacterSheetSkeleton,
-  } from '~character-sheet/body';
-  import {
-    useCharacterSheetAutosave,
-    useCharacterSheetDetail,
-    useCharacterSheetLoader,
-  } from '~character-sheet/composables';
+  import { useCharacterSheetDetail } from '~character-sheet/composables';
   import { CharacterSheetControls } from '~character-sheet/controls';
+  import { CharacterSheetHost } from '~character-sheet/host';
   import { CharacterSheetList } from '~character-sheet/list';
   import {
     CHARACTER_SHEET_LIST_TITLE,
+    createSheetKey,
+    getSheetPagePath,
+    SHEET_HOST_LABELS,
     SHEET_LOGIN_PROMPT,
-    SHEET_NOT_FOUND_SUBTITLES,
   } from '~character-sheet/model';
   import { UiResult } from '~ui/result';
   import { AuthModal } from '~user/auth-modal';
@@ -63,7 +60,7 @@
   }
 
   // Панель показывает и свои листы (`?detail=<id>`), и чужие, сохранённые по
-  // ссылке (`?detail=shared:<token>`): загрузчику хватает цели и режима.
+  // ссылке (`?detail=shared:<token>`): хосту листа хватает цели и режима.
   const {
     detailTarget,
     isSharedDetail,
@@ -72,19 +69,29 @@
     closeDetail,
   } = useCharacterSheetDetail();
 
-  const { status: detailStatus, load: reloadDetail } = useCharacterSheetLoader(
-    detailTarget,
-    { shared: isSharedDetail },
-  );
-
-  // Правок в чужом листе не бывает: автосейв сам молчит в режиме просмотра.
-  useCharacterSheetAutosave();
-
-  const detailNotFoundSubtitle = computed(() =>
+  // Свой лист хост получает идентификатором, чужой — токеном ссылки
+  const detailHostProps = computed(() =>
     isSharedDetail.value
-      ? SHEET_NOT_FOUND_SUBTITLES.shared
-      : SHEET_NOT_FOUND_SUBTITLES.own,
+      ? { shareToken: detailTarget.value }
+      : { characterId: detailTarget.value },
   );
+
+  // Другой лист в панели — новый хост: лист задаётся ему один раз
+  const detailHostKey = computed(() =>
+    createSheetKey({
+      source: isSharedDetail.value ? 'shared' : 'own',
+      id: detailTarget.value,
+    }),
+  );
+
+  /**
+   * Лист в панели просит показать вместо себя другой: право на правки выдали
+   * или отозвали. Как и раньше, открывается страница этого листа.
+   * @param target - чей лист и чем он открывается; `null` — листа нет
+   */
+  function handleRetarget(target: SheetKeyTarget | null) {
+    navigateTo(getSheetPagePath(target), { replace: true });
+  }
 
   /** Открывает выбранный лист на отдельной странице. */
   function handleExpand() {
@@ -163,39 +170,20 @@
           v-if="isDetailOpen"
           class="flex h-full flex-col overflow-y-auto p-4"
         >
-          <CharacterSheetSkeleton v-if="detailStatus === 'pending'" />
-
-          <UiResult
-            v-else-if="detailStatus === 'notFound'"
-            status="404"
-            title="Лист не найден"
-            :sub-title="detailNotFoundSubtitle"
-          >
-            <template #extra>
-              <UButton @click.left.exact.prevent="closeDetail">
-                К списку листов
-              </UButton>
-            </template>
-          </UiResult>
-
-          <UiResult
-            v-else-if="detailStatus === 'error'"
-            status="error"
-            title="Не удалось загрузить лист"
-          >
-            <template #extra>
-              <UButton @click.left.exact.prevent="reloadDetail">
-                Повторить
-              </UButton>
-            </template>
-          </UiResult>
-
-          <CharacterSheetBody
-            v-else-if="detailStatus === 'ready'"
+          <CharacterSheetHost
+            :key="detailHostKey"
+            v-bind="detailHostProps"
             can-expand
             @close="closeDetail"
             @expand="handleExpand"
-          />
+            @retarget="handleRetarget"
+          >
+            <template #notFoundActions>
+              <UButton @click.left.exact.prevent="closeDetail">
+                {{ SHEET_HOST_LABELS.toList }}
+              </UButton>
+            </template>
+          </CharacterSheetHost>
         </div>
 
         <div
@@ -209,11 +197,11 @@
             />
 
             <h3 class="text-lg font-semibold text-highlighted">
-              Лист не выбран
+              {{ SHEET_HOST_LABELS.emptyTitle }}
             </h3>
 
             <p class="text-sm text-secondary">
-              Выберите лист персонажа из списка, чтобы открыть его здесь
+              {{ SHEET_HOST_LABELS.emptyDescription }}
             </p>
           </div>
         </div>

@@ -26,6 +26,11 @@
   } from '../../model';
   import SheetCustomBonusRows from './SheetCustomBonusRows.vue';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   /** Строка навыка в модалке: черновик навыка и всё, что рисуется рядом с ним. */
   interface SkillSettingsRow {
     /** Запись черновика: её правят поля строки. */
@@ -69,7 +74,7 @@
     close: [];
   }>();
 
-  const { character, setSkills } = useCharacterSheet();
+  const { character, setSkills } = useCharacterSheet(sheetKey);
 
   // Черновик правится до «Применить»: копируются и сами навыки, и списки их
   // бонусов — иначе правки уходили бы в лист мимо кнопки.

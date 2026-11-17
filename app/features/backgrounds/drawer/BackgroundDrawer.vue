@@ -13,13 +13,8 @@
     (e: 'close'): void;
   }>();
 
-  const { data: detail, status } = await useAsyncData(
-    computed(() => `background-${url}`),
-    () => $fetch<BackgroundDetailResponse>(`/api/v2/backgrounds/${url}`),
-    {
-      server: false,
-      immediate: true,
-    },
+  const { data: detail, status } = useEntityDetail<BackgroundDetailResponse>(
+    () => `/api/v2/backgrounds/${url}`,
   );
 
   const isLoading = computed(() => status.value === 'pending');

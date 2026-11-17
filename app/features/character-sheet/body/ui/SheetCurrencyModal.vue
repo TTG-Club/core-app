@@ -17,11 +17,16 @@
     SHEET_EMPTY_LABELS,
   } from '../../model';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
 
-  const { character, setCurrency } = useCharacterSheet();
+  const { character, setCurrency } = useCharacterSheet(sheetKey);
 
   const draftCurrency = ref<CharacterCurrency>({ ...character.value.currency });
 

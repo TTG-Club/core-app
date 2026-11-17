@@ -52,7 +52,7 @@ export function useCharacterSheetPresence(
 
   const isAccessLost = ref(false);
 
-  const remoteVersion = useCharacterSheetRemoteVersion();
+  const { setRemoteVersion } = useCharacterSheetRemoteVersion();
 
   const interval = computed(() =>
     otherUsers.value.length || toValue(isEditor)
@@ -79,10 +79,7 @@ export function useCharacterSheetPresence(
       otherUsers.value = presence.users;
 
       if (presence.version !== null) {
-        remoteVersion.value = {
-          sheetId: requestedSheetId,
-          version: presence.version,
-        };
+        setRemoteVersion(requestedSheetId, presence.version);
       }
     } catch (error) {
       const status = getFetchStatus(error);

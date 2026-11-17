@@ -1,18 +1,15 @@
 <script setup lang="ts">
+  import type { SheetKeyTarget } from '~character-sheet/model';
+
   import { Role } from '~/shared/types';
-  import {
-    CharacterSheetBody,
-    CharacterSheetSkeleton,
-  } from '~character-sheet/body';
-  import {
-    useCharacterSheetAutosave,
-    useCharacterSheetLoader,
-  } from '~character-sheet/composables';
+  import { CharacterSheetSkeleton } from '~character-sheet/body';
+  import { CharacterSheetHost } from '~character-sheet/host';
   import {
     CHARACTER_SHEET_ROUTE,
     CHARACTER_SHEET_TITLE,
+    getSheetPagePath,
+    SHEET_HOST_LABELS,
   } from '~character-sheet/model';
-  import { UiResult } from '~ui/result';
 
   definePageMeta({
     auth: { roles: [Role.USER] },
@@ -32,9 +29,15 @@
     return typeof id === 'string' && id ? id : '';
   });
 
-  const { status, load } = useCharacterSheetLoader(sheetId);
-
-  useCharacterSheetAutosave();
+  /**
+   * Лист просит показать вместо себя другой: право на правки выдали или
+   * отозвали. Страница переходит на адрес этого листа, не оставляя прежний
+   * в истории.
+   * @param target - чей лист и чем он открывается; `null` — листа нет
+   */
+  function handleRetarget(target: SheetKeyTarget | null) {
+    navigateTo(getSheetPagePath(target), { replace: true });
+  }
 
   /** Закрытие листа возвращает к списку листов персонажей. */
   function handleClose() {
@@ -48,35 +51,19 @@
     :title="CHARACTER_SHEET_TITLE"
   >
     <ClientOnly>
-      <CharacterSheetSkeleton
-        v-if="status === 'pending' || status === 'idle'"
-      />
-
-      <UiResult
-        v-else-if="status === 'notFound'"
-        status="404"
-        title="Лист не найден"
-        sub-title="Возможно, он был удалён или принадлежит другому пользователю"
-      >
-        <template #extra>
-          <UButton :to="CHARACTER_SHEET_ROUTE"> К списку листов </UButton>
-        </template>
-      </UiResult>
-
-      <UiResult
-        v-else-if="status === 'error'"
-        status="error"
-        title="Не удалось загрузить лист"
-      >
-        <template #extra>
-          <UButton @click.left.exact.prevent="load"> Повторить </UButton>
-        </template>
-      </UiResult>
-
-      <CharacterSheetBody
-        v-else
+      <!-- Ключ: другой лист по тому же маршруту — новый хост -->
+      <CharacterSheetHost
+        :key="sheetId"
+        :character-id="sheetId"
         @close="handleClose"
-      />
+        @retarget="handleRetarget"
+      >
+        <template #notFoundActions>
+          <UButton :to="CHARACTER_SHEET_ROUTE">
+            {{ SHEET_HOST_LABELS.toList }}
+          </UButton>
+        </template>
+      </CharacterSheetHost>
 
       <template #fallback>
         <CharacterSheetSkeleton />

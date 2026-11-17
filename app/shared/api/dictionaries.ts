@@ -43,7 +43,8 @@ enum DictionaryEndpoints {
   WEAPON_PROPERTIES = '/api/v2/dictionaries/weapon/properties',
   WEAPON_MASTERY = '/api/v2/dictionaries/weapon/mastery',
   WEAPON_AMMUNITION = '/api/v2/dictionaries/weapon/ammunition',
-  SOURCE_TYPES = '/api/v2/dictionaries/source/types',
+  SOURCE_OFFICIALITIES = '/api/v2/dictionaries/source/officialities',
+  SOURCE_CATEGORIES = '/api/v2/dictionaries/source/categories',
   NOTIFICATION_TYPES = '/api/v2/dictionaries/notification/types',
   ATTACK_TYPES = '/api/v2/dictionaries/attack/types',
   SPELL_AREA = '/api/v2/dictionaries/spell-area',
@@ -324,10 +325,31 @@ class Dictionaries {
     });
   };
 
-  public sourceTypes = <R extends NitroFetchRequest>(
+  /**
+   * Степени официальности источника: официальный, UA, третьи лица, хомбрю.
+   *
+   * @param config - Параметры запроса
+   * @returns Варианты для выпадающего списка
+   */
+  public sourceOfficialities = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
-    return $fetch(DictionaryEndpoints.SOURCE_TYPES, {
+    return $fetch(DictionaryEndpoints.SOURCE_OFFICIALITIES, {
+      ...config,
+      method: 'get',
+    });
+  };
+
+  /**
+   * Категории источника: основные правила, сеттинг, приключения.
+   *
+   * @param config - Параметры запроса
+   * @returns Варианты для выпадающего списка
+   */
+  public sourceCategories = <R extends NitroFetchRequest>(
+    config: Omit<NitroFetchOptions<R>, 'method'> = {},
+  ): Promise<Array<SelectOption>> => {
+    return $fetch(DictionaryEndpoints.SOURCE_CATEGORIES, {
       ...config,
       method: 'get',
     });

@@ -1,94 +1,30 @@
-import type {
-  Character,
-  CharacterSheetDetail,
-  SheetSaveStatus,
-} from '../model';
+import type { SheetSaveQueue, SheetSaveStatus } from '../model';
 
 import { StatusCodes } from 'http-status-codes';
 
 import { getFetchStatus } from '~initiative/model';
 
 import {
-  DRAFT_CHARACTER_ID,
+  createSheetSaveQueue,
   fetchCharacterSheet,
+  getSheetStateKey,
   mergeCharacterSheets,
+  parseSheetKey,
   SHEET_KEEPALIVE_MAX_BYTES,
-  SHEET_SAVE_DEBOUNCE_MS,
-  SHEET_SAVE_RETRY_LIMIT,
-  SHEET_SAVE_RETRY_MAX_DELAY_MS,
   updateCharacterSheet,
 } from '../model';
 import { useCharacterSheet } from './useCharacterSheet';
 
-/** Несохранённое состояние листа, ожидающее отправки. */
-interface PendingSave {
-  /**
-   * Идентификатор листа на момент правки. Фиксируется здесь, а не читается при
-   * отправке: пока тикал дебаунс, пользователь мог открыть другой лист или
-   * закрыть текущий — хвост правок должен уехать в свой лист.
-   */
-  sheetId: string;
-
-  data: Character;
-  json: string;
-
-  /**
-   * Последний принятый сервером документ, от которого сделаны правки. Нужен
-   * слиянию: если лист тем временем сохранил другой редактор, свои правки
-   * переносятся на его версию как разница с этой базой.
-   */
-  base: Character;
-}
-
-/** Последнее принятое сервером состояние открытого листа. */
-interface SheetBaseline {
-  sheetId: string;
-  data: Character;
-  json: string;
-}
-
-/** Версия листа на сервере, о которой узнали без сохранения. */
-interface RemoteSheetVersion {
-  sheetId: string;
-  version: number;
-}
-
 /**
- * Размер документа листа в байтах. Считается по UTF-8, а не по длине строки:
- * лист написан по-русски, и почти каждый символ занимает два байта — по
- * `length` документ выглядел бы вдвое легче квоты, в которую на самом деле не
- * влезает. Серверный `getStringByteSize` тут не годится: он считает через
- * `Buffer`, которого в браузере нет.
+ * Статус автосохранения листа: очередь сохранения пишет, индикатор шапки
+ * читает. У каждого открытого листа свой.
  *
- * @param save очередь на отправку.
- * @returns размер документа в байтах.
- */
-function getPendingSaveBytes(save: PendingSave): number {
-  return new TextEncoder().encode(save.json).byteLength;
-}
-
-/**
- * Пауза перед очередным повтором сохранения: удваивается с каждой неудачей,
- * чтобы упавший бэкенд не получал один и тот же PUT каждые полторы секунды.
- *
- * @param attempt сколько попыток уже сорвалось.
- * @returns пауза в миллисекундах.
- */
-function getSaveRetryDelay(attempt: number): number {
-  return Math.min(
-    SHEET_SAVE_DEBOUNCE_MS * 2 ** attempt,
-    SHEET_SAVE_RETRY_MAX_DELAY_MS,
-  );
-}
-
-/**
- * Общий статус автосохранения листа: автосейв пишет, индикатор шапки читает.
- *
+ * @param sheetKey ключ открытого листа.
  * @returns реактивный статус сохранения.
  */
-export function useCharacterSheetSaveStatus() {
+export function useCharacterSheetSaveStatus(sheetKey: string) {
   return useState<SheetSaveStatus>(
-    'character-sheet:save-status',
+    getSheetStateKey('save-status', sheetKey),
     () => 'saved',
   );
 }
@@ -137,414 +73,199 @@ export function useCharacterSheetVersion() {
 }
 
 /**
- * Версия открытого листа на сервере, известная по отметке присутствия. Пишет
- * отметка, читает автосохранение: если версия новее своей, лист сохранил
- * кто-то ещё, и его правки подтягиваются слиянием, не дожидаясь своего
- * сохранения.
+ * Версии листов на сервере, известные по отметкам присутствия: `sheetId →
+ * версия`. Пишет отметка, читает автосохранение: если версия новее своей,
+ * лист сохранил кто-то ещё, и его правки подтягиваются слиянием, не
+ * дожидаясь своего сохранения.
  *
- * @returns реактивная версия листа на сервере; null — неизвестна.
+ * По листам: открытых листов может быть несколько, и отметка одного не
+ * должна затирать версию другого.
+ *
+ * @returns чтение и запись версии листа на сервере.
  */
 export function useCharacterSheetRemoteVersion() {
-  return useState<RemoteSheetVersion | null>(
-    'character-sheet:remote-version',
-    () => null,
+  const remoteVersions = useState<Record<string, number>>(
+    'character-sheet:remote-versions',
+    () => ({}),
   );
-}
 
-/**
- * Состояние автосохранения — на уровне модуля, а не экземпляра композабла.
- * Контейнеры листа (страница, панель списка, drawer из глобального
- * overlay-хоста) живут по разным жизненным циклам, и их экземпляры автосейва
- * дублируются: общая база/очередь/таймер гарантируют, что правка уходит одним
- * PUT, кто бы из живых наблюдателей её ни заметил. На сервере код не
- * выполняется (см. гард в композабле), поэтому состояние строго клиентское.
- */
-let baseline: SheetBaseline | null = null;
-let pending: PendingSave | null = null;
-let isSaving = false;
-
-/** Идёт подтягивание чужих правок — второй экземпляр автосейва его не дублирует. */
-let isSyncing = false;
-let timer: ReturnType<typeof setTimeout> | null = null;
-
-/**
- * Сколько раз подряд отправка уже сорвалась. Считается здесь же, рядом с
- * очередью: повтор планирует тот экземпляр, который поймал ошибку, а ждёт его
- * общая правка.
- */
-let retryAttempt = 0;
-
-/**
- * Двигает базу открытого листа к документу, который принял сервер.
- *
- * @param sheetId идентификатор листа.
- * @param data принятый документ.
- * @param json он же строкой (чтобы не сериализовать дважды).
- */
-function moveBaseline(sheetId: string, data: Character, json: string): void {
-  if (baseline?.sheetId === sheetId) {
-    baseline = { sheetId, data, json };
+  /**
+   * Версия листа на сервере.
+   *
+   * @param sheetId идентификатор листа.
+   * @returns версия; undefined — отметок ещё не было.
+   */
+  function getRemoteVersion(sheetId: string): number | undefined {
+    return remoteVersions.value[sheetId];
   }
+
+  /**
+   * Запоминает версию листа на сервере.
+   *
+   * @param sheetId идентификатор листа.
+   * @param version версия из ответа отметки присутствия.
+   */
+  function setRemoteVersion(sheetId: string, version: number): void {
+    if (remoteVersions.value[sheetId] !== version) {
+      remoteVersions.value = { ...remoteVersions.value, [sheetId]: version };
+    }
+  }
+
+  return { getRemoteVersion, setRemoteVersion };
+}
+
+/** Очередь сохранения листа и сколько мест её сейчас держат. */
+interface SaveQueueEntry {
+  queue: SheetSaveQueue;
+  holders: number;
 }
 
 /**
- * Автосохранение листа персонажа: правки уходят на бэк с дебаунсом, статус
- * («Сохранение…»/«Сохранено»/ошибка) — в общем состоянии для индикатора шапки.
+ * Очереди сохранения открытых листов. Один лист может стоять сразу в панели
+ * списка и в дровере: очередь у него одна, поэтому правка уходит одним
+ * запросом, кто бы из наблюдателей её ни заметил. У разных листов очереди
+ * разные — сохранение одного не задерживает и не затирает другой.
  *
- * Идентификатор листа берётся из самих данных (`character.id`): у загруженного
- * листа это серверный UUID, у пустого черновика — {@link DRAFT_CHARACTER_ID},
- * который сохранению не подлежит. Контейнер ничего не передаёт — любой живой
- * экземпляр композабла сохраняет правки из любого контекста редактирования.
+ * На сервере код не выполняется (см. гард в композабле), поэтому состояние
+ * строго клиентское.
+ */
+const saveQueues = new Map<string, SaveQueueEntry>();
+
+/**
+ * Автосохранение листа персонажа: правки уходят на бэк с паузой, статус
+ * («Сохранение…»/«Сохранено»/ошибка) — в состоянии листа для индикатора
+ * шапки. Чужой лист на просмотр не сохраняется: ручек записи в него нет.
  *
  * Наблюдение за листом не глубокое: все экшены `useCharacterSheet` заменяют
  * `character.value` новым объектом целиком. Цикл «watch → PUT» не возникает:
  * сохранение не пишет в `character`, а повторное срабатывание с тем же JSON
  * отсеивается сравнением с базой последнего сохранённого состояния.
  *
+ * Побочные действия: запросы к серверу, слушатель `beforeunload`; при уходе
+ * со страницы и при закрытии листа хвост правок досылается.
+ *
+ * @param sheetKey ключ открытого листа.
  * @returns статус сохранения и повтор после ошибки.
  */
-export function useCharacterSheetAutosave() {
-  const { character, isReadonly, loadCharacter } = useCharacterSheet();
+export function useCharacterSheetAutosave(sheetKey: string) {
+  const { character, isReadonly, loadCharacter } = useCharacterSheet(sheetKey);
 
-  const saveStatus = useCharacterSheetSaveStatus();
+  const saveStatus = useCharacterSheetSaveStatus(sheetKey);
 
   const { getSheetVersion, setSheetVersion } = useCharacterSheetVersion();
 
-  /** Повтор отправки после ошибки сохранения — вручную, из шапки листа. */
-  function retry(): void {
-    if (pending) {
-      // Счёт автоматических попыток начинается заново: игрок нажал повтор,
-      // увидев ошибку, — значит с прошлой серии могло измениться и окружение.
-      retryAttempt = 0;
-      saveStatus.value = 'saving';
-      void flush();
-    }
-  }
+  const { getRemoteVersion } = useCharacterSheetRemoteVersion();
+
+  const { source, id: sheetId } = parseSheetKey(sheetKey);
 
   // Во время SSR правок не бывает (загрузка листа и редактирование — только
-  // на клиенте), а модульное состояние не должно делиться между запросами.
-  if (import.meta.server) {
-    return { saveStatus, retry };
+  // на клиенте), а очереди не должны делиться между запросами. Лист по
+  // ссылке не правится вовсе
+  if (import.meta.server || source === 'shared') {
+    return { saveStatus, retry: () => undefined };
   }
 
-  /**
-   * Перезапускает таймер отправки накопленных изменений.
-   *
-   * @param delay пауза до отправки; по умолчанию — дебаунс правок.
-   */
-  function restartTimer(delay: number = SHEET_SAVE_DEBOUNCE_MS): void {
-    if (timer) {
-      clearTimeout(timer);
+  /** Очередь листа: общая для всех мест, где он открыт. */
+  function acquireQueue(): SheetSaveQueue {
+    const existing = saveQueues.get(sheetKey);
+
+    if (existing) {
+      existing.holders += 1;
+
+      return existing.queue;
     }
 
-    timer = setTimeout(() => {
-      timer = null;
-      void flush();
-    }, delay);
+    const created = createSheetSaveQueue(sheetId, {
+      save: (data, version, options) =>
+        updateCharacterSheet(sheetId, data, version, options),
+      fetch: () => fetchCharacterSheet(sheetId),
+      merge: mergeCharacterSheets,
+      isConflict: (error) => getFetchStatus(error) === StatusCodes.CONFLICT,
+      getVersion: () => getSheetVersion(sheetId),
+      setVersion: (version) => setSheetVersion(sheetId, version),
+      onStatus: (status) => {
+        saveStatus.value = status;
+      },
+      onDocument: loadCharacter,
+    });
+
+    saveQueues.set(sheetKey, { queue: created, holders: 1 });
+
+    return created;
   }
 
-  /**
-   * Планирует повтор после сорвавшейся отправки. Без него правка ждала бы
-   * следующего действия игрока: `pending` остаётся в очереди, но отправить его
-   * некому — а игрок уже считает лист сохранённым и уходит со страницы.
-   *
-   * После {@link SHEET_SAVE_RETRY_LIMIT} попыток очередь остаётся с ошибкой и
-   * ждёт следующей правки, ухода со страницы либо явного {@link retry} (кнопки
-   * повтора в шапке пока нет — индикатор сохранения только показывает
-   * состояние).
-   */
-  function scheduleRetry(): void {
-    if (retryAttempt >= SHEET_SAVE_RETRY_LIMIT) {
-      return;
-    }
+  const queue = acquireQueue();
 
-    const delay = getSaveRetryDelay(retryAttempt);
-
-    retryAttempt += 1;
-
-    restartTimer(delay);
+  /** Повтор отправки после ошибки сохранения — вручную, из шапки листа. */
+  function retry(): void {
+    queue.retry();
   }
 
-  /**
-   * Применяет документ, который сервер принял от другого редактора (или из
-   * другой вкладки). Свои несохранённые правки не теряются: они сливаются с ним
-   * (`mergeCharacterSheets`) и уходят следующим сохранением уже от его версии.
-   *
-   * Цикла «загрузка → watch → PUT» нет: база выставляется в серверный документ
-   * до записи в `character`, и `scheduleSave` отсеивает срабатывание сравнением
-   * с ней; слитый документ отличается от базы ровно своими правками — их и
-   * нужно дослать.
-   *
-   * @param detail актуальный лист с сервера.
-   * @param local свои правки этого листа; null — их нет.
-   */
-  function applyServerDocument(
-    detail: CharacterSheetDetail,
-    local: PendingSave | null,
-  ): void {
-    const sheetId = detail.id;
-    const serverJson = JSON.stringify(detail.data);
-
-    setSheetVersion(sheetId, detail.version);
-    moveBaseline(sheetId, detail.data, serverJson);
-
-    const merged = local
-      ? mergeCharacterSheets(local.base, local.data, detail.data)
-      : detail.data;
-
-    const mergedJson = JSON.stringify(merged);
-
-    if (mergedJson === serverJson) {
-      if (pending?.sheetId === sheetId) {
-        pending = null;
-        saveStatus.value = 'saved';
-      }
-    } else {
-      pending = { sheetId, data: merged, json: mergedJson, base: detail.data };
-      restartTimer();
-    }
-
-    if (character.value.id === sheetId) {
-      loadCharacter(merged);
-    }
-  }
-
-  /**
-   * Конфликт сохранения: лист успел сохранить кто-то ещё (редактор, другая
-   * вкладка, хиты от мастера боя). Актуальный документ загружается, свои
-   * правки сливаются с ним и отправляются заново — ничего не пропадает.
-   * Сорвалась загрузка — правка остаётся в очереди, повтор попробует снова.
-   *
-   * @param rejected отвергнутая отправка.
-   */
-  async function resolveConflict(rejected: PendingSave): Promise<void> {
-    retryAttempt = 0;
-
-    try {
-      const detail = await fetchCharacterSheet(rejected.sheetId);
-
-      // Пока шёл запрос, могли накопиться новые правки — сливаем самые свежие.
-      applyServerDocument(
-        detail,
-        pending?.sheetId === rejected.sheetId ? pending : rejected,
-      );
-    } catch {
-      saveStatus.value = 'error';
-      scheduleRetry();
-    }
-  }
-
-  /**
-   * Подтягивает чужие правки, когда версия листа на сервере обогнала свою.
-   * Пока идёт своё сохранение, ждать незачем: устаревшая версия вернёт 409, и
-   * то же слияние сделает {@link resolveConflict}.
-   *
-   * @param remote версия листа на сервере.
-   */
-  async function syncRemoteVersion(remote: RemoteSheetVersion): Promise<void> {
-    const knownVersion = getSheetVersion(remote.sheetId);
-
-    if (
-      isSaving
-      || isSyncing
-      || knownVersion === null
-      || remote.version <= knownVersion
-    ) {
-      return;
-    }
-
-    isSyncing = true;
-
-    try {
-      const detail = await fetchCharacterSheet(remote.sheetId);
-      const currentVersion = getSheetVersion(remote.sheetId);
-
-      // За время запроса своё сохранение могло уйти и принести версию новее.
-      if (
-        isSaving
-        || detail.version === null
-        || (currentVersion !== null && detail.version <= currentVersion)
-      ) {
-        return;
-      }
-
-      applyServerDocument(
-        detail,
-        pending?.sheetId === remote.sheetId ? pending : null,
-      );
-    } catch {
-      // Не страшно: следующая отметка присутствия или своё сохранение повторят.
-    } finally {
-      isSyncing = false;
-    }
-  }
-
-  /**
-   * Отправляет накопленные изменения. Ошибка не сбрасывает `pending` — база не
-   * двигается, и правку дошлёт повтор (или следующая правка, или `retry`).
-   * Конфликт версий дослать как есть нельзя — правка сначала сливается с
-   * актуальным документом (см. {@link resolveConflict}).
-   *
-   * @param options настройки отправки.
-   * @param options.keepalive запрос должен пережить закрытие страницы. Ставится
-   *   только после проверки размера тела: браузер отклоняет `keepalive` больше
-   *   квоты, и такой отказ приходит уже некому.
-   */
-  async function flush(options: { keepalive?: boolean } = {}): Promise<void> {
-    if (isSaving || !pending) {
-      return;
-    }
-
-    const current = pending;
-
-    isSaving = true;
-
-    try {
-      const savedVersion = await updateCharacterSheet(
-        current.sheetId,
-        current.data,
-        getSheetVersion(current.sheetId),
-        options,
-      );
-
-      setSheetVersion(current.sheetId, savedVersion);
-      moveBaseline(current.sheetId, current.data, current.json);
-      retryAttempt = 0;
-
-      if (pending === current) {
-        pending = null;
-        saveStatus.value = 'saved';
-      } else {
-        // За время запроса накопились новые правки — дошлём следующим циклом.
-        // Их база теперь — только что принятый документ.
-        if (pending?.sheetId === current.sheetId) {
-          pending = { ...pending, base: current.data };
-        }
-
-        restartTimer();
-      }
-    } catch (error) {
-      if (getFetchStatus(error) === StatusCodes.CONFLICT) {
-        await resolveConflict(current);
-
-        // В очереди могла остаться правка другого листа: её таймер сработал,
-        // пока шёл этот запрос, и отправка тогда была пропущена.
-        if (pending) {
-          restartTimer();
-        }
-
-        return;
-      }
-
-      saveStatus.value = 'error';
-      scheduleRetry();
-    } finally {
-      isSaving = false;
-    }
-  }
-
-  /**
-   * Планирует сохранение изменившегося листа с дебаунсом.
-   *
-   * @param next новое состояние персонажа.
-   */
-  function scheduleSave(next: Character): void {
-    // Лист открыт по ссылке: правок в нём быть не должно, а ручек записи по
-    // токену на бэке нет. Страховка на случай, если контейнер (дровер чужого
-    // листа) подключил автосейв тем же кодом, что и для своего листа.
-    if (isReadonly.value) {
-      return;
-    }
-
-    const currentSheetId = next.id === DRAFT_CHARACTER_ID ? '' : next.id;
-
-    if (!currentSheetId) {
-      // Лист закрыт (состояние сброшено к черновику): хвост правок дошлём,
-      // база очищается — следующая загрузка листа зафиксирует новую.
-      if (pending) {
-        void flush();
-      }
-
-      baseline = null;
-
-      return;
-    }
-
-    const json = JSON.stringify(next);
-
-    if (currentSheetId !== baseline?.sheetId) {
-      // Хвост правок предыдущего листа дошлём немедленно, не дожидаясь
-      // дебаунса — иначе он потерялся бы при смене базы ниже.
-      if (pending && pending.sheetId !== currentSheetId) {
-        void flush();
-      }
-
-      // Смена листа: это срабатывание — загрузка документа в состояние,
-      // фиксируем базу без отправки.
-      baseline = { sheetId: currentSheetId, data: next, json };
-      saveStatus.value = 'saved';
-
-      return;
-    }
-
-    if (json === baseline.json) {
-      return;
-    }
-
-    pending = {
-      sheetId: currentSheetId,
-      data: next,
-      json,
-      // База серии правок — тот документ, от которого начали править; у новой
-      // серии это последнее принятое сервером.
-      base: pending?.sheetId === currentSheetId ? pending.base : baseline.data,
-    };
-
-    // Новая правка — новая серия попыток: прошлая ошибка могла быть разовой.
-    retryAttempt = 0;
-    saveStatus.value = 'saving';
-    restartTimer();
-  }
-
-  watch(character, scheduleSave);
-
-  // Лист сохранил кто-то ещё — подтягиваем его правки сразу, а не при своём
-  // сохранении. Цикла нет: слияние пишет версию и документ, но не отметку.
-  const remoteVersion = useCharacterSheetRemoteVersion();
-
-  watch(remoteVersion, (remote) => {
-    if (remote) {
-      void syncRemoteVersion(remote);
+  watch(character, (next) => {
+    // Лист открыт администратором на просмотр: правок в нём быть не должно,
+    // а писать в чужой лист нельзя
+    if (!isReadonly.value) {
+      queue.track(next);
     }
   });
 
-  onBeforeUnmount(() => {
-    // Уход контейнера не должен терять хвост дебаунса. Таймер не трогаем —
-    // другие живые экземпляры продолжают им пользоваться.
-    void flush();
+  // Лист сохранил кто-то ещё — подтягиваем его правки сразу, а не при своём
+  // сохранении. Цикла нет: слияние пишет версию и документ, но не отметку.
+  watch(
+    () => getRemoteVersion(sheetId),
+    (remoteVersion) => {
+      if (remoteVersion !== undefined) {
+        void queue.syncRemote(remoteVersion);
+      }
+    },
+  );
+
+  onScopeDispose(() => {
+    const entry = saveQueues.get(sheetKey);
+
+    if (!entry) {
+      return;
+    }
+
+    entry.holders -= 1;
+
+    // Уход одного из мест не должен терять хвост паузы
+    if (entry.holders > 0) {
+      void queue.flush();
+
+      return;
+    }
+
+    // Лист закрыли везде: хвост досылается, а следующее открытие начнёт с
+    // нового документа. Очередь с недосланным остаётся до следующего раза
+    queue.detach();
+
+    if (!queue.hasPending() && !queue.isSaving()) {
+      saveQueues.delete(sheetKey);
+    }
   });
 
   // Вкладку свернули, ушли в другое приложение или перешли на другую страницу:
   // страница ещё жива, и хвост правок уходит обычным запросом, не дожидаясь
-  // дебаунса. На мобильных это единственный надёжный сигнал ухода —
+  // паузы. На мобильных это единственный надёжный сигнал ухода —
   // `beforeunload` там может не сработать вовсе.
   const visibility = useDocumentVisibility();
 
   watch(visibility, (state) => {
     if (state === 'hidden') {
-      void flush();
+      void queue.flush();
     }
   });
 
   // Закрытие вкладки: на обычный запрос времени нет, keepalive даёт браузеру
   // дослать PUT уже после закрытия страницы.
   useEventListener('beforeunload', (event) => {
-    if (!pending || isSaving) {
+    if (!queue.hasPending() || queue.isSaving()) {
       return;
     }
 
-    if (getPendingSaveBytes(pending) <= SHEET_KEEPALIVE_MAX_BYTES) {
-      void flush({ keepalive: true });
+    if (queue.getPendingBytes() <= SHEET_KEEPALIVE_MAX_BYTES) {
+      void queue.flush({ keepalive: true });
 
       return;
     }
@@ -553,8 +274,8 @@ export function useCharacterSheetAutosave() {
     // отказ придёт уже некому — правка пропала бы молча, и лист откатился бы к
     // прошлому сохранению. Поэтому шлём обычным запросом (успеет — хорошо) и
     // спрашиваем подтверждение ухода: секунды диалога хватает, чтобы запрос
-    // дошёл, а если игрок останется — сохранит дебаунс.
-    void flush();
+    // дошёл, а если игрок останется — сохранит пауза.
+    void queue.flush();
 
     event.preventDefault();
   });

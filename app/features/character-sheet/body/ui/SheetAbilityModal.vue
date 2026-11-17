@@ -18,6 +18,9 @@
   import SheetCustomBonusRows from './SheetCustomBonusRows.vue';
 
   const props = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     abilityKey: AbilityKey;
   }>();
 
@@ -25,7 +28,9 @@
     close: [];
   }>();
 
-  const { character, setAbilityBonuses, setAbilityScore } = useCharacterSheet();
+  const { character, setAbilityBonuses, setAbilityScore } = useCharacterSheet(
+    props.sheetKey,
+  );
 
   const abilityLabel = computed(() => ABILITY_LABELS[props.abilityKey]);
 

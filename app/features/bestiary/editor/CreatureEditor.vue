@@ -10,7 +10,7 @@
   import { EFFECT_FORM_CONTEXT, EFFECT_ORIGIN } from '~active-effects/model';
   import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
-  import { SelectAlignment } from '~ui/select';
+  import { SelectAlignment, SelectCreature } from '~ui/select';
   import { UploadGallery, UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
   import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
@@ -54,6 +54,9 @@
    * из всего блока нужно одно число, а ответ сервера здесь — `unknown`.
    */
   const loadedExperienceSchema = z.object({ value: z.number() });
+
+  /** Спутники из `/raw`: у существ, заведённых до появления поля, там `null`. */
+  const loadedCompanionsSchema = z.array(z.string()).catch([]);
 
   /** Блок легендарных действий из `/raw`: разбирается только список записей. */
   const loadedLegendarySchema = z
@@ -101,6 +104,7 @@
       legendary: loadedLegendarySchema.parse(raw.legendary),
       lair: loadedLairSchema.parse(raw.lair),
       spellcasting: normalizeLoadedCreatureSpellcasting(raw.spellcasting),
+      companions: loadedCompanionsSchema.parse(raw.companions),
     };
 
     const experience = loadedExperienceSchema.safeParse(raw.experience);
@@ -124,6 +128,11 @@
       revisionEntityType: REVISION_ENTITY_TYPES.CREATURE,
       transformBeforeSubmit: transformCreatureBeforeSubmit,
     });
+
+  /** Само существо в спутники себе не годится: его слаг из выбора убран. */
+  const companionExcludeUrls = computed(() =>
+    state.value.url ? [state.value.url] : [],
+  );
 
   /**
    * Лента вкладок: прокручивается по горизонтали, полоса прокрутки скрыта.
@@ -225,6 +234,26 @@
 
               <CreatureSize v-model="state.sizes" />
             </div>
+          </UCard>
+
+          <UCard
+            variant="subtle"
+            class="col-span-full"
+          >
+            <template #header>
+              <h2 class="truncate text-base text-highlighted">Спутники</h2>
+            </template>
+
+            <UFormField
+              name="companions"
+              help="Существа, с которыми это обычно встречается: рыцарь — боевой конь, некромант — скелеты. Генератор столкновений охотнее берёт их в свиту."
+            >
+              <SelectCreature
+                v-model="state.companions"
+                multiple
+                :exclude-urls="companionExcludeUrls"
+              />
+            </UFormField>
           </UCard>
         </div>
       </template>

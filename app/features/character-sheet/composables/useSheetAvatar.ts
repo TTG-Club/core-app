@@ -5,10 +5,11 @@ import { useCharacterSheet } from './useCharacterSheet';
  * Изображение персонажа: загрузка, замена и удаление файла в хранилище.
  * Ссылка живёт в документе листа, поэтому сохраняет её автосохранение листа.
  *
+ * @param sheetKey ключ открытого листа.
  * @returns ссылка на изображение, флаг загрузки и операции с картинкой.
  */
-export function useSheetAvatar() {
-  const { character, ensureEditable, setAvatar } = useCharacterSheet();
+export function useSheetAvatar(sheetKey: string) {
+  const { character, ensureEditable, setAvatar } = useCharacterSheet(sheetKey);
 
   const { isUploading, uploadImage, removeImage } = useImageUpload({
     section: SHEET_AVATAR_S3_SECTION,

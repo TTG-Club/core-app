@@ -1,3 +1,5 @@
+export { default as AdminOnlineHistoryChart } from './AdminOnlineHistoryChart.vue';
+export { default as AdminOnlineHistoryPanel } from './AdminOnlineHistoryPanel.vue';
 export { default as AdminOnlinePreferenceBreakdown } from './AdminOnlinePreferenceBreakdown.vue';
 export { default as AdminOnlinePreferencesPanel } from './AdminOnlinePreferencesPanel.vue';
 export { default as AdminOnlineSitesPanel } from './AdminOnlineSitesPanel.vue';

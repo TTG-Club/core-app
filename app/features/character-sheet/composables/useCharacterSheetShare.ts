@@ -7,42 +7,23 @@ import {
 } from '../model';
 
 /**
- * Доступ к листу по ссылке: выпуск и отзыв токена. Токен живёт в общем
- * состоянии — его кладёт туда загрузчик открытого листа либо карточка списка,
- * а меню и модалка читают, чтобы не ходить на бэк ради «расшарен ли лист».
+ * Доступ к листу по ссылке: выпуск и отзыв токена. Токены лежат в общем
+ * состоянии по идентификаторам листов — их кладёт туда загрузчик открытого
+ * листа либо карточка списка, а меню и модалка читают, чтобы не ходить на
+ * бэк ради «расшарен ли лист».
  *
- * Состояние помнит, КАКОМУ листу принадлежит токен: модалку открывают и из
- * шапки открытого листа, и из карточки соседнего в списке, и без привязки к
- * листу одна из них выдавала бы чужой доступ за свой.
+ * По листам, а не один на всё состояние: модалку открывают и из шапки
+ * открытого листа, и из карточки соседнего в списке, а открытых листов может
+ * быть несколько — токен одного нельзя выдать за доступ другого.
  *
  * @returns состояние доступа по ссылке и операции его включения/отзыва.
  */
 export function useCharacterSheetShare() {
   const toast = useToast();
 
-  const shareSheetId = useState<string | null>(
-    'character-sheet:share-sheet-id',
-    () => null,
-  );
-
-  const shareToken = useState<string | null>(
-    'character-sheet:share-token',
-    () => null,
-  );
-
-  // Токен, ПО КОТОРОМУ открыт чужой лист, — не то же самое, что `shareToken`
-  // владельца: публичная ручка токена в ответе не отдаёт, а меню действий по
-  // нему сохраняет лист к себе. Кладёт его загрузчик, читает тело листа.
-  const viewedShareToken = useState<string | null>(
-    'character-sheet:viewed-share-token',
-    () => null,
-  );
-
-  // Лист чужой, но открыт по праву редактора: править можно, а управлять
-  // доступом — нет. Кладёт загрузчик, читают шапка и тело листа.
-  const isEditorAccess = useState<boolean>(
-    'character-sheet:editor-access',
-    () => false,
+  const shareTokens = useState<Record<string, string | null>>(
+    'character-sheet:share-tokens',
+    () => ({}),
   );
 
   const isPending = ref(false);
@@ -56,7 +37,7 @@ export function useCharacterSheetShare() {
    * @returns true, если у листа есть живая ссылка.
    */
   function isSheetShared(sheetId: string): boolean {
-    return shareSheetId.value === sheetId && shareToken.value !== null;
+    return Boolean(shareTokens.value[sheetId]);
   }
 
   /**
@@ -65,42 +46,33 @@ export function useCharacterSheetShare() {
    * справочника.
    *
    * @param sheetId идентификатор листа.
-   * @returns адрес ссылки; null — доступ выключен либо токен от другого листа.
+   * @returns адрес ссылки; null — доступ выключен либо о листе ничего не известно.
    */
   function getShareUrl(sheetId: string): string | null {
-    return isSheetShared(sheetId)
-      ? `${getOrigin()}${CHARACTER_SHEET_SHARED_ROUTE}/${shareToken.value}`
+    return getShareUrlByToken(shareTokens.value[sheetId]);
+  }
+
+  /**
+   * Адрес ссылки по готовому токену — когда токен известен не из общего
+   * состояния: из списка листов, сохранённой записи или адреса чужого листа.
+   *
+   * @param token токен доступа; null — доступ выключен.
+   * @returns адрес ссылки либо null.
+   */
+  function getShareUrlByToken(token: string | null | undefined): string | null {
+    return token
+      ? `${getOrigin()}${CHARACTER_SHEET_SHARED_ROUTE}/${token}`
       : null;
   }
 
   /**
-   * Кладёт токен листа в общее состояние (загрузка листа, открытие модалки из
-   * карточки, сброс при закрытии).
+   * Запоминает токен листа (загрузка листа, открытие модалки из карточки).
    *
-   * @param sheetId идентификатор листа; null — состояние сбрасывается.
+   * @param sheetId идентификатор листа.
    * @param token токен из ответа API; null — доступ по ссылке выключен.
    */
-  function setShareToken(sheetId: string | null, token: string | null): void {
-    shareSheetId.value = sheetId;
-    shareToken.value = sheetId ? token : null;
-  }
-
-  /**
-   * Кладёт в общее состояние токен, по которому открыт чужой лист.
-   *
-   * @param token токен из адреса или сохранённой записи; null — лист свой.
-   */
-  function setViewedShareToken(token: string | null): void {
-    viewedShareToken.value = token;
-  }
-
-  /**
-   * Отмечает, открыт ли лист по праву редактора, а не владельцем.
-   *
-   * @param editorAccess true — лист чужой, правки разрешены владельцем.
-   */
-  function setEditorAccess(editorAccess: boolean): void {
-    isEditorAccess.value = editorAccess;
+  function setShareToken(sheetId: string, token: string | null): void {
+    shareTokens.value = { ...shareTokens.value, [sheetId]: token };
   }
 
   /**
@@ -161,15 +133,11 @@ export function useCharacterSheetShare() {
   }
 
   return {
-    shareToken,
-    viewedShareToken,
-    isEditorAccess,
     isPending,
     isSheetShared,
     getShareUrl,
+    getShareUrlByToken,
     setShareToken,
-    setViewedShareToken,
-    setEditorAccess,
     enableShare,
     disableShare,
   };

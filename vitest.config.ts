@@ -45,6 +45,9 @@ export default defineConfig({
       '~initiative': fileURLToPath(
         new URL('./app/features/initiative', import.meta.url),
       ),
+      '~calculator': fileURLToPath(
+        new URL('./app/features/calculator', import.meta.url),
+      ),
       '~character-sheet': fileURLToPath(
         new URL('./app/features/character-sheet', import.meta.url),
       ),

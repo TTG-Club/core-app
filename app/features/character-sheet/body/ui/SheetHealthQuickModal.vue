@@ -5,11 +5,16 @@
     SHEET_HEALTH_QUICK_LABELS,
   } from '../../model';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
 
-  const { character, maxHitPoints, setHitPoints } = useCharacterSheet();
+  const { character, maxHitPoints, setHitPoints } = useCharacterSheet(sheetKey);
 
   const health = computed(() => character.value.health);
 

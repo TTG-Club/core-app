@@ -1,9 +1,6 @@
-import type { MaybeRefOrGetter } from 'vue';
-
 import type { CharacterSheetDetail, SheetReadonlyReason } from '../model';
 
 import { StatusCodes } from 'http-status-codes';
-import { toValue } from 'vue';
 
 import { getFetchStatus } from '~initiative/model';
 
@@ -11,10 +8,17 @@ import {
   fetchCharacterSheet,
   fetchCharacterSheetForAdmin,
   fetchSharedCharacterSheet,
+  getSheetStateKey,
+  parseSheetKey,
 } from '../model';
 import { useCharacterSheet } from './useCharacterSheet';
 import { useCharacterSheetVersion } from './useCharacterSheetAutosave';
 import { useCharacterSheetShare } from './useCharacterSheetShare';
+import {
+  acquireSheetSession,
+  isSheetSessionOpen,
+  releaseSheetSession,
+} from './useSheetSessions';
 
 /** Статус загрузки листа: idle — лист не выбран (пустой идентификатор). */
 export type SheetLoadStatus =
@@ -23,19 +27,6 @@ export type SheetLoadStatus =
   | 'ready'
   | 'notFound'
   | 'error';
-
-/** Настройки загрузчика листа. */
-export interface SheetLoaderOptions {
-  /**
-   * Лист открыт по ссылке «поделиться»: грузится публичной ручкой по токену,
-   * а состояние переводится в режим просмотра. Идентификатор в этом случае —
-   * токен ссылки, а не id листа.
-   *
-   * Реактивный: правая панель списка показывает то свой лист, то чужой по
-   * ссылке, не перемонтируясь, — режим должен переключаться вместе с выбором.
-   */
-  shared?: MaybeRefOrGetter<boolean>;
-}
 
 /** Загруженный лист и режим, в котором его показывать. */
 interface LoadedSheet {
@@ -46,44 +37,52 @@ interface LoadedSheet {
 }
 
 /**
- * Загрузка сохранённого листа в общее состояние `useCharacterSheet` по
- * идентификатору. Используется страницей листа, панелью широкого режима и
- * дровером. При размонтировании хозяина состояние сбрасывается, чтобы
- * следующий открытый лист не мигал данными предыдущего.
+ * Загрузка сохранённого листа в состояние `useCharacterSheet` его ключа.
+ * Используется хостом листа: на странице, в панели широкого режима, в
+ * дровере. Один лист может быть открыт сразу в нескольких местах: грузит
+ * его первое, остальные показывают уже загруженное — повторная загрузка
+ * затёрла бы правки, которые ещё не ушли на сервер. Состояние сбрасывается,
+ * когда лист закрыли в последнем месте.
  *
+ * Свой лист открывается по идентификатору, чужой — по токену ссылки
+ * «поделиться»: тогда он грузится публичной ручкой и открыт на просмотр.
  * Чужой лист по идентификатору открывается только администратору и только на
  * просмотр — так он смотрит лист из баг-репорта, даже если ссылкой на него не
  * делились.
  *
- * Побочные эффекты: пишет в общее состояние листа (документ, режим просмотра,
- * токены ссылки) и сбрасывает его при уходе хозяина; получив отказ по чужому
- * листу до загрузки профиля, догружает профиль (`useUser().fetch`), чтобы
- * узнать роль.
+ * Побочные эффекты: пишет в состояние листа (документ, режим просмотра,
+ * токен ссылки, версию) и ведёт счёт мест, где лист открыт. Если чужой лист
+ * отдан как 403 до загрузки профиля, догружает профиль (`useUser().fetch`),
+ * чтобы узнать роль.
  *
- * @param sheetId идентификатор листа (реактивный для панели `?detail=`) либо
- *   токен ссылки при `options.shared`.
- * @param options режим загрузки; по умолчанию — свой лист.
+ * @param sheetKey ключ открытого листа (`createSheetKey`).
  * @returns статус загрузки и ручной перезапуск.
  */
-export function useCharacterSheetLoader(
-  sheetId: MaybeRefOrGetter<string>,
-  options: SheetLoaderOptions = {},
-) {
-  const { loadCharacter, resetCharacter, setReadonly } = useCharacterSheet();
+export function useCharacterSheetLoader(sheetKey: string) {
+  const { source, id: sheetId } = parseSheetKey(sheetKey);
+  const isShared = source === 'shared';
 
-  const { setShareToken, setViewedShareToken, setEditorAccess } =
-    useCharacterSheetShare();
+  const { loadCharacter, resetCharacter, setReadonly, setEditorAccess } =
+    useCharacterSheet(sheetKey);
+
+  const { setShareToken } = useCharacterSheetShare();
 
   const { setSheetVersion } = useCharacterSheetVersion();
   const { user, isAdmin, fetch: fetchProfile } = useUser();
 
-  const isShared = computed(() => toValue(options.shared ?? false));
-
-  const status = ref<SheetLoadStatus>('idle');
+  // Статус общий для всех мест, где лист открыт: второе место не грузит лист
+  // заново, а ждёт загрузку первого
+  const status = useState<SheetLoadStatus>(
+    getSheetStateKey('load-status', sheetKey),
+    () => 'idle',
+  );
 
   // Режим просмотра включается до первого рендера тела листа, иначе шапка
-  // успеет показать чужому зрителю замок и меню владельца.
-  setReadonly(isShared.value ? 'shared' : null);
+  // успеет показать чужому зрителю замок и меню владельца. Лист, уже
+  // открытый в другом месте, свой режим знает
+  if (acquireSheetSession(sheetKey)) {
+    setReadonly(isShared ? 'shared' : null);
+  }
 
   /**
    * Может ли зритель прочитать чужой лист как администратор. На странице листа
@@ -106,24 +105,19 @@ export function useCharacterSheetLoader(
    * перечитывает его отдельной ручкой на просмотр, остальным отказ уходит
    * дальше и превращается в «не найден».
    *
-   * @param requestedSheetId идентификатор листа либо токен ссылки.
-   * @param requestedShared лист открыт по ссылке.
    * @returns лист и причина режима просмотра.
    */
-  async function fetchSheet(
-    requestedSheetId: string,
-    requestedShared: boolean,
-  ): Promise<LoadedSheet> {
-    if (requestedShared) {
+  async function fetchSheet(): Promise<LoadedSheet> {
+    if (isShared) {
       return {
-        detail: await fetchSharedCharacterSheet(requestedSheetId),
+        detail: await fetchSharedCharacterSheet(sheetId),
         readonlyReason: 'shared',
       };
     }
 
     try {
       return {
-        detail: await fetchCharacterSheet(requestedSheetId),
+        detail: await fetchCharacterSheet(sheetId),
         readonlyReason: null,
       };
     } catch (error) {
@@ -135,41 +129,20 @@ export function useCharacterSheetLoader(
       }
 
       return {
-        detail: await fetchCharacterSheetForAdmin(requestedSheetId),
+        detail: await fetchCharacterSheetForAdmin(sheetId),
         readonlyReason: 'admin',
       };
     }
   }
 
-  /**
-   * Ответ пришёл к уже неактуальному выбору: пока грузили, панель переключилась
-   * на другой лист или сменила режим (свой ↔ по ссылке).
-   *
-   * @param requestedSheetId идентификатор (или токен) на момент запроса.
-   * @param requestedShared режим на момент запроса.
-   * @returns true, если ответ применять не нужно.
-   */
-  function isStaleResponse(
-    requestedSheetId: string,
-    requestedShared: boolean,
-  ): boolean {
-    return (
-      toValue(sheetId) !== requestedSheetId
-      || isShared.value !== requestedShared
-    );
-  }
-
-  /** Загружает лист; пустой идентификатор переводит в `idle` без запроса. */
+  /** Загружает лист; пустой идентификатор оставляет `idle` без запроса. */
   async function load(): Promise<void> {
-    const currentSheetId = toValue(sheetId);
-    const currentShared = isShared.value;
-
-    // Режим фиксируется до запроса: панель могла переключиться со своего листа
-    // на чужой, и тело листа не должно успеть показать владельческие действия.
-    setReadonly(currentShared ? 'shared' : null);
+    // Режим фиксируется до запроса: тело листа не должно успеть показать
+    // владельческие действия у чужого листа.
+    setReadonly(isShared ? 'shared' : null);
     setEditorAccess(false);
 
-    if (!currentSheetId) {
+    if (!sheetId) {
       status.value = 'idle';
 
       return;
@@ -178,13 +151,10 @@ export function useCharacterSheetLoader(
     status.value = 'pending';
 
     try {
-      const { detail, readonlyReason } = await fetchSheet(
-        currentSheetId,
-        currentShared,
-      );
+      const { detail, readonlyReason } = await fetchSheet();
 
-      // Пока грузили, могли выбрать другой лист — устаревший ответ не применяем.
-      if (isStaleResponse(currentSheetId, currentShared)) {
+      // Пока грузили, лист закрыли везде — ответ применять некуда.
+      if (!isSheetSessionOpen(sheetKey)) {
         return;
       }
 
@@ -198,13 +168,11 @@ export function useCharacterSheetLoader(
       loadCharacter(detail.data);
       // У листа по ссылке токена в ответе нет: управление доступом — только у владельца.
       setShareToken(detail.id, detail.shareToken);
-      // Зато известен токен, по которому лист открыт, — им меню сохраняет его к себе.
-      setViewedShareToken(currentShared ? currentSheetId : null);
       // Чужой лист по праву редактора: правки разрешены, управление доступом — нет.
       setEditorAccess(detail.editor);
       status.value = 'ready';
     } catch (error) {
-      if (isStaleResponse(currentSheetId, currentShared)) {
+      if (!isSheetSessionOpen(sheetKey)) {
         return;
       }
 
@@ -220,22 +188,21 @@ export function useCharacterSheetLoader(
   }
 
   onMounted(() => {
-    void load();
-  });
-
-  // Панель широкого режима: смена выбранного листа (или режима — со своего на
-  // чужой по ссылке) перезагружает документ.
-  watch([() => toValue(sheetId), isShared], () => {
-    void load();
+    // Лист, который уже грузит или показывает другое место, заново не грузится
+    if (status.value === 'idle') {
+      void load();
+    }
   });
 
   onScopeDispose(() => {
+    // Лист ещё открыт в другом месте: его состояние остаётся как есть
+    if (!releaseSheetSession(sheetKey)) {
+      return;
+    }
+
     resetCharacter();
-    setShareToken(null, null);
-    setViewedShareToken(null);
+    status.value = 'idle';
     setEditorAccess(false);
-    // Режим просмотра снимается вместе со страницей: состояние общее, и
-    // следующий свой лист иначе открылся бы нередактируемым.
     setReadonly(null);
   });
 

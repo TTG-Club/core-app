@@ -22,12 +22,17 @@
   } from '../../model';
   import SheetHitDiceSelect from './SheetHitDiceSelect.vue';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
 
   const { character, maxHitPoints, spendHitDice, completeShortRest } =
-    useCharacterSheet();
+    useCharacterSheet(sheetKey);
 
   // Кости хитов катятся напрямую роллером: результат каждой кости нужен здесь,
   // чтобы прибавить модификатор Телосложения и поднять хиты.

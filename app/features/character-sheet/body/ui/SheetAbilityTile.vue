@@ -27,6 +27,9 @@
   const SETTINGS_BUTTON_CLASSES = 'relative z-10';
 
   const props = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     abilityRow: AbilityRow;
   }>();
 
@@ -39,7 +42,7 @@
 
   // Быстрая правка ± — действие редактирования: у запертого и у чужого листа
   // кнопки прячутся, а плашка со значением остаётся на прежнем месте.
-  const { editControlClass } = useCharacterSheet();
+  const { editControlClass } = useCharacterSheet(props.sheetKey);
 
   // Правится записанное значение, а плитка показывает его вместе с прибавками
   // (снаряжение и свои бонусы) — границы диапазона проверяются по записанному,

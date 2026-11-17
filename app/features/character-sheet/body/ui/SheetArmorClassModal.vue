@@ -19,11 +19,16 @@
     toSelectedAbilityKeys,
   } from '../../model';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
 
-  const { character, setArmorClass } = useCharacterSheet();
+  const { character, setArmorClass } = useCharacterSheet(sheetKey);
 
   const draftBase = ref(character.value.armorClass.base);
 

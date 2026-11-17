@@ -42,6 +42,9 @@
   import SheetSpellsTab from './SheetSpellsTab.vue';
 
   const props = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     currency: CharacterCurrency;
     customCurrencies: CharacterCustomCurrency[];
     inventory: CharacterInventoryItem[];
@@ -942,6 +945,7 @@
 
           <SheetEquipmentTab
             v-else-if="activeSlot === 'equipment'"
+            :sheet-key="sheetKey"
             :currency="currency"
             :custom-currencies="customCurrencies"
             :inventory="inventory"
@@ -970,6 +974,7 @@
 
           <SheetSpellsTab
             v-else-if="activeSlot === 'spells'"
+            :sheet-key="sheetKey"
             :spells="spells"
             :innate-spells="innateSpells"
             :class-spells="classSpells"
@@ -993,6 +998,7 @@
 
           <SheetFeaturesTab
             v-else-if="activeSlot === 'features'"
+            :sheet-key="sheetKey"
             :features="features"
             @add-feature="handleFeatureAdd"
             @add-feat="handleFeatAdd"
@@ -1002,12 +1008,14 @@
 
           <SheetEffectsTab
             v-else-if="activeSlot === 'effects'"
+            :sheet-key="sheetKey"
             @add-effect="handleEffectAdd"
             @edit-effect="handleEffectEdit"
           />
 
           <SheetPersonalityTab
             v-else-if="activeSlot === 'personality'"
+            :sheet-key="sheetKey"
             @edit-appearance="handlePersonalityEdit"
             @edit-description="handlePersonalityDescriptionEdit"
             @edit-background="handleBackgroundEdit"
@@ -1015,6 +1023,7 @@
 
           <SheetNotesTab
             v-else
+            :sheet-key="sheetKey"
             @add-note="handleNoteAdd"
             @edit-note="handleNoteEdit"
             @remove-note="handleNoteRemove"

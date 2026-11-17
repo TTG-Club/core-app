@@ -10,6 +10,9 @@ import {
 import { useCharacterSheet } from './useCharacterSheet';
 
 interface ChoiceHintsOptions {
+  /** Ключ открытого листа: чьи записи считать уже известными. */
+  sheetKey: string;
+
   /**
    * Все выборы окна: по ним видно, что персонаж берёт соседним выбором. Одно и
    * то же заклинание спрашивают не по одному разу — «Посвящённый в магию»
@@ -40,7 +43,7 @@ interface ChoiceHints {
  * @returns пометки опций выбора.
  */
 export function useChoiceHints(options: ChoiceHintsOptions): ChoiceHints {
-  const { character } = useCharacterSheet();
+  const { character } = useCharacterSheet(options.sheetKey);
 
   const knownSpellNames = computed(() => getKnownSpellNames(character.value));
 

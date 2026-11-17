@@ -14,11 +14,16 @@
     getAttunementBreakdown,
   } from '../../model';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
 
-  const { character, setAttunement } = useCharacterSheet();
+  const { character, setAttunement } = useCharacterSheet(sheetKey);
 
   const savedBreakdown = getAttunementBreakdown(character.value);
 

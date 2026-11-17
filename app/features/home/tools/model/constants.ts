@@ -5,6 +5,11 @@ import {
   DICE_CALCULATOR_ROUTE,
   DICE_CALCULATOR_TITLE,
 } from '~calculator/dice/model';
+import {
+  ENCOUNTER_CALCULATOR_ICON,
+  ENCOUNTER_CALCULATOR_ROUTE,
+  ENCOUNTER_CALCULATOR_TITLE,
+} from '~calculator/encounter/model';
 import { CHARACTER_SHEET_ROUTE } from '~character-sheet/model';
 import {
   DM_SCREEN_ICON,
@@ -41,6 +46,11 @@ export const HOME_TOOLS: Array<HomeTool> = [
     label: 'Калькулятор характеристик',
     icon: 'tabler:calculator',
     to: '/calculators/abilities',
+  },
+  {
+    label: ENCOUNTER_CALCULATOR_TITLE,
+    icon: ENCOUNTER_CALCULATOR_ICON,
+    to: ENCOUNTER_CALCULATOR_ROUTE,
   },
   {
     label: DICE_CALCULATOR_TITLE,

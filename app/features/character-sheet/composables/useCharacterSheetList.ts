@@ -37,7 +37,6 @@ import {
   toStoredSettings,
   updateCharacterSheet,
 } from '../model';
-import { useCharacterSheet } from './useCharacterSheet';
 
 /**
  * Исходное имя персонажа без следов прошлого копирования: `Гимли (копия) 3`
@@ -149,8 +148,6 @@ async function readCharacterFromFile(
 export function useCharacterSheetList() {
   const toast = useToast();
 
-  const { character, ensureEditable, setSettings } = useCharacterSheet();
-
   const { copyImage } = useImageUpload({
     section: SHEET_AVATAR_S3_SECTION,
     maxSize: SHEET_AVATAR_MAX_SIZE,
@@ -203,22 +200,26 @@ export function useCharacterSheetList() {
     () => null,
   );
 
-  // Правки открытого рядом листа (drawer или широкая панель) сразу отражаются
-  // в карточке: общий useState листа — источник истины, совпадающий по id
-  // элемент списка патчится локально (на бэк изменения шлёт автосейв). Цикла
-  // нет: патч списка в `character` не пишет; после закрытия листа состояние
-  // сбрасывается к моку с id `new-character` — он не совпадает ни с одним
-  // листом, и патч не срабатывает. Наблюдателей может быть несколько (список и
-  // открытый рядом лист) — патч идемпотентен, повтор ничего не меняет.
-  watch(character, (next) => {
-    if (!sheets.value.some((sheet) => sheet.id === next.id)) {
+  /**
+   * Отражает правки открытого листа в его карточке списка: документ листа —
+   * источник истины, карточка патчится локально (на бэк изменения шлёт
+   * автосейв). Зовёт хост каждого открытого своего листа; листа, которого в
+   * списке нет, патч не касается, а повтор с тем же документом ничего не
+   * меняет.
+   *
+   * @param openCharacter персонаж открытого листа.
+   */
+  function syncOpenSheet(openCharacter: Character): void {
+    if (!sheets.value.some((sheet) => sheet.id === openCharacter.id)) {
       return;
     }
 
     sheets.value = sheets.value.map((sheet) =>
-      sheet.id === next.id ? { ...sheet, name: next.name, data: next } : sheet,
+      sheet.id === openCharacter.id
+        ? { ...sheet, name: openCharacter.name, data: openCharacter }
+        : sheet,
     );
-  });
+  }
 
   const activeSheets = computed(() =>
     sheets.value.filter((sheet) => !sheet.deleted),
@@ -550,10 +551,10 @@ export function useCharacterSheetList() {
   }
 
   /**
-   * Сохраняет настройки листа из списка. Открытый рядом лист (drawer или
-   * панель) правится через общее состояние — его допишет автосейв; прямой PUT
-   * здесь устроил бы гонку: автосейв перезаписал бы настройки своей копией
-   * документа. Остальные листы уходят на бэк сразу.
+   * Сохраняет настройки листа, который сейчас нигде не открыт: документ
+   * уходит на бэк сразу. Открытый лист так править нельзя — прямой PUT
+   * устроил бы гонку: автосейв перезаписал бы настройки своей копией
+   * документа. Его настройки окно пишет в состояние листа само.
    *
    * @param target персонаж листа, чьи настройки меняются.
    * @param settings новые настройки листа.
@@ -563,16 +564,6 @@ export function useCharacterSheetList() {
     target: Character,
     settings: CharacterSettings,
   ): Promise<boolean> {
-    if (character.value.id === target.id) {
-      if (!ensureEditable()) {
-        return false;
-      }
-
-      setSettings(settings);
-
-      return true;
-    }
-
     isMutating.value = true;
 
     // Чистка своих бонусов та же, что у открытого листа: у него её делает
@@ -681,5 +672,6 @@ export function useCharacterSheetList() {
     remove,
     restore,
     saveSettings,
+    syncOpenSheet,
   };
 }

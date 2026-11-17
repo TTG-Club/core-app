@@ -93,6 +93,7 @@ import {
   drawValueBox,
   wrapPlainText,
 } from './layout';
+import { drawPdfQrCode } from './qr';
 
 /** Параметры строки «подпись — значение». */
 interface KeyValueRowOptions extends PdfSlot {
@@ -194,8 +195,21 @@ function drawMainHeader(
   page: PDFPage,
   character: Character,
 ): void {
+  // QR-код со ссылкой на лист — квадрат высотой в шапку у правого края; боксы
+  // и имя сдвигаются левее, освобождая под него место.
+  const qrWidth = context.shareUrl ? PDF_HEADER_HEIGHT + PDF_GAP : 0;
+
   const boxesWidth = PDF_HEADER_BOX_WIDTH * 3 + PDF_GAP * 2;
-  const boxesLeft = PDF_PAGE_MARGIN + PDF_CONTENT_WIDTH - boxesWidth;
+  const boxesLeft = PDF_PAGE_MARGIN + PDF_CONTENT_WIDTH - boxesWidth - qrWidth;
+
+  if (context.shareUrl) {
+    drawPdfQrCode(page, {
+      text: context.shareUrl,
+      left: PDF_PAGE_MARGIN + PDF_CONTENT_WIDTH - PDF_HEADER_HEIGHT,
+      top: PDF_PAGE_MARGIN,
+      width: PDF_HEADER_HEIGHT,
+    });
+  }
 
   drawTextLine(page, {
     text: character.name,

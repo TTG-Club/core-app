@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { SheetChoiceOption, SheetChoicePoolStatus } from '../../model';
 
+  import { useSheetOverlay } from '../../composables';
   import {
     getChoiceSelectionSummary,
     SHEET_CHOICE_PICKER_LABELS,
@@ -64,7 +65,7 @@
 
   const model = defineModel<string[]>({ default: () => [] });
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
   // Без destroyOnClose: закрытая модалка остаётся в оверлее, и повторный open()
   // после закрытия иначе падает («Overlay not found»).

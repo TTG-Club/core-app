@@ -33,6 +33,7 @@
     useChoiceHints,
     useChoiceSpellPools,
     usePickedFeatChoices,
+    useSheetOverlay,
     useToolCatalog,
   } from '../../composables';
   import {
@@ -154,7 +155,10 @@
     feature: CharacterFeature;
   }
 
-  const { mode = 'primary' } = defineProps<{
+  const { sheetKey, mode = 'primary' } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     /**
      * `primary` — выбор (или замена) основного класса, `add` — добавление
      * класса мультикласса первым уровнем.
@@ -168,9 +172,9 @@
 
   const toast = useToast();
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
-  const { character, setClass, addClass } = useCharacterSheet();
+  const { character, setClass, addClass } = useCharacterSheet(sheetKey);
 
   const isAddMode = computed(() => mode === 'add');
 
@@ -210,7 +214,9 @@
   // Свой класс собирается в отдельной модалке поверх списка: сама она и
   // применяет его к листу, поэтому мастер после успеха только закрывается, а
   // отмена возвращает к списку каталога.
-  const customClassModal = overlay.create(SheetCustomClassModal);
+  const customClassModal = overlay.create(SheetCustomClassModal, {
+    props: { sheetKey },
+  });
 
   function handlePreview(url: string) {
     classPreviewDrawer.open({ url });
@@ -1029,6 +1035,7 @@
    * которые он уже знает.
    */
   const { getHints: choiceHints } = useChoiceHints({
+    sheetKey,
     choices: allChoices,
     selections,
   });

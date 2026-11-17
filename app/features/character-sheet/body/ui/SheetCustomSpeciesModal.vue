@@ -30,12 +30,17 @@
   } from '../../model';
   import SheetDistanceRows from './SheetDistanceRows.vue';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     /** `true` — свой вид применён к листу. */
     close: [isCreated?: boolean];
   }>();
 
-  const { character, setSpecies } = useCharacterSheet();
+  const { character, setSpecies } = useCharacterSheet(sheetKey);
 
   const draftName = ref('');
 

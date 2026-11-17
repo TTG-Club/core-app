@@ -12,6 +12,7 @@
   import {
     useCharacterSheet,
     useLazyCatalogSourceQuery,
+    useSheetOverlay,
     useToolCatalog,
   } from '../../composables';
   import {
@@ -39,6 +40,11 @@
   } from '../../model';
   import SheetChoicePickerField from './SheetChoicePickerField.vue';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     /** `true` — своя предыстория применена к листу. */
     close: [isCreated?: boolean];
@@ -46,9 +52,9 @@
 
   const toast = useToast();
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
-  const { character, setBackground } = useCharacterSheet();
+  const { character, setBackground } = useCharacterSheet(sheetKey);
 
   // Дровер описания черты с сайта; без destroyOnClose — повторный open() после
   // закрытия иначе падает («Overlay not found»).

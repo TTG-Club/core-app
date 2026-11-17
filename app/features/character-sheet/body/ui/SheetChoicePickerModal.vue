@@ -12,6 +12,7 @@
   import { SpellDrawer } from '~spells/drawer';
   import { UiResult } from '~ui/result';
 
+  import { useSheetOverlay } from '../../composables';
   import {
     getChoiceSelectionSummary,
     SHEET_CHOICE_PICKER_LABELS,
@@ -70,7 +71,7 @@
     close: [values?: string[]];
   }>();
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
   const { isMdOrGreater } = useBreakpoints();
 

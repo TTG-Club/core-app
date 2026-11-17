@@ -1,8 +1,9 @@
-import type { ScreenPickerPlacement } from './schemas';
+import type { ScreenPickerPlacement, ScreenView } from './schemas';
 import type {
   ScreenLayout,
   ScreenLayoutZone,
   ScreenPickerOption,
+  ScreenRect,
   ScreenResizeHandle,
   ScreenSection,
 } from './types';
@@ -140,6 +141,12 @@ export const DM_SCREEN_GAP = 12;
 /** С какого расстояния край окна притягивается к соседнему краю, px. */
 export const DM_SCREEN_MAGNET_DISTANCE = 12;
 
+/** Сколько клеток по стороне в поле выбора сетки окон. */
+export const DM_SCREEN_ARRANGE_GRID_SIZE = 10;
+
+/** Колонки поля выбора сетки: столько же, сколько клеток по стороне. */
+export const DM_SCREEN_ARRANGE_GRID_CLASS = 'grid-cols-10';
+
 /** Сдвиг нового окна от точки клика, px. */
 export const DM_SCREEN_CLICK_OFFSET = 16;
 
@@ -148,15 +155,6 @@ export const DM_SCREEN_CASCADE_STEP = 32;
 
 /** Сколько окон встаёт лесенкой, прежде чем она начнётся заново. */
 export const DM_SCREEN_CASCADE_LENGTH = 8;
-
-/**
- * Сколько окна остаётся на холсте по ширине, когда его утащили за край,
- * px: за эту часть окно вытягивают обратно.
- */
-export const DM_SCREEN_REACHABLE_PART = 96;
-
-/** Высота шапки окна, px: шапка не уходит за нижний край холста. */
-export const DM_SCREEN_WINDOW_HEADER_HEIGHT = 40;
 
 /** Сколько подсвечивается окно, на которое указали вместо нового, мс. */
 export const DM_SCREEN_HIGHLIGHT_DURATION = 1500;
@@ -206,6 +204,77 @@ export const DM_SCREEN_ZONE_ATTRIBUTE = 'data-dm-screen-zone';
 export const DM_SCREEN_SPLITTER_TOLERANCE = 1;
 
 /**
+ * Поле ширмы: место, на котором стоят окна. Оно намного больше экрана, но
+ * не бесконечно: за его края не уходят ни окна, ни обзор. Начало координат
+ * — там, где был угол прежнего холста, поэтому старые окна остаются возле
+ * середины поля.
+ */
+export const DM_SCREEN_FIELD: ScreenRect = {
+  x: -7200,
+  y: -4550,
+  width: 16000,
+  height: 10000,
+};
+
+/** Ключ обзора ширмы (сдвиг и масштаб поля) в localStorage. */
+export const DM_SCREEN_VIEW_STORAGE_KEY = 'dm-screen:view';
+
+/** Обзор, пока мастер его не менял: начало поля, без отдаления. */
+export const DM_SCREEN_VIEW_DEFAULT: ScreenView = { x: 0, y: 0, zoom: 1 };
+
+/**
+ * Масштаб поля: пределы (ближе, чем один к одному, поле не подходит), шаг
+ * кнопок и скорость колёсика. Колёсико, которое считает строками, а не
+ * пикселями, переводится в пиксели высотой строки.
+ */
+export const DM_SCREEN_ZOOM = {
+  min: 0.2,
+  max: 1,
+  step: 1.25,
+  wheelRate: 0.0015,
+  wheelLineHeight: 32,
+} as const;
+
+/** Отступ от краёв холста, когда обзор подгоняют под все окна, px. */
+export const DM_SCREEN_FIT_PADDING = 48;
+
+/** Кнопки мыши: основной тянут пустое место поля, средней — где угодно. */
+export const DM_SCREEN_POINTER_BUTTON = { main: 0, middle: 1 } as const;
+
+/** Курсор холста, пока поле тянут. */
+export const DM_SCREEN_PANNING_CLASS = 'cursor-grabbing';
+
+/**
+ * Точки на пустом месте поля: шаг на поле и наименьший шаг на экране, px.
+ * Когда поле отдалено и точки сливаются, шаг удваивается. Сама точка —
+ * фоновый рисунок цветом рамок темы.
+ */
+export const DM_SCREEN_BACKDROP = {
+  step: 32,
+  minStep: 20,
+  image:
+    'radial-gradient(circle, var(--ui-border-accented) 1px, transparent 1px)',
+} as const;
+
+/** Ключ настройки «показывать миникарту» в localStorage. */
+export const DM_SCREEN_MINIMAP_STORAGE_KEY = 'dm-screen:minimap';
+
+/** Размер миникарты, px: те же пропорции, что у поля. */
+export const DM_SCREEN_MINIMAP_SIZE = { width: 208, height: 130 } as const;
+
+/** Отступ поля от краёв миникарты, px: поле занимает её целиком. */
+export const DM_SCREEN_MINIMAP_PADDING = 0;
+
+/** Вид кнопки миникарты: нажата, пока миникарта видна. */
+export const DM_SCREEN_MINIMAP_TOGGLE_VARIANT = {
+  open: 'soft',
+  closed: 'ghost',
+} as const;
+
+/** Наименьший масштаб миникарты: поле помещается на неё целиком. */
+export const DM_SCREEN_MINIMAP_MIN_ZOOM = 0.001;
+
+/**
  * Размер холста, пока ширма не открыта: запись кладут на неё с другой
  * страницы. Из окна браузера вычитаются боковая панель сайта и шапка ширмы.
  */
@@ -216,6 +285,18 @@ export const DM_SCREEN_BOARD_INSET = { width: 64, height: 72 } as const;
  * страницы (`keepalive`), байт. С запасом от предела в 64 КБ.
  */
 export const DM_SCREEN_KEEPALIVE_MAX_BYTES = 60000;
+
+/**
+ * Размер нового окна с листом персонажа, px: лист шире и выше обычной
+ * записи. На тесном холсте окно ужимается до свободного места.
+ */
+export const DM_SCREEN_SHEET_WINDOW_SIZE = { width: 620, height: 760 } as const;
+
+/** Отметка в списке «Персонаж»: чей лист. */
+export const DM_SCREEN_SHEET_SOURCE_LABEL = {
+  own: 'Мой лист',
+  shared: 'Доступен по ссылке',
+} as const;
 
 /** Сколько записей показывает поиск на ширме. */
 export const DM_SCREEN_SEARCH_LIMIT = 12;
@@ -380,7 +461,10 @@ export const DM_SCREEN_NEW_TAB = {
   features: 'noopener',
 } as const;
 
-/** Вид места в панели раскладок: под указателем и остальные. */
+/**
+ * Вид места в панели раскладок и клетки поля выбора сетки: под указателем
+ * (у сетки — внутри выбранного прямоугольника) и остальные.
+ */
 export const DM_SCREEN_ZONE_CLASS = {
   active: 'border-primary bg-primary/40',
   idle: 'border-accented bg-accented/40',
@@ -420,6 +504,12 @@ export const DM_SCREEN_ICONS = {
   signIn: 'tabler:login',
   error: 'tabler:alert-triangle',
   loading: 'tabler:loader-2',
+  sheet: 'tabler:id',
+  sheetAvatar: 'tabler:user',
+  zoomIn: 'tabler:plus',
+  zoomOut: 'tabler:minus',
+  fit: 'tabler:focus-centered',
+  minimap: 'tabler:map-2',
 } as const;
 
 /** Подписи ширмы. */
@@ -438,6 +528,10 @@ export const DM_SCREEN_TEXT = {
   signIn: 'Войти',
   addNote: 'Заметка',
   arrange: 'Выровнять по сетке',
+  arrangeTitle: 'Сетка окон',
+  arrangeHint: 'Наведите на клетку',
+  arrangeCell: 'Сетка',
+  arrangeAuto: 'Подобрать автоматически',
   minimizeAll: 'Свернуть все',
   restoreAll: 'Развернуть все',
   pickerSettings: 'Панель раскладок',
@@ -473,4 +567,18 @@ export const DM_SCREEN_TEXT = {
   addFailed: 'Не удалось добавить в ширму',
   limitReached: 'На ширме слишком много окон: закройте лишние',
   unknownError: 'Неизвестная ошибка',
+  addSheet: 'Персонаж',
+  sheetsTitle: 'Листы персонажей',
+  sheetsEmpty:
+    'Листов пока нет. Создайте свой или сохраните лист игрока по его ссылке — он появится здесь.',
+  sheetsFailed: 'Часть листов загрузить не удалось',
+  sheetLevel: 'Уровень',
+  zoomIn: 'Приблизить',
+  zoomOut: 'Отдалить',
+  zoomReset: 'Вернуть обычный масштаб',
+  fit: 'Показать все окна',
+  minimapShow: 'Показать миникарту',
+  minimapHide: 'Скрыть миникарту',
+  minimap: 'Миникарта ширмы',
+  navigator: 'Обзор ширмы',
 } as const;

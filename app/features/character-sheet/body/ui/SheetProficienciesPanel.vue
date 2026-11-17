@@ -6,7 +6,7 @@
 
   import { ItemDrawer } from '~items/drawer';
 
-  import { useCharacterSheet } from '../../composables';
+  import { useCharacterSheet, useSheetOverlay } from '../../composables';
   import {
     ARMOR_PROFICIENCY_GROUPS,
     collapseProficiencies,
@@ -62,6 +62,9 @@
   }
 
   const props = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     proficiencies: CharacterProficiencies;
   }>();
 
@@ -71,9 +74,9 @@
 
   // Шестерёнка на плашке группы — вход в правку владений: без прав она
   // прячется, а сама плашка остаётся прежней.
-  const { editControlClass } = useCharacterSheet();
+  const { editControlClass } = useCharacterSheet(props.sheetKey);
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
   // Дровер описания инструмента; без destroyOnClose — повторный open() после
   // закрытия иначе падает («Overlay not found»).

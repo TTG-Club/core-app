@@ -11,11 +11,16 @@
     SHEET_FEATURE_FORM_LABELS,
   } from '../../model';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
 
-  const { character, addFeature } = useCharacterSheet();
+  const { character, addFeature } = useCharacterSheet(sheetKey);
 
   const draftName = ref('');
 

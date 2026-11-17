@@ -1,15 +1,14 @@
 /**
  * Допустимые значения поля `key` в source-группах ответа `/api/v2/{section}/filters`.
  *
- * Бэкенд возвращает уникальный ключ типа источника (enum `SourceType` в UPPER_SNAKE_CASE).
+ * Бэкенд группирует источники по степени официальности и возвращает её ключ
+ * (enum `SourceOfficiality` в UPPER_SNAKE_CASE).
  */
-export type SourceTypeKey =
+export type SourceOfficialityKey =
   | 'OFFICIAL'
-  | 'SETTING'
-  | 'MODULE'
   | 'TEST'
   | 'THIRD_PARTY'
-  | 'CUSTOM';
+  | 'HOMEBREW';
 
 export interface FilterGroup {
   key: string;

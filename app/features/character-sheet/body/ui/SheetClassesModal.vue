@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { useCharacterSheet } from '../../composables';
+  import { useCharacterSheet, useSheetOverlay } from '../../composables';
   import {
     CLASSES_MODAL_LABELS,
     getCharacterClasses,
@@ -9,18 +9,26 @@
   } from '../../model';
   import SheetClassWizardModal from './SheetClassWizardModal.vue';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
-  const { character, canEdit, removeClass } = useCharacterSheet();
+  const { character, canEdit, removeClass } = useCharacterSheet(sheetKey);
 
   // Мастер выбора класса открывается поверх списка: он же и применяет класс к
   // листу, поэтому здесь остаётся только выбрать режим.
   const classWizardModal = overlay.create(SheetClassWizardModal, {
-    props: { mode: 'primary' as const },
+    props: {
+      sheetKey,
+      mode: 'primary' as const,
+    },
   });
 
   /**
@@ -63,11 +71,11 @@
   );
 
   function handleEdit() {
-    classWizardModal.open({ mode: 'primary' });
+    classWizardModal.open({ sheetKey, mode: 'primary' });
   }
 
   function handleAdd() {
-    classWizardModal.open({ mode: 'add' });
+    classWizardModal.open({ sheetKey, mode: 'add' });
   }
 
   function handleRemoveClick(classUrl: string) {

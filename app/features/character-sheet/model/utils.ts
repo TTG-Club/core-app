@@ -141,6 +141,7 @@ import type {
   SheetChoiceOrigin,
   SheetChoicePoolStatus,
   SheetEditStatus,
+  SheetPdfVariant,
   SkillRow,
   SkillRowGroup,
   SpeciesFeatureSummary,
@@ -443,6 +444,7 @@ import {
   SHEET_EDIT_ACCESS_LABELS,
   SHEET_FEAT_CHOICE_LABELS,
   SHEET_PDF_MIME_TYPE,
+  SHEET_PDF_VARIANT_OPTIONS,
   SHEET_PERSONALITY_LABELS,
   SHEET_PLURAL_FORMS,
   SHEET_SAVE_SHARED_LABELS,
@@ -7876,8 +7878,9 @@ interface FeatureGrantedSpellEntry extends GrantedSpellEntry {
  * (см. `getInnateSpells` и `getClassGrantedSpells`), а вот справочнику и
  * выгрузке важны все разом.
  *
- * Одно и то же заклинание может прийти дважды (вид и черта, две черты): в
- * списке ему место одно, и остаётся первая запись — правки достаются ей.
+ * Одно и то же заклинание может прийти дважды (вид и черта, класс и подкласс):
+ * в списке ему место одно — остаётся выдача, которая держит его готовым, а при
+ * равных правах первая запись (см. `uniqGrantedSpells`).
  *
  * @param character персонаж листа.
  * @returns заклинания вне книги персонажа.
@@ -7977,12 +7980,41 @@ function collectGrantedSpells(character: Character): GrantedSpellEntry[] {
     ),
   ];
 
-  return uniqBy(granted, (entry) => entry.spell.url).map(
-    ({ spell, fromClass }) => ({
-      spell: { ...spell, prepared: isInnateSpellPrepared(spell) },
-      fromClass,
-    }),
-  );
+  return uniqGrantedSpells(granted).map(({ spell, fromClass }) => ({
+    spell: { ...spell, prepared: isInnateSpellPrepared(spell) },
+    fromClass,
+  }));
+}
+
+/**
+ * Убирает дубли выданных заклинаний, оставляя по одному на URL.
+ *
+ * Одно заклинание может прийти от класса («весь список класса», готовит игрок)
+ * и от подкласса (заклинание домена, готово всегда) — так «Дневной свет» у
+ * жреца домена Света. Выдача, которая держит заклинание готовым, сильнее:
+ * иначе заклинание домена числилось бы неподготовленным и занимало место в
+ * пределе. При равных правах остаётся первая запись, и место в списке
+ * дубль берёт у первой встречи.
+ *
+ * @param entries заклинания вне книги вместе с дублями.
+ * @returns по одной записи на заклинание.
+ */
+function uniqGrantedSpells<T extends GrantedSpellEntry>(entries: T[]): T[] {
+  const chosen = new Map<string, T>();
+
+  for (const entry of entries) {
+    const current = chosen.get(entry.spell.url);
+
+    if (
+      !current
+      || (takesPreparationSpace(current.spell)
+        && !takesPreparationSpace(entry.spell))
+    ) {
+      chosen.set(entry.spell.url, entry);
+    }
+  }
+
+  return [...chosen.values()];
 }
 
 /**
@@ -8097,9 +8129,13 @@ export function findFeatureSpell(
   features: CharacterFeature[],
   spellUrl: string,
 ): CharacterSpell | undefined {
-  return getFeatureGrantedSpells(features).find(
-    (entry) => entry.spell.url === spellUrl,
-  )?.spell;
+  // Та же запись, что видна во вкладке (см. `uniqGrantedSpells`): иначе
+  // подготовку и предел правка считала бы по проигравшему дублю
+  return uniqGrantedSpells(
+    getFeatureGrantedSpells(features).filter(
+      (entry) => entry.spell.url === spellUrl,
+    ),
+  )[0]?.spell;
 }
 
 /**
@@ -16433,20 +16469,25 @@ export function downloadCharacterJson(character: Character): void {
 }
 
 /**
- * Скачивание листа в виде PDF: раскладка близка к официальному листу D&D 2024,
- * дальше идут снаряжение, заклинания и справочник с полными описаниями.
+ * Скачивание листа в виде PDF. Лист TTG — раскладка сайта, дальше снаряжение,
+ * заклинания и справочник с полными описаниями; лист PHB повторяет
+ * двухстраничный лист Книги игрока 2024 и тоже заканчивается справочником.
  *
  * Сборщик и pdf-lib загружаются динамически: они нужны только в момент экспорта,
  * а в основном бандле весили бы больше самого листа.
  *
  * @param character персонаж скачиваемого листа.
+ * @param shareUrl ссылка на просмотр листа для QR-кода; null — кода не будет.
+ * @param variant вид листа.
  */
 export async function downloadCharacterPdf(
   character: Character,
+  shareUrl: string | null = null,
+  variant: SheetPdfVariant = 'ttg',
 ): Promise<void> {
   const { buildCharacterSheetPdf } = await import('./pdf');
 
-  const bytes = await buildCharacterSheetPdf(character);
+  const bytes = await buildCharacterSheetPdf(character, { shareUrl, variant });
 
   // Копия байтов в свежий массив: `Blob` принимает только представления над
   // `ArrayBuffer`, а pdf-lib отдаёт массив над `ArrayBufferLike`.
@@ -16454,6 +16495,34 @@ export async function downloadCharacterPdf(
     new Blob([new Uint8Array(bytes)], { type: SHEET_PDF_MIME_TYPE }),
     `${getCharacterFileName(character.name)}.pdf`,
   );
+}
+
+/**
+ * Пункт «Скачать PDF» с подменю выбора вида листа — общий для меню своего и
+ * сохранённого чужого листа.
+ *
+ * @param isLoading идёт сборка PDF: пункт показывает загрузку и закрыт для
+ * повторного выбора.
+ * @param onDownload запуск экспорта выбранного вида листа.
+ * @returns пункт меню с подпунктами видов листа.
+ */
+function getPdfDownloadMenuItem(
+  isLoading: boolean | undefined,
+  onDownload: (variant: SheetPdfVariant) => void,
+): DropdownMenuItem {
+  return {
+    label: SHEET_DOWNLOAD_PDF_LABEL,
+    icon: 'tabler:file-type-pdf',
+    description: SHEET_DOWNLOAD_PDF_HINT,
+    loading: isLoading,
+    disabled: isLoading,
+    children: SHEET_PDF_VARIANT_OPTIONS.map((option) => ({
+      label: option.label,
+      description: option.description,
+      icon: 'tabler:file-text',
+      onSelect: () => onDownload(option.variant),
+    })),
+  };
 }
 
 /** Доступность действий и обработчики пунктов меню действий над листом. */
@@ -16486,7 +16555,7 @@ export interface SheetActionMenuOptions {
   isPdfLoading?: boolean;
 
   onDownload: () => void;
-  onDownloadPdf: () => void;
+  onDownloadPdf: (variant: SheetPdfVariant) => void;
   onDuplicate: () => void;
   onRemove: () => void;
   onSettings: () => void;
@@ -16523,14 +16592,10 @@ export function getSheetActionMenuItems(
   options: SheetActionMenuOptions,
 ): Array<Array<DropdownMenuItem>> {
   // Экспорт в PDF идёт первым: играют по нему, а JSON нужен для переноса листа.
-  const downloadPdf: DropdownMenuItem = {
-    label: SHEET_DOWNLOAD_PDF_LABEL,
-    icon: 'tabler:file-type-pdf',
-    description: SHEET_DOWNLOAD_PDF_HINT,
-    loading: options.isPdfLoading,
-    disabled: options.isPdfLoading,
-    onSelect: options.onDownloadPdf,
-  };
+  const downloadPdf = getPdfDownloadMenuItem(
+    options.isPdfLoading,
+    options.onDownloadPdf,
+  );
 
   const download: DropdownMenuItem = {
     label: SHEET_DOWNLOAD_JSON_LABEL,
@@ -16625,7 +16690,7 @@ export interface SavedSheetActionMenuOptions {
   editStatus: SheetEditStatus | null;
 
   onDownload: () => void;
-  onDownloadPdf: () => void;
+  onDownloadPdf: (variant: SheetPdfVariant) => void;
   onCopy: () => void;
   onRequestEdit: () => void;
   onRemove: () => void;
@@ -16695,14 +16760,7 @@ export function getSavedSheetActionMenuItems(
 
   return [
     [
-      {
-        label: SHEET_DOWNLOAD_PDF_LABEL,
-        icon: 'tabler:file-type-pdf',
-        description: SHEET_DOWNLOAD_PDF_HINT,
-        loading: options.isPdfLoading,
-        disabled: options.isPdfLoading,
-        onSelect: options.onDownloadPdf,
-      },
+      getPdfDownloadMenuItem(options.isPdfLoading, options.onDownloadPdf),
       {
         label: SHEET_DOWNLOAD_JSON_LABEL,
         icon: 'tabler:download',

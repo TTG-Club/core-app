@@ -4,6 +4,9 @@
   import SheetAbilityTile from './SheetAbilityTile.vue';
 
   defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     rows: AbilityRow[];
   }>();
 
@@ -34,6 +37,7 @@
       <SheetAbilityTile
         v-for="row in rows"
         :key="row.key"
+        :sheet-key="sheetKey"
         :ability-row="row"
         @roll="emit('roll', row.key)"
         @settings="emit('settings', row.key)"

@@ -14,7 +14,10 @@
 
   // Идентификатор редактируемой особенности — прокидывается при открытии
   // (`open({ featureId })`); саму особенность модалка достаёт из состояния листа.
-  const { featureId } = defineProps<{
+  const { sheetKey, featureId } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     featureId: string;
   }>();
 
@@ -22,7 +25,7 @@
     close: [];
   }>();
 
-  const { character, updateFeature } = useCharacterSheet();
+  const { character, updateFeature } = useCharacterSheet(sheetKey);
 
   // Снимок редактируемой особенности на момент открытия. Модалка размонтируется
   // при закрытии, поэтому setup выполняется заново на каждое открытие — снимок

@@ -29,6 +29,9 @@
 
   const props = withDefaults(
     defineProps<{
+      /** Ключ открытого листа: с каким листом работает компонент. */
+      sheetKey: string;
+
       /** Заголовок модалки (например, «Урон: Длинный меч»). */
       title: string;
 
@@ -52,7 +55,7 @@
 
   // Модификатор характеристики считается по листу: в справочнике и в оружии
   // лежит только то, сколько раз он входит в урон.
-  const { character } = useCharacterSheet();
+  const { character } = useCharacterSheet(props.sheetKey);
 
   const baseNotation = parseDamageNotation(props.damage.diceNotation);
 

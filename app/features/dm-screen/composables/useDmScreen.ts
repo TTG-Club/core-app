@@ -1,8 +1,8 @@
 import type {
   ScreenAddOutcome,
+  ScreenGrid,
   ScreenPoint,
   ScreenRect,
-  ScreenSize,
   ScreenTile,
   ScreenWindow,
   ScreenWindowRequest,
@@ -14,7 +14,6 @@ import {
   appendScreenWindow,
   arrangeScreenWindows,
   createScreenNotePath,
-  DM_SCREEN_BOARD_INSET,
   DM_SCREEN_HIGHLIGHT_DURATION,
   DM_SCREEN_ICONS,
   DM_SCREEN_KEEPALIVE_MAX_BYTES,
@@ -28,6 +27,7 @@ import {
   saveScreen,
   screenWindowListSchema,
 } from '../model';
+import { useDmScreenView } from './useDmScreenView';
 
 /** Изменяемые поля окна. */
 type ScreenWindowPatch = Partial<Omit<ScreenWindow, 'id'>>;
@@ -169,48 +169,13 @@ export const useDmScreen = createSharedComposable(() => {
     localWindows.value = [];
   }
 
-  const { width: viewportWidth, height: viewportHeight } = useWindowSize();
-
-  /** Размер холста, который сообщила страница ширмы. */
-  const measuredBoard = shallowRef<ScreenSize>();
-
-  /** Левый верхний угол холста в окне браузера. */
-  const boardOrigin = shallowRef<ScreenPoint>({ x: 0, y: 0 });
-
-  /**
-   * Размер холста. Пока ширма не открыта (запись кладут с другой
-   * страницы), он оценивается по окну браузера.
-   */
-  const board = computed<ScreenSize>(
-    () =>
-      measuredBoard.value ?? {
-        width: viewportWidth.value - DM_SCREEN_BOARD_INSET.width,
-        height: viewportHeight.value - DM_SCREEN_BOARD_INSET.height,
-      },
-  );
-
-  /**
-   * Запоминает место и размер холста; без значений — холста больше нет.
-   * @param rect - прямоугольник холста в окне браузера
-   */
-  function setBoard(rect?: ScreenRect): void {
-    measuredBoard.value = rect
-      ? { width: rect.width, height: rect.height }
-      : undefined;
-
-    boardOrigin.value = rect ? { x: rect.x, y: rect.y } : { x: 0, y: 0 };
-  }
-
-  /**
-   * Точка холста по точке в окне браузера.
-   * @param client - координаты указателя в окне браузера
-   */
-  function toBoardPoint(client: ScreenPoint): ScreenPoint {
-    return {
-      x: client.x - boardOrigin.value.x,
-      y: client.y - boardOrigin.value.y,
-    };
-  }
+  // Видимая часть поля: в ней встают новые окна и раскладки
+  const {
+    board,
+    setBoard,
+    toBoardPoint,
+    reveal: revealRect,
+  } = useDmScreenView();
 
   /** Окно, на которое указали вместо создания нового: недолго подсвечено. */
   const highlightedId = refAutoReset<string | undefined>(
@@ -296,8 +261,21 @@ export const useDmScreen = createSharedComposable(() => {
   }
 
   /**
+   * Подводит обзор к окну, если его совсем не видно на холсте.
+   * @param id - окно
+   */
+  function reveal(id: string): void {
+    const target = windows.value.find((screenWindow) => screenWindow.id === id);
+
+    if (target) {
+      revealRect(target);
+    }
+  }
+
+  /**
    * Кладёт запись или заметку окном на ширму. То, что на ширме уже есть,
-   * не дублируется: окно разворачивается, встаёт сверху и подсвечивается.
+   * не дублируется: окно разворачивается, встаёт сверху и подсвечивается,
+   * а обзор подходит к нему, если оно было не видно.
    * @param request - запись, её название и точка клика на холсте
    * @returns чем кончилась просьба
    */
@@ -323,6 +301,7 @@ export const useDmScreen = createSharedComposable(() => {
 
     if (!appended.isAdded) {
       highlightedId.value = appended.windowId;
+      reveal(appended.windowId);
     }
 
     return appended.isAdded ? 'added' : 'existing';
@@ -407,17 +386,21 @@ export const useDmScreen = createSharedComposable(() => {
   }
 
   /**
-   * Раскладывает все окна ровной сеткой, свёрнутые тоже разворачиваются.
+   * Раскладывает все окна ровной сеткой на видимой части поля, свёрнутые
+   * тоже разворачиваются.
    * Порядок — как окна стоят сейчас (сверху вниз, слева направо), свёрнутые
    * встают в конец: раскладка окна не перемешивает.
+   * @param grid - сколько колонок и рядов в сетке; без неё ширма подбирает
+   * сетку сама
    */
-  function arrange(): void {
+  function arrange(grid?: ScreenGrid): void {
     const ordered = sortBy(windows.value, ['isMinimized', 'y', 'x']);
 
     updateRects(
       arrangeScreenWindows(
         ordered.map((screenWindow) => screenWindow.id),
         board.value,
+        grid,
       ),
       { isMinimized: false },
     );
@@ -444,6 +427,7 @@ export const useDmScreen = createSharedComposable(() => {
     update,
     updateRects,
     focus,
+    reveal,
     navigate,
     close,
     clear,

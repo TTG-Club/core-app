@@ -711,29 +711,35 @@ function getBlockIndent(kind: PdfBlockKind, level: number): number {
 }
 
 /**
- * Отрисовка блоков описания в потоке с переносом строк и страниц.
+ * Отрисовка блоков описания в потоке с переносом строк и страниц. Поток с
+ * `measuring` только двигает курсор: так высота описания меряется теми же
+ * переносами, что и при отрисовке, без второй копии правил вёрстки.
  *
  * @param context документ в процессе сборки.
  * @param flow поток содержимого.
  * @param blocks блоки описания.
+ * @param baseSize кегль текста описания.
  */
 export function drawTextBlocks(
   context: PdfBuildContext,
   flow: PdfFlow,
   blocks: PdfTextBlock[],
+  baseSize = PDF_FONT_SIZES.body,
 ): void {
-  const baseSize = PDF_FONT_SIZES.body;
+  const isDrawing = !flow.measuring;
 
   for (const block of blocks) {
     if (block.kind === 'separator') {
       flow.ensure(PDF_GAP * 2);
       flow.advance(PDF_GAP);
 
-      drawRule(flow.page, {
-        left: flow.left,
-        top: flow.top,
-        width: flow.width,
-      });
+      if (isDrawing) {
+        drawRule(flow.page, {
+          left: flow.left,
+          top: flow.top,
+          width: flow.width,
+        });
+      }
 
       flow.advance(PDF_GAP);
 
@@ -741,7 +747,7 @@ export function drawTextBlocks(
     }
 
     if (block.kind === 'table') {
-      drawFlowTableRows(context, flow, block.rows);
+      drawFlowTableRows(context, flow, block.rows, baseSize);
 
       continue;
     }
@@ -759,6 +765,12 @@ export function drawTextBlocks(
 
     for (const [index, line] of lines.entries()) {
       flow.ensure(lineHeight);
+
+      if (!isDrawing) {
+        flow.advance(lineHeight);
+
+        continue;
+      }
 
       if (block.kind === 'listItem' && index === 0) {
         drawTextLine(flow.page, {
@@ -802,11 +814,13 @@ export function drawTextBlocks(
  * @param context документ в процессе сборки.
  * @param flow поток содержимого.
  * @param rows строки таблицы по ячейкам.
+ * @param baseSize кегль текста описания: таблица набирается чуть мельче.
  */
 function drawFlowTableRows(
   context: PdfBuildContext,
   flow: PdfFlow,
   rows: string[][],
+  baseSize: number,
 ): void {
   const columnCount = rows.reduce(
     (count, row) => Math.max(count, row.length),
@@ -818,7 +832,8 @@ function drawFlowTableRows(
   }
 
   const columnWidth = flow.width / columnCount;
-  const size = PDF_FONT_SIZES.small + 1;
+  // Таблица на кегль мельче текста: при обычном теле (8) — те же 7, что были.
+  const size = baseSize - 1;
   const lineHeight = size * PDF_LINE_HEIGHT_RATIO;
 
   for (const [rowIndex, row] of rows.entries()) {
@@ -834,6 +849,12 @@ function drawFlowTableRows(
       + 2;
 
     flow.ensure(rowHeight);
+
+    if (flow.measuring) {
+      flow.advance(rowHeight);
+
+      continue;
+    }
 
     for (const [columnIndex, lines] of cellLines.entries()) {
       for (const [lineIndex, line] of lines.entries()) {

@@ -6,6 +6,11 @@ import {
   DICE_CALCULATOR_ROUTE,
   DICE_CALCULATOR_TITLE,
 } from '~calculator/dice/model';
+import {
+  ENCOUNTER_CALCULATOR_ICON,
+  ENCOUNTER_CALCULATOR_ROUTE,
+  ENCOUNTER_CALCULATOR_TITLE,
+} from '~calculator/encounter/model';
 import { RECENT_COMMENTS_ROUTE, RECENT_COMMENTS_TITLE } from '~comments/model';
 import {
   COMMUNITY_NEWS_ICON,
@@ -163,6 +168,11 @@ export const MENU_SECTIONS: Array<MenuSection> = [
         href: '/calculators/abilities',
         label: 'Калькулятор характеристик',
         icon: 'tabler:calculator',
+      },
+      {
+        href: ENCOUNTER_CALCULATOR_ROUTE,
+        label: ENCOUNTER_CALCULATOR_TITLE,
+        icon: ENCOUNTER_CALCULATOR_ICON,
       },
       {
         href: DICE_CALCULATOR_ROUTE,

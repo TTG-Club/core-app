@@ -51,6 +51,9 @@
 
   const props = withDefaults(
     defineProps<{
+      /** Ключ открытого листа: с каким листом работает компонент. */
+      sheetKey: string;
+
       /** Заголовок модалки (например, «Проверка: Сила»). */
       title: string;
 
@@ -115,7 +118,7 @@
 
   // Подмена характеристики считается по значениям листа, а не по переданному
   // модификатору: в нём уже сложены мастерство и владение, их трогать нельзя.
-  const { character } = useCharacterSheet();
+  const { character } = useCharacterSheet(props.sheetKey);
 
   const draftBonus = ref(0);
 

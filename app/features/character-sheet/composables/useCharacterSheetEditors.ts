@@ -10,12 +10,19 @@ import {
 import { useCharacterSheetEditRequests } from './useCharacterSheetEditRequests';
 
 /**
+ * Номер последнего запроса списка редакторов по каждому листу: по нему
+ * отбрасывается ответ, который пришёл позже более свежего. Листы открываются
+ * только на клиенте, поэтому между запросами сервера счётчик не делится.
+ */
+const latestLoadRequests = new Map<string, number>();
+
+/**
  * Запросы на редактирование и выданные права одного листа — для его владельца:
  * баннер с запросами в листе и список редакторов в модалке «Поделиться».
  *
- * Состояние общее (`useState`) и, как токен ссылки, помнит, КАКОМУ листу
- * принадлежит: модалку открывают и из шапки открытого листа, и из карточки
- * соседнего в списке. После каждого решения перечитывается сводка у шлема —
+ * Состояние общее (`useState`) и, как токены ссылок, разложено по листам:
+ * модалку открывают и из шапки открытого листа, и из карточки соседнего в
+ * списке, а открытых листов может быть несколько. После каждого решения перечитывается сводка у шлема —
  * иначе точка горела бы до следующего опроса.
  *
  * @returns запросы и редакторы листа и операции над ними.
@@ -25,14 +32,11 @@ export function useCharacterSheetEditors() {
 
   const { refresh: refreshIncoming } = useCharacterSheetEditRequests();
 
-  const editorsSheetId = useState<string | null>(
-    'character-sheet:editors-sheet-id',
-    () => null,
-  );
-
-  const editorList = useState<SheetEditorList | null>(
-    'character-sheet:editors',
-    () => null,
+  // По листам: открытых листов может быть несколько, и запросы одного нельзя
+  // показать у другого
+  const editorLists = useState<Record<string, SheetEditorList | null>>(
+    'character-sheet:editor-lists',
+    () => ({}),
   );
 
   const isPending = ref(false);
@@ -45,9 +49,7 @@ export function useCharacterSheetEditors() {
    * @returns записи листа, старые первее.
    */
   function getEditors(sheetId: string): SheetEditor[] {
-    return editorsSheetId.value === sheetId && editorList.value
-      ? editorList.value.editors
-      : [];
+    return editorLists.value[sheetId]?.editors ?? [];
   }
 
   /**
@@ -77,22 +79,19 @@ export function useCharacterSheetEditors() {
    * @returns true, если лимит редакторов не исчерпан.
    */
   function canApproveMore(sheetId: string): boolean {
-    return (
-      editorsSheetId.value === sheetId
-      && editorList.value !== null
-      && getApprovedEditors(sheetId).length < editorList.value.limit
-    );
+    const list = editorLists.value[sheetId];
+
+    return list ? getApprovedEditors(sheetId).length < list.limit : false;
   }
 
   /**
    * Кладёт ответ сервера в общее состояние.
    *
    * @param sheetId идентификатор листа.
-   * @param list запросы и редакторы листа; null — состояние сбрасывается.
+   * @param list запросы и редакторы листа; null — о листе ничего не известно.
    */
-  function setEditors(sheetId: string | null, list: SheetEditorList | null) {
-    editorsSheetId.value = sheetId;
-    editorList.value = sheetId ? list : null;
+  function setEditors(sheetId: string, list: SheetEditorList | null): void {
+    editorLists.value = { ...editorLists.value, [sheetId]: list };
   }
 
   /**
@@ -116,12 +115,22 @@ export function useCharacterSheetEditors() {
    * @param sheetId идентификатор листа.
    */
   async function load(sheetId: string): Promise<void> {
+    const requestId = (latestLoadRequests.get(sheetId) ?? 0) + 1;
+
+    latestLoadRequests.set(sheetId, requestId);
+
     try {
       const list = await fetchSheetEditors(sheetId);
 
-      setEditors(sheetId, list);
+      // Список перечитывают и баннер, и модалка доступа: запоздавший ответ
+      // раннего запроса не должен затереть более свежий
+      if (latestLoadRequests.get(sheetId) === requestId) {
+        setEditors(sheetId, list);
+      }
     } catch {
-      setEditors(sheetId, null);
+      if (latestLoadRequests.get(sheetId) === requestId) {
+        setEditors(sheetId, null);
+      }
     }
   }
 

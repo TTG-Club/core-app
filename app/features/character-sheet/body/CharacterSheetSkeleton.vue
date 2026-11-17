@@ -88,14 +88,14 @@
 
     <DefineSummary>
       <!--
-        На мобильном (< sm) колонки-обёртки и пары плиток схлопываются в
+        В узком месте (контейнер уже @xl) колонки-обёртки и пары плиток схлопываются в
         display:contents — блоки идут в том же порядке order-*, что и в сводке
         самого листа: плитки → здоровье → истощение → ресурсы класса → навыки →
-        спасброски → владения. На sm колонки восстанавливаются.
+        спасброски → владения. С @xl колонки восстанавливаются.
       -->
-      <div class="grid grid-cols-2 gap-4 max-sm:@md:grid-cols-4">
-        <div class="flex flex-col gap-4 max-sm:contents">
-          <div class="grid grid-cols-2 gap-4 max-sm:contents">
+      <div class="grid grid-cols-2 gap-4 @max-xl:@md:grid-cols-4">
+        <div class="flex flex-col gap-4 @max-xl:contents">
+          <div class="grid grid-cols-2 gap-4 @max-xl:contents">
             <SheetSkeletonPanel
               v-for="index in SHEET_SKELETON_COUNTS.summaryTiles"
               :key="index"
@@ -111,7 +111,7 @@
           <!-- Здоровье: три значения и строка костей хитов под чертой -->
           <SheetSkeletonPanel
             title-class="w-20"
-            class="max-sm:order-1 max-sm:col-span-full"
+            class="@max-xl:order-1 @max-xl:col-span-full"
           >
             <div class="grid grid-cols-3 items-end gap-2 pt-1">
               <div class="flex flex-col items-start gap-1.5">
@@ -145,7 +145,7 @@
           <!-- Истощение: шесть делений уровня и строка эффектов под чертой -->
           <SheetSkeletonPanel
             title-class="w-20"
-            class="max-sm:order-2 max-sm:col-span-full"
+            class="@max-xl:order-2 @max-xl:col-span-full"
           >
             <div class="grid grid-cols-6 gap-1 pt-1">
               <USkeleton
@@ -162,7 +162,7 @@
 
           <SheetSkeletonPanel
             title-class="w-24"
-            class="max-sm:order-5 max-sm:col-span-full"
+            class="@max-xl:order-5 @max-xl:col-span-full"
           >
             <div class="grid grid-flow-col grid-cols-2 grid-rows-3 gap-2">
               <div
@@ -182,7 +182,7 @@
           <!-- Владения: плашка группы и чипы под ней -->
           <SheetSkeletonPanel
             title-class="w-20"
-            class="max-sm:order-6 max-sm:col-span-full"
+            class="@max-xl:order-6 @max-xl:col-span-full"
           >
             <div class="flex flex-col gap-4 pt-2">
               <div
@@ -204,8 +204,8 @@
           </SheetSkeletonPanel>
         </div>
 
-        <div class="flex flex-col gap-4 max-sm:contents">
-          <div class="grid grid-cols-2 gap-4 max-sm:contents">
+        <div class="flex flex-col gap-4 @max-xl:contents">
+          <div class="grid grid-cols-2 gap-4 @max-xl:contents">
             <SheetSkeletonPanel
               v-for="index in SHEET_SKELETON_COUNTS.summaryTiles"
               :key="index"
@@ -220,7 +220,7 @@
 
           <SheetSkeletonPanel
             title-class="w-28"
-            class="max-sm:order-3 max-sm:col-span-full"
+            class="@max-xl:order-3 @max-xl:col-span-full"
           >
             <div class="flex flex-col gap-2">
               <div
@@ -239,7 +239,7 @@
 
           <SheetSkeletonPanel
             title-class="w-16"
-            class="grow max-sm:order-4 max-sm:col-span-full"
+            class="grow @max-xl:order-4 @max-xl:col-span-full"
           >
             <div class="flex flex-col gap-0.5">
               <div

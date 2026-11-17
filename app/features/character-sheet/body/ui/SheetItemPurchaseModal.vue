@@ -16,7 +16,10 @@
     SHEET_ITEM_PURCHASE_LABELS,
   } from '../../model';
 
-  const { items } = defineProps<{
+  const { sheetKey, items } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     items: ItemPurchaseLine[];
   }>();
 
@@ -24,7 +27,7 @@
     close: [result: ItemPurchaseResult];
   }>();
 
-  const { character } = useCharacterSheet();
+  const { character } = useCharacterSheet(sheetKey);
 
   /**
    * Черновик списка покупки: в нём меняют количество и убирают предметы до

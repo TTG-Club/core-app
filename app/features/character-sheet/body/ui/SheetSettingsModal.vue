@@ -3,13 +3,14 @@
     AbilityKey,
     Character,
     CharacterCustomBonus,
+    CharacterSettings,
     CustomBonusBaseSource,
     ProficiencyBaseSource,
   } from '../../model';
 
   import { ACTION_LABELS } from '~/shared/consts';
 
-  import { useCharacterSheetList } from '../../composables';
+  import { useCharacterSheet, useCharacterSheetList } from '../../composables';
   import {
     ABILITY_LABELS,
     CUSTOM_BONUS_BASE_SOURCE_OPTIONS,
@@ -37,10 +38,17 @@
   import SheetCustomBonusSection from './SheetCustomBonusSection.vue';
 
   // Модалка открывается и из шапки листа, и из карточки списка, поэтому
-  // персонаж приходит пропом, а сохранение идёт через список: он сам решает,
-  // писать в открытый лист (его допишет автосейв) или отправить документ на бэк.
+  // персонаж приходит пропом. Настройки открытого листа пишутся в его
+  // состояние (на бэк их допишет автосейв), а листа, который нигде не
+  // открыт, — уходят на бэк сразу, через список.
   const props = defineProps<{
     character: Character;
+
+    /**
+     * Ключ открытого листа. Задан — лист сейчас открыт: прямая отправка на
+     * бэк устроила бы гонку с его автосохранением.
+     */
+    sheetKey?: string;
   }>();
 
   const emit = defineEmits<{
@@ -48,6 +56,31 @@
   }>();
 
   const { saveSettings } = useCharacterSheetList();
+
+  // Открытый лист: окно пересоздаётся при каждом открытии, ключ постоянен
+  const openSheet = props.sheetKey
+    ? useCharacterSheet(props.sheetKey)
+    : undefined;
+
+  /**
+   * Сохраняет настройки: в открытый лист — через его состояние, в закрытый —
+   * документом на бэк.
+   * @param settings новые настройки листа.
+   * @returns удалось ли сохранить.
+   */
+  async function applySettings(settings: CharacterSettings): Promise<boolean> {
+    if (!openSheet) {
+      return await saveSettings(props.character, settings);
+    }
+
+    if (!openSheet.ensureEditable()) {
+      return false;
+    }
+
+    openSheet.setSettings(settings);
+
+    return true;
+  }
 
   const draftWeaponAbility = ref<
     AbilityKey | typeof WEAPON_ATTACK_ABILITY_AUTO
@@ -221,7 +254,7 @@
   async function handleApply() {
     isSaving.value = true;
 
-    const saved = await saveSettings(props.character, {
+    const saved = await applySettings({
       weaponAttackAbility:
         draftWeaponAbility.value === WEAPON_ATTACK_ABILITY_AUTO
           ? null

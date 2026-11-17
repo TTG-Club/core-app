@@ -1,6 +1,11 @@
+import type { SheetKeySource } from '~character-sheet/model';
+
 import type { ScreenPickerPlacement } from './schemas';
 
-/** Точка на холсте ширмы, px от его левого верхнего угла. */
+/**
+ * Точка в px: на бесконечном поле ширмы (место окон) либо на холсте — его
+ * видимой части, от её левого верхнего угла.
+ */
 export interface ScreenPoint {
   x: number;
   y: number;
@@ -18,6 +23,15 @@ export interface ScreenRect extends ScreenPoint, ScreenSize {}
 /** Прямоугольник окна вместе с его идентификатором. */
 export interface ScreenTile extends ScreenRect {
   id: string;
+}
+
+/**
+ * Сетка окон: сколько в ней колонок и рядов. Тем же видом записана клетка
+ * поля выбора сетки — её колонка и ряд, считая с единицы.
+ */
+export interface ScreenGrid {
+  columns: number;
+  rows: number;
 }
 
 /** Направление по одной оси: `-1` — к началу, `1` — к концу, `0` — нет. */
@@ -74,6 +88,19 @@ export interface ScreenSplitter {
   afterIds: ReadonlyArray<string>;
 }
 
+/** Лист персонажа в списке «Персонаж»: его можно поставить на ширму. */
+export interface ScreenSheetOption {
+  /** Путь окна: адрес страницы листа на сайте. */
+  path: string;
+  /** Свой лист или чужой, доступный по ссылке. */
+  source: SheetKeySource;
+  name: string;
+  /** Классы с уровнями и вид. */
+  subtitle: string;
+  /** Портрет персонажа; без него — значок. */
+  avatarUrl?: string;
+}
+
 /** Просьба положить на ширму запись сайта или заметку. */
 export interface ScreenWindowRequest {
   /** Адрес записи на сайте (`/spells/fireball`) или путь заметки. */
@@ -82,6 +109,8 @@ export interface ScreenWindowRequest {
   title: string;
   /** Точка на холсте, рядом с которой встаёт окно; без неё — по центру. */
   origin?: ScreenPoint;
+  /** Желаемый размер окна; без него — обычный. */
+  size?: ScreenSize;
 }
 
 /** Раздел сайта, чьи записи открываются в окнах ширмы. */

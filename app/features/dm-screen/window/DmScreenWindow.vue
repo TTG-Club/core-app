@@ -6,7 +6,11 @@
     ScreenWindow,
   } from '../model';
 
-  import { useDmScreen, useDmScreenLayouts } from '../composables';
+  import {
+    useDmScreen,
+    useDmScreenLayouts,
+    useDmScreenView,
+  } from '../composables';
   import {
     DM_SCREEN_CLASSES_PATH,
     DM_SCREEN_EDITABLE_SELECTOR,
@@ -19,15 +23,17 @@
     getScreenWindowIcon,
     isOutsideScreenControl,
     isScreenNotePath,
-    keepScreenWindowReachable,
+    keepScreenWindowOnField,
     magnetScreenWindow,
     normalizeScreenEntryPath,
     resizeScreenWindow,
     resolveScreenEntry,
+    resolveScreenSheet,
     toScreenRectStyle,
   } from '../model';
   import DmScreenEntry from './DmScreenEntry.vue';
   import DmScreenNote from './DmScreenNote.vue';
+  import DmScreenSheet from './DmScreenSheet.vue';
 
   /** С чего началось перетаскивание или растягивание окна. */
   interface PointerGesture {
@@ -38,7 +44,7 @@
   }
 
   /**
-   * Окно записи или заметки на холсте ширмы. Тянется за шапку и
+   * Окно записи или заметки на поле ширмы. Тянется за шапку и
    * притягивается к краям холста и соседних окон (Alt — без магнита),
    * растягивается за любую сторону или угол, сворачивается в плашку кнопкой
    * или двойным кликом по шапке и закрывается. Окно, отпущенное у бокового
@@ -66,6 +72,8 @@
     previewRects,
   } = useDmScreen();
 
+  const { view } = useDmScreenView();
+
   const {
     startDrag: startLayoutDrag,
     moveDrag: moveLayoutDrag,
@@ -79,16 +87,11 @@
   /** Где окно стоит, пока его двигают или растягивают. */
   const liveRect = shallowRef<ScreenRect>();
 
-  // Место окна: под указателем, в предпросмотре общей границы или
-  // сохранённое. Сохранённое могло остаться за краем меньшего холста
+  // Место окна на поле: под указателем, в предпросмотре общей границы или
+  // сохранённое
   const rect = computed<ScreenRect>(
     () =>
-      liveRect.value
-      ?? previewRects.value.get(screenWindow.id) ?? {
-        ...keepScreenWindowReachable(screenWindow, screenWindow, board.value),
-        width: screenWindow.width,
-        height: screenWindow.height,
-      },
+      liveRect.value ?? previewRects.value.get(screenWindow.id) ?? screenWindow,
   );
 
   const windowStyle = computed(() => ({
@@ -104,6 +107,9 @@
   ]);
 
   const isNote = computed(() => isScreenNotePath(screenWindow.path));
+
+  /** Лист персонажа в окне; у остальных окон его нет. */
+  const sheet = computed(() => resolveScreenSheet(screenWindow.path));
 
   /** Запись сайта в окне; у заметки и у адреса незнакомого раздела её нет. */
   const entry = computed(() => resolveScreenEntry(screenWindow.path));
@@ -177,7 +183,8 @@
 
   /**
    * Указатель двигается: окно идёт за ним или меняет размер. С зажатым Alt
-   * магнита нет, но выше холста окно не уходит и тогда.
+   * магнита нет, но за край поля окно не уходит и тогда. Указатель идёт по экрану, а окно — по полю: на отдалённом
+   * поле тот же путь указателя сдвигает окно дальше.
    * @param event - движение указателя
    */
   function moveGesture(event: PointerEvent): void {
@@ -186,19 +193,21 @@
     }
 
     const delta = {
-      x: event.clientX - gesture.pointer.x,
-      y: event.clientY - gesture.pointer.y,
+      x: (event.clientX - gesture.pointer.x) / view.value.zoom,
+      y: (event.clientY - gesture.pointer.y) / view.value.zoom,
     };
 
     const others = event.altKey ? undefined : getOthers();
 
     if (gesture.edges) {
-      liveRect.value = resizeScreenWindow(
-        gesture.rect,
-        gesture.edges,
-        delta,
-        board.value,
-        others,
+      liveRect.value = keepScreenWindowOnField(
+        resizeScreenWindow(
+          gesture.rect,
+          gesture.edges,
+          delta,
+          board.value,
+          others,
+        ),
       );
 
       return;
@@ -214,19 +223,18 @@
       ? magnetScreenWindow(moved, others, board.value)
       : moved;
 
-    liveRect.value = {
+    liveRect.value = keepScreenWindowOnField({
       ...moved,
-      x: position.x,
-      y: Math.max(position.y, 0),
-    };
+      x: Math.round(position.x),
+      y: Math.round(position.y),
+    });
 
     moveLayoutDrag({ x: event.clientX, y: event.clientY });
   }
 
   /**
    * Жест закончился: место и размер окна записываются в ширму. Окно,
-   * отпущенное над местом раскладки, занимает его целиком; шапка, утащенная
-   * за край холста, возвращается на него.
+   * отпущенное над местом раскладки, занимает его целиком.
    */
   function endGesture(): void {
     const finished = gesture;
@@ -252,10 +260,7 @@
       return;
     }
 
-    update(screenWindow.id, {
-      ...current,
-      ...keepScreenWindowReachable(current, current, board.value),
-    });
+    update(screenWindow.id, current);
   }
 
   /** Поднимает окно над остальными: по нему нажали. */
@@ -447,6 +452,15 @@
         v-if="isNote"
         v-model:editing="isNoteEditing"
         :screen-window="screenWindow"
+      />
+
+      <DmScreenSheet
+        v-else-if="sheet"
+        :key="screenWindow.path"
+        :sheet
+        @loaded="syncTitle"
+        @navigate="navigateWindow"
+        @close="closeWindow"
       />
 
       <DmScreenEntry

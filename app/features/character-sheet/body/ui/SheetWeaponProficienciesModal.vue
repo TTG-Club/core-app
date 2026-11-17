@@ -12,11 +12,16 @@
     WEAPON_PROFICIENCY_ICON,
   } from '../../model';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
 
-  const { character, setProficiencies } = useCharacterSheet();
+  const { character, setProficiencies } = useCharacterSheet(sheetKey);
 
   const catalogNames = new Set(
     WEAPON_PROFICIENCY_GROUPS.flatMap((group) => [group.all, ...group.items]),

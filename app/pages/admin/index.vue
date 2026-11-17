@@ -1,6 +1,9 @@
 <script setup lang="ts">
   import type { AdminCharacterSheetStats } from '~admin/character-sheets/model';
-  import type { AdminOnlineStatsResponse } from '~admin/online/model';
+  import type {
+    AdminOnlineHistoryResponse,
+    AdminOnlineStatsResponse,
+  } from '~admin/online/model';
   import type { AdminSubscription } from '~admin/subscription-stats/model';
 
   import { FetchStatus } from '~/shared/consts';
@@ -34,11 +37,16 @@
   } from '~admin/navigation/model';
   import {
     ADMIN_ONLINE_DM_SCREEN_USAGE,
+    ADMIN_ONLINE_HISTORY_API_URL,
+    ADMIN_ONLINE_HISTORY_DATA_KEY,
+    ADMIN_ONLINE_HISTORY_REQUEST_DAYS,
     ADMIN_ONLINE_STATS_API_URL,
     ADMIN_ONLINE_STATS_DATA_KEY,
+    parseAdminOnlineHistory,
     parseAdminOnlineStats,
   } from '~admin/online/model';
   import {
+    AdminOnlineHistoryPanel,
     AdminOnlinePreferencesPanel,
     AdminOnlineSitesPanel,
     AdminOnlineSummary,
@@ -92,6 +100,39 @@
       lazy: true,
     },
   );
+
+  // Историю берём сразу за самый длинный период: короткие — её хвост.
+  const {
+    data: onlineHistory,
+    error: onlineHistoryError,
+    refresh: refreshOnlineHistory,
+    status: onlineHistoryStatus,
+  } = await useAsyncData<AdminOnlineHistoryResponse>(
+    ADMIN_ONLINE_HISTORY_DATA_KEY,
+    async () =>
+      parseAdminOnlineHistory(
+        await requestFetch(ADMIN_ONLINE_HISTORY_API_URL, {
+          query: { days: ADMIN_ONLINE_HISTORY_REQUEST_DAYS },
+        }),
+      ),
+    { server: false, lazy: true },
+  );
+
+  const isOnlineHistoryLoading = computed(
+    () => onlineHistoryStatus.value === FetchStatus.Pending,
+  );
+
+  // Как у подписок: до старта запроса на клиенте статус 'idle', и пустота тогда —
+  // ещё не ответ, а ожидание.
+  const isOnlineHistoryPending = computed(
+    () =>
+      isOnlineHistoryLoading.value
+      || onlineHistoryStatus.value === FetchStatus.Idle,
+  );
+
+  const hasOnlineHistoryError = computed(() => !!onlineHistoryError.value);
+
+  const resolvedOnlineHistory = computed(() => onlineHistory.value ?? null);
 
   const isOnlineStatsLoading = computed(
     () => onlineStatsStatus.value === 'pending',
@@ -201,6 +242,7 @@
   const isStatsLoading = computed(
     () =>
       isOnlineStatsLoading.value
+      || isOnlineHistoryLoading.value
       || isUsersTotalLoading.value
       || isSheetStatsLoading.value
       || isGameStatisticsLoading.value
@@ -213,6 +255,7 @@
   async function handleStatsRefresh(): Promise<void> {
     await Promise.all([
       refreshOnlineStats(),
+      refreshOnlineHistory(),
       refreshSheetStats(),
       refreshGameStatistics(),
       refreshSubscriptions(),
@@ -225,9 +268,32 @@
   <NuxtLayout
     name="detail"
     :title="ADMIN_DASHBOARD_PAGE_TITLE"
+    wide
   >
-    <div class="space-y-6">
-      <section class="space-y-3">
+    <!-- Разделы — то, ради чего в админку заходят, поэтому они не под
+         статистикой: до 2xl — над ней, на широком экране — колонкой справа -->
+    <div class="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_20rem] 2xl:items-start">
+      <section class="space-y-3 2xl:col-start-2 2xl:row-start-1">
+        <h2 class="text-sm font-semibold text-muted">
+          {{ ADMIN_DASHBOARD_SECTIONS_TITLE }}
+        </h2>
+
+        <div
+          class="grid items-start gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-1"
+        >
+          <AdminSectionGroup :group="ADMIN_USERS_SECTION_GROUP">
+            <SubscriptionSalesSwitch />
+          </AdminSectionGroup>
+
+          <AdminSectionGroup :group="ADMIN_CONTENT_SECTION_GROUP" />
+
+          <AdminSectionGroup :group="ADMIN_TOOLS_SECTION_GROUP" />
+
+          <AdminSectionGroup :group="ADMIN_VTTG_SECTION_GROUP" />
+        </div>
+      </section>
+
+      <section class="min-w-0 space-y-3 2xl:col-start-1 2xl:row-start-1">
         <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
           <h2 class="text-sm font-semibold text-muted">
             {{ ADMIN_DASHBOARD_STATS_TITLE }}
@@ -320,24 +386,12 @@
             :is-pending="isOnlineStatsPending"
           />
         </div>
-      </section>
 
-      <section class="space-y-3">
-        <h2 class="text-sm font-semibold text-muted">
-          {{ ADMIN_DASHBOARD_SECTIONS_TITLE }}
-        </h2>
-
-        <div class="grid items-start gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <AdminSectionGroup :group="ADMIN_USERS_SECTION_GROUP">
-            <SubscriptionSalesSwitch />
-          </AdminSectionGroup>
-
-          <AdminSectionGroup :group="ADMIN_CONTENT_SECTION_GROUP" />
-
-          <AdminSectionGroup :group="ADMIN_TOOLS_SECTION_GROUP" />
-
-          <AdminSectionGroup :group="ADMIN_VTTG_SECTION_GROUP" />
-        </div>
+        <AdminOnlineHistoryPanel
+          :history="resolvedOnlineHistory"
+          :is-pending="isOnlineHistoryPending"
+          :has-error="hasOnlineHistoryError"
+        />
       </section>
     </div>
   </NuxtLayout>

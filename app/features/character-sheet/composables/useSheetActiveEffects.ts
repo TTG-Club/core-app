@@ -42,15 +42,16 @@ function getFeatureEffectSource(feature: CharacterFeature): string {
 /**
  * Ведение активных эффектов листа.
  *
+ * @param sheetKey ключ открытого листа.
  * @returns свои эффекты, эффекты снаряжения, состояния и действия над ними.
  */
-export function useSheetActiveEffects() {
+export function useSheetActiveEffects(sheetKey: string) {
   const {
     character,
     canEdit,
     updateActiveEffects,
     toggleFeatureEffectDisabled,
-  } = useCharacterSheet();
+  } = useCharacterSheet(sheetKey);
 
   /** Свои эффекты персонажа — всё, что не собрано из шаблона состояния. */
   const customEffects = computed(() =>

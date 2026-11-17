@@ -1,6 +1,11 @@
-import type { ScreenPickerPlacement, ScreenWindow } from './schemas';
+import type {
+  ScreenPickerPlacement,
+  ScreenView,
+  ScreenWindow,
+} from './schemas';
 import type {
   ScreenDirection,
+  ScreenGrid,
   ScreenLayout,
   ScreenLayoutTarget,
   ScreenLayoutZone,
@@ -16,21 +21,22 @@ import type {
 import { clamp, minBy, sortBy, uniq } from 'es-toolkit';
 
 import {
+  DM_SCREEN_BACKDROP,
   DM_SCREEN_CASCADE_LENGTH,
   DM_SCREEN_CASCADE_STEP,
   DM_SCREEN_CLICK_OFFSET,
   DM_SCREEN_EDGE_DISTANCE,
+  DM_SCREEN_FIELD,
   DM_SCREEN_GAP,
   DM_SCREEN_HALVES_LAYOUT,
   DM_SCREEN_MAGNET_DISTANCE,
   DM_SCREEN_MARGIN,
   DM_SCREEN_PICKER_BAND,
   DM_SCREEN_PICKER_OFFSET,
-  DM_SCREEN_REACHABLE_PART,
   DM_SCREEN_SPLITTER_TOLERANCE,
-  DM_SCREEN_WINDOW_HEADER_HEIGHT,
   DM_SCREEN_WINDOW_MIN_SIZE,
   DM_SCREEN_WINDOW_SIZE,
+  DM_SCREEN_ZOOM,
 } from './constants';
 
 /** Отрезок окна вдоль одной оси. */
@@ -68,34 +74,38 @@ function clampFromStart(coordinate: number, min: number, max: number): number {
 }
 
 /**
- * Свободное место холста: холст без отступов по краям.
- * @param board - размер холста
+ * Свободное место холста: видимая часть поля без отступов по краям.
+ * @param board - видимая часть поля
  */
-export function getScreenArea(board: ScreenSize): ScreenRect {
+export function getScreenArea(board: ScreenRect): ScreenRect {
   return {
-    x: DM_SCREEN_MARGIN,
-    y: DM_SCREEN_MARGIN,
+    x: board.x + DM_SCREEN_MARGIN,
+    y: board.y + DM_SCREEN_MARGIN,
     width: board.width - DM_SCREEN_MARGIN * 2,
     height: board.height - DM_SCREEN_MARGIN * 2,
   };
 }
 
 /**
- * Размер нового окна: обычный, но не больше свободного места холста и не
- * меньше наименьшего окна.
- * @param board - размер холста
+ * Размер нового окна: желаемый (без него — обычный), но не больше свободного
+ * места холста и не меньше наименьшего окна.
+ * @param board - видимая часть поля
+ * @param preferred - желаемый размер окна
  */
-export function fitScreenWindowSize(board: ScreenSize): ScreenSize {
+export function fitScreenWindowSize(
+  board: ScreenRect,
+  preferred: ScreenSize = DM_SCREEN_WINDOW_SIZE,
+): ScreenSize {
   const area = getScreenArea(board);
 
   return {
     width: Math.max(
       DM_SCREEN_WINDOW_MIN_SIZE.width,
-      Math.min(DM_SCREEN_WINDOW_SIZE.width, area.width),
+      Math.min(preferred.width, area.width),
     ),
     height: Math.max(
       DM_SCREEN_WINDOW_MIN_SIZE.height,
-      Math.min(DM_SCREEN_WINDOW_SIZE.height, area.height),
+      Math.min(preferred.height, area.height),
     ),
   };
 }
@@ -103,13 +113,13 @@ export function fitScreenWindowSize(board: ScreenSize): ScreenSize {
 /**
  * Место нового окна: рядом с точкой клика, а без неё — лесенкой от центра
  * холста. Окно целиком остаётся на холсте.
- * @param board - размер холста
+ * @param board - видимая часть поля
  * @param size - размер окна
  * @param origin - точка клика на холсте
  * @param openCount - сколько окон уже развёрнуто
  */
 export function placeScreenWindow(
-  board: ScreenSize,
+  board: ScreenRect,
   size: ScreenSize,
   origin: ScreenPoint | undefined,
   openCount: number,
@@ -139,36 +149,6 @@ export function placeScreenWindow(
 }
 
 /**
- * Место окна, с которого его ещё можно ухватить: окно может уйти за край
- * холста, но шапка остаётся видна, а с боков виден кусок окна.
- * @param position - желаемое место
- * @param size - размер окна
- * @param board - размер холста
- */
-export function keepScreenWindowReachable(
-  position: ScreenPoint,
-  size: ScreenSize,
-  board: ScreenSize,
-): ScreenPoint {
-  return {
-    x: Math.round(
-      clampFromStart(
-        position.x,
-        DM_SCREEN_REACHABLE_PART - size.width,
-        board.width - DM_SCREEN_REACHABLE_PART,
-      ),
-    ),
-    y: Math.round(
-      clampFromStart(
-        position.y,
-        0,
-        board.height - DM_SCREEN_WINDOW_HEADER_HEIGHT,
-      ),
-    ),
-  };
-}
-
-/**
  * Самый верхний слой среди окон.
  * @param windows - окна ширмы
  */
@@ -186,14 +166,14 @@ export function getScreenTopLayer(
  * дублируется: её окно разворачивается и встаёт поверх остальных.
  * @param windows - окна ширмы
  * @param request - запись, её название и точка клика
- * @param board - размер холста
+ * @param board - видимая часть поля
  * @param id - идентификатор нового окна
  * @returns новые окна, окно записи и появилось ли оно только что
  */
 export function appendScreenWindow(
   windows: ReadonlyArray<ScreenWindow>,
   request: ScreenWindowRequest,
-  board: ScreenSize,
+  board: ScreenRect,
   id: string,
 ): { windows: Array<ScreenWindow>; windowId: string; isAdded: boolean } {
   const layer = getScreenTopLayer(windows) + 1;
@@ -214,7 +194,7 @@ export function appendScreenWindow(
     };
   }
 
-  const size = fitScreenWindowSize(board);
+  const size = fitScreenWindowSize(board, request.size);
 
   const position = placeScreenWindow(
     board,
@@ -278,23 +258,27 @@ function pickGridColumns(count: number, area: ScreenSize): number {
 }
 
 /**
- * Раскладывает окна ровной сеткой на свободном месте холста. Меньше
- * наименьшего окна клетки не становятся: если окон слишком много, нижние
- * ряды уходят за край холста.
+ * Раскладывает окна ровной сеткой на свободном месте холста. Сетку задаёт
+ * мастер; без неё число колонок подбирается само, а рядов берётся столько,
+ * сколько нужно окнам. Меньше наименьшего окна клетки не становятся: если
+ * сетка слишком частая или окон больше, чем клеток, лишние колонки и ряды
+ * уходят за край холста.
  * @param ids - окна в порядке чтения: слева направо, сверху вниз
- * @param board - размер холста
+ * @param board - видимая часть поля
+ * @param grid - сколько колонок и рядов в сетке
  */
 export function arrangeScreenWindows(
   ids: ReadonlyArray<string>,
-  board: ScreenSize,
+  board: ScreenRect,
+  grid?: ScreenGrid,
 ): Array<ScreenTile> {
   if (!ids.length) {
     return [];
   }
 
   const area = getScreenArea(board);
-  const columns = pickGridColumns(ids.length, area);
-  const rows = Math.ceil(ids.length / columns);
+  const columns = grid?.columns ?? pickGridColumns(ids.length, area);
+  const rows = grid?.rows ?? Math.ceil(ids.length / columns);
 
   // Шаг сетки — клетка вместе с промежутком. Края клеток округляются по
   // отдельности, поэтому последняя колонка доходит ровно до края холста
@@ -349,12 +333,12 @@ function attractToNearest(
  * другим окнам — вровень с их краями или рядом через промежуток.
  * @param rect - где окно сейчас
  * @param others - остальные развёрнутые окна
- * @param board - размер холста
+ * @param board - видимая часть поля
  */
 export function magnetScreenWindow(
   rect: ScreenRect,
   others: ReadonlyArray<ScreenRect>,
-  board: ScreenSize,
+  board: ScreenRect,
 ): ScreenPoint {
   const area = getScreenArea(board);
 
@@ -418,9 +402,7 @@ function resizeAxisSpan(
         ])
       : wanted;
 
-    // Выше холста и левее него сторона не уходит; окно, которое уже там
-    // стоит, обратно не выталкивается
-    const start = clamp(attracted, Math.min(span.start, 0), end - minSize);
+    const start = Math.min(attracted, end - minSize);
 
     return { start, size: end - start };
   }
@@ -455,14 +437,14 @@ function resizeAxisSpan(
  * @param start - окно до растягивания
  * @param edges - за какие стороны тянут
  * @param delta - на сколько сдвинулся указатель
- * @param board - размер холста
+ * @param board - видимая часть поля
  * @param others - остальные развёрнутые окна; без них магнита нет
  */
 export function resizeScreenWindow(
   start: ScreenRect,
   edges: ScreenResizeEdges,
   delta: ScreenPoint,
-  board: ScreenSize,
+  board: ScreenRect,
   others?: ReadonlyArray<ScreenRect>,
 ): ScreenRect {
   const area = getScreenArea(board);
@@ -497,9 +479,9 @@ export function resizeScreenWindow(
  * Место раскладки на холсте как есть, без оглядки на наименьшее окно. Между
  * соседними местами — обычный промежуток, у краёв холста — обычный отступ.
  * @param zone - место в долях холста
- * @param board - размер холста
+ * @param board - видимая часть поля
  */
-function getZoneBounds(zone: ScreenLayoutZone, board: ScreenSize): ScreenRect {
+function getZoneBounds(zone: ScreenLayoutZone, board: ScreenRect): ScreenRect {
   const area = getScreenArea(board);
 
   // К свободному месту добавлен один промежуток, а из каждого места он
@@ -523,11 +505,11 @@ function getZoneBounds(zone: ScreenLayoutZone, board: ScreenSize): ScreenRect {
  * Прямоугольник места раскладки на холсте. Меньше наименьшего окна место
  * не становится.
  * @param zone - место в долях холста
- * @param board - размер холста
+ * @param board - видимая часть поля
  */
 export function getScreenZoneRect(
   zone: ScreenLayoutZone,
-  board: ScreenSize,
+  board: ScreenRect,
 ): ScreenRect {
   const bounds = getZoneBounds(zone, board);
 
@@ -542,11 +524,11 @@ export function getScreenZoneRect(
  * Помещается ли раскладка на холст: каждое её место не меньше наименьшего
  * окна. Иначе окна в соседних местах наезжали бы друг на друга.
  * @param layout - раскладка
- * @param board - размер холста
+ * @param board - видимая часть поля
  */
 export function isScreenLayoutFitting(
   layout: ScreenLayout,
-  board: ScreenSize,
+  board: ScreenRect,
 ): boolean {
   return layout.zones.every((zone) => {
     const bounds = getZoneBounds(zone, board);
@@ -834,6 +816,293 @@ export function moveScreenSplitter(
 }
 
 /**
+ * Масштаб в допустимых пределах: ближе, чем один к одному, поле не подходит.
+ * @param zoom - желаемый масштаб
+ * @param minZoom - наименьший масштаб
+ */
+export function clampScreenZoom(
+  zoom: number,
+  minZoom: number = DM_SCREEN_ZOOM.min,
+): number {
+  return clamp(zoom, minZoom, DM_SCREEN_ZOOM.max);
+}
+
+/**
+ * Видимая часть поля: что помещается на холст при этом обзоре. Края
+ * округлены: окна, которые к ним притягиваются, стоят на целых пикселях.
+ * @param view - обзор
+ * @param canvas - размер холста на экране
+ */
+export function getScreenVisibleRect(
+  view: ScreenView,
+  canvas: ScreenSize,
+): ScreenRect {
+  return {
+    x: Math.round(view.x),
+    y: Math.round(view.y),
+    width: Math.round(canvas.width / view.zoom),
+    height: Math.round(canvas.height / view.zoom),
+  };
+}
+
+/**
+ * Точка поля по точке холста.
+ * @param point - точка на холсте, px от его левого верхнего угла
+ * @param view - обзор
+ */
+export function toScreenFieldPoint(
+  point: ScreenPoint,
+  view: ScreenView,
+): ScreenPoint {
+  return {
+    x: view.x + point.x / view.zoom,
+    y: view.y + point.y / view.zoom,
+  };
+}
+
+/**
+ * Прямоугольник поля, как он виден на холсте.
+ * @param rect - прямоугольник на поле
+ * @param view - обзор
+ */
+export function toScreenCanvasRect(
+  rect: ScreenRect,
+  view: ScreenView,
+): ScreenRect {
+  return {
+    x: (rect.x - view.x) * view.zoom,
+    y: (rect.y - view.y) * view.zoom,
+    width: rect.width * view.zoom,
+    height: rect.height * view.zoom,
+  };
+}
+
+/**
+ * Обзор, не выходящий за края поля. Если холст вмещает больше, чем всё
+ * поле, оно встаёт по центру.
+ * @param view - желаемый обзор
+ * @param canvas - размер холста на экране
+ */
+export function clampScreenView(
+  view: ScreenView,
+  canvas: ScreenSize,
+): ScreenView {
+  const width = canvas.width / view.zoom;
+  const height = canvas.height / view.zoom;
+
+  return {
+    ...view,
+    x:
+      width >= DM_SCREEN_FIELD.width
+        ? DM_SCREEN_FIELD.x - (width - DM_SCREEN_FIELD.width) / 2
+        : clamp(
+            view.x,
+            DM_SCREEN_FIELD.x,
+            DM_SCREEN_FIELD.x + DM_SCREEN_FIELD.width - width,
+          ),
+    y:
+      height >= DM_SCREEN_FIELD.height
+        ? DM_SCREEN_FIELD.y - (height - DM_SCREEN_FIELD.height) / 2
+        : clamp(
+            view.y,
+            DM_SCREEN_FIELD.y,
+            DM_SCREEN_FIELD.y + DM_SCREEN_FIELD.height - height,
+          ),
+  };
+}
+
+/**
+ * Окно, целиком стоящее на поле: за край поля оно не выходит, а больше
+ * поля не становится.
+ * @param rect - желаемые место и размер окна
+ */
+export function keepScreenWindowOnField(rect: ScreenRect): ScreenRect {
+  const width = Math.min(rect.width, DM_SCREEN_FIELD.width);
+  const height = Math.min(rect.height, DM_SCREEN_FIELD.height);
+
+  return {
+    x: clamp(
+      rect.x,
+      DM_SCREEN_FIELD.x,
+      DM_SCREEN_FIELD.x + DM_SCREEN_FIELD.width - width,
+    ),
+    y: clamp(
+      rect.y,
+      DM_SCREEN_FIELD.y,
+      DM_SCREEN_FIELD.y + DM_SCREEN_FIELD.height - height,
+    ),
+    width,
+    height,
+  };
+}
+
+/**
+ * Где на холсте стоит начало координат поля, в целых пикселях: дробный
+ * сдвиг размывал бы текст окон.
+ * @param view - обзор
+ */
+export function getScreenFieldOffset(view: ScreenView): ScreenPoint {
+  return {
+    x: Math.round(-view.x * view.zoom),
+    y: Math.round(-view.y * view.zoom),
+  };
+}
+
+/**
+ * Масштаб поля в процентах для подписи: `0.5` — «50%».
+ * @param zoom - масштаб поля
+ */
+export function formatScreenZoom(zoom: number): string {
+  return `${Math.round(zoom * 100)}%`;
+}
+
+/**
+ * Сдвигает обзор вслед за указателем: поле едет вместе с ним.
+ * @param view - обзор в начале жеста
+ * @param delta - на сколько сдвинулся указатель на экране
+ */
+export function panScreenView(
+  view: ScreenView,
+  delta: ScreenPoint,
+): ScreenView {
+  return {
+    ...view,
+    x: view.x - delta.x / view.zoom,
+    y: view.y - delta.y / view.zoom,
+  };
+}
+
+/**
+ * Меняет масштаб так, что точка поля под якорем остаётся на месте.
+ * @param view - обзор
+ * @param zoom - желаемый масштаб
+ * @param anchor - точка холста, вокруг которой меняется масштаб
+ */
+export function zoomScreenView(
+  view: ScreenView,
+  zoom: number,
+  anchor: ScreenPoint,
+): ScreenView {
+  const nextZoom = clampScreenZoom(zoom);
+  const fieldAnchor = toScreenFieldPoint(anchor, view);
+
+  return {
+    x: fieldAnchor.x - anchor.x / nextZoom,
+    y: fieldAnchor.y - anchor.y / nextZoom,
+    zoom: nextZoom,
+  };
+}
+
+/**
+ * Ставит точку поля в середину холста, масштаб не меняется.
+ * @param view - обзор
+ * @param center - точка поля
+ * @param canvas - размер холста на экране
+ */
+export function centerScreenView(
+  view: ScreenView,
+  center: ScreenPoint,
+  canvas: ScreenSize,
+): ScreenView {
+  return {
+    ...view,
+    x: center.x - canvas.width / view.zoom / 2,
+    y: center.y - canvas.height / view.zoom / 2,
+  };
+}
+
+/**
+ * Середина прямоугольника.
+ * @param rect - прямоугольник
+ */
+export function getScreenRectCenter(rect: ScreenRect): ScreenPoint {
+  return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+}
+
+/**
+ * Наименьший прямоугольник, в который помещаются все переданные; без
+ * прямоугольников его нет.
+ * @param rects - прямоугольники на поле
+ */
+export function getScreenBounds(
+  rects: ReadonlyArray<ScreenRect>,
+): ScreenRect | undefined {
+  if (!rects.length) {
+    return undefined;
+  }
+
+  const left = Math.min(...rects.map((rect) => rect.x));
+  const top = Math.min(...rects.map((rect) => rect.y));
+  const right = Math.max(...rects.map((rect) => rect.x + rect.width));
+  const bottom = Math.max(...rects.map((rect) => rect.y + rect.height));
+
+  return { x: left, y: top, width: right - left, height: bottom - top };
+}
+
+/**
+ * Обзор, при котором прямоугольник поля целиком виден и стоит по центру:
+ * поле отдаляется настолько, насколько нужно, но не приближается сверх
+ * обычного.
+ * @param bounds - что должно поместиться
+ * @param canvas - размер холста на экране
+ * @param padding - отступ от краёв холста, px
+ * @param minZoom - наименьший масштаб; то, что не влезло, останется за краем
+ */
+export function fitScreenView(
+  bounds: ScreenRect,
+  canvas: ScreenSize,
+  padding: number,
+  minZoom: number = DM_SCREEN_ZOOM.min,
+): ScreenView {
+  const zoom = clampScreenZoom(
+    Math.min(
+      (canvas.width - padding * 2) / bounds.width,
+      (canvas.height - padding * 2) / bounds.height,
+    ),
+    minZoom,
+  );
+
+  return centerScreenView(
+    { x: 0, y: 0, zoom },
+    getScreenRectCenter(bounds),
+    canvas,
+  );
+}
+
+/**
+ * Виден ли прямоугольник хотя бы частью.
+ * @param rect - прямоугольник на поле
+ * @param board - видимая часть поля
+ */
+export function isScreenRectVisible(
+  rect: ScreenRect,
+  board: ScreenRect,
+): boolean {
+  return (
+    rect.x < board.x + board.width
+    && board.x < rect.x + rect.width
+    && rect.y < board.y + board.height
+    && board.y < rect.y + rect.height
+  );
+}
+
+/**
+ * Шаг точек на пустом месте поля, px на экране. Когда поле отдалено и точки
+ * сливаются, шаг удваивается, пока не станет различимым.
+ * @param zoom - масштаб поля
+ */
+export function getScreenBackdropStep(zoom: number): number {
+  const step = DM_SCREEN_BACKDROP.step * zoom;
+
+  const doublings = Math.max(
+    0,
+    Math.ceil(Math.log2(DM_SCREEN_BACKDROP.minStep / step)),
+  );
+
+  return step * 2 ** doublings;
+}
+
+/**
  * Место и размер прямоугольника холста для привязки `style`.
  * @param rect - прямоугольник, px
  */
@@ -846,6 +1115,48 @@ export function toScreenRectStyle(
     width: `${rect.width}px`,
     height: `${rect.height}px`,
   };
+}
+
+/**
+ * Клетки поля выбора сетки по рядам: слева направо, сверху вниз.
+ * @param size - сколько клеток по стороне
+ */
+export function getScreenGridCells(size: number): Array<ScreenGrid> {
+  return Array.from({ length: size * size }, (_, index) => ({
+    columns: (index % size) + 1,
+    rows: Math.floor(index / size) + 1,
+  }));
+}
+
+/**
+ * Попадает ли клетка поля выбора в сетку: сетка тянется от левого верхнего
+ * угла до клетки под указателем.
+ * @param cell - клетка: её колонка и ряд
+ * @param grid - выбранная сетка
+ */
+export function isScreenGridCellInside(
+  cell: ScreenGrid,
+  grid: ScreenGrid,
+): boolean {
+  return cell.columns <= grid.columns && cell.rows <= grid.rows;
+}
+
+/**
+ * Сетка подписью: «3 × 2» — три колонки, два ряда.
+ * @param grid - сетка
+ */
+export function formatScreenGrid(grid: ScreenGrid): string {
+  return `${grid.columns} × ${grid.rows}`;
+}
+
+/**
+ * Размер для привязки `style`.
+ * @param size - размер, px
+ */
+export function toScreenSizeStyle(
+  size: ScreenSize,
+): Record<'width' | 'height', string> {
+  return { width: `${size.width}px`, height: `${size.height}px` };
 }
 
 /**

@@ -15,11 +15,16 @@
     SHEET_HEALTH_MODAL_LABELS,
   } from '../../model';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
 
-  const { character, setHealth, setHitDice } = useCharacterSheet();
+  const { character, setHealth, setHitDice } = useCharacterSheet(sheetKey);
 
   const draftHealth = ref({ ...character.value.health });
 

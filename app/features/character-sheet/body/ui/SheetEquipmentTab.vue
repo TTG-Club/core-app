@@ -11,7 +11,7 @@
   import { ItemDrawer } from '~items/drawer';
   import { MagicItemDrawer } from '~magic-items/drawer';
 
-  import { useCharacterSheet } from '../../composables';
+  import { useCharacterSheet, useSheetOverlay } from '../../composables';
   import {
     ATTUNEMENT_LABELS,
     CARRYING_CAPACITY_LABELS,
@@ -31,6 +31,9 @@
   import SheetItemSellModal from './SheetItemSellModal.vue';
 
   const props = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+
     currency: CharacterCurrency;
     customCurrencies: CharacterCustomCurrency[];
     inventory: CharacterInventoryItem[];
@@ -64,7 +67,9 @@
 
   // Пополнение снаряжения — правка листа: у запертого и у чужого листа кнопка
   // «Добавить» прячется, а ряд с переносимым весом остаётся прежним.
-  const { editControlClass, sellInventoryItem } = useCharacterSheet();
+  const { editControlClass, sellInventoryItem } = useCharacterSheet(
+    props.sheetKey,
+  );
 
   const addMenuItems = getEquipmentAddMenuItems({
     onAddItem: () => emit('add-item'),
@@ -72,7 +77,7 @@
     onAddCustomItem: () => emit('add-custom-item'),
   });
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
   // Дроверы описаний предметов; без destroyOnClose — повторный open()
   // после закрытия иначе падает («Overlay not found»).
@@ -316,6 +321,7 @@
         <SheetInventoryItemRow
           v-for="inventoryItem in group.items"
           :key="inventoryItem.id"
+          :sheet-key="sheetKey"
           :inventory-item="inventoryItem"
           @preview="handlePreview(inventoryItem)"
           @edit="emit('edit-item', inventoryItem.id)"

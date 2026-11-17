@@ -28,6 +28,7 @@
     useChoiceSpellPools,
     useLazyCatalogSourceQuery,
     usePickedFeatChoices,
+    useSheetOverlay,
     useToolCatalog,
   } from '../../composables';
   import {
@@ -83,6 +84,11 @@
   import SheetFeatChoiceField from './SheetFeatChoiceField.vue';
   import SheetPickedFeatChoices from './SheetPickedFeatChoices.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
+
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
 
   type WizardStep = 'species' | 'features';
 
@@ -145,9 +151,9 @@
 
   const toast = useToast();
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
-  const { character, setSpecies, removeSpecies } = useCharacterSheet();
+  const { character, setSpecies, removeSpecies } = useCharacterSheet(sheetKey);
 
   // Дровер описания вида с сайта; без destroyOnClose — повторный open()
   // после закрытия иначе падает («Overlay not found»).
@@ -161,7 +167,9 @@
   // Свой вид собирается в отдельной модалке поверх списка: сама она и применяет
   // его к листу, поэтому мастер после успеха только закрывается, а отмена
   // возвращает к списку каталога.
-  const customSpeciesModal = overlay.create(SheetCustomSpeciesModal);
+  const customSpeciesModal = overlay.create(SheetCustomSpeciesModal, {
+    props: { sheetKey },
+  });
 
   function handlePreview(url: string) {
     speciesPreviewDrawer.open({ url });
@@ -561,6 +569,7 @@
    * которые он уже знает.
    */
   const { getHints: choiceHints } = useChoiceHints({
+    sheetKey,
     choices: allChoices,
     selections,
   });

@@ -21,7 +21,7 @@
   } from '~infrastructure/filter';
   import { ItemDrawer } from '~items/drawer';
 
-  import { useCharacterSheet } from '../../composables';
+  import { useCharacterSheet, useSheetOverlay } from '../../composables';
   import {
     buildInventoryItem,
     fetchItemSummary,
@@ -37,16 +37,21 @@
   import SheetItemPurchaseModal from './SheetItemPurchaseModal.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
 
   const toast = useToast();
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
   const { character, addInventoryItems, purchaseInventoryItems } =
-    useCharacterSheet();
+    useCharacterSheet(sheetKey);
 
   // Дровер описания предмета; без destroyOnClose — повторный open()
   // после закрытия иначе падает («Overlay not found»).
@@ -432,6 +437,7 @@
     }
 
     const purchase = await purchaseModal.open({
+      sheetKey,
       items: [...draftItems.value.values()],
     }).result;
 

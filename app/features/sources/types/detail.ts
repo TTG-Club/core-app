@@ -5,7 +5,8 @@ export interface SourceDetailResponse {
   url: string;
   name: NameResponse;
   source: SourceResponse;
-  type?: string;
+  officiality?: string; // степень официальности
+  category?: string; // категория: основные правила, сеттинг, приключения
   publisher?: {
     name: string;
     date: string;

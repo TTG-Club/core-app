@@ -11,6 +11,7 @@ import {
   DM_SCREEN_SECTIONS,
 } from './constants';
 import { screenEntryNameSchema } from './schemas';
+import { resolveScreenSheet } from './sheets';
 
 /** Адрес записи: раздел и её `url` в нём. */
 const ENTRY_PATH_PATTERN = /^\/([^/?#]+)\/([^?#]+?)\/?(?:[?#].*)?$/;
@@ -79,12 +80,17 @@ export function createScreenNotePath(id: string): string {
 }
 
 /**
- * Иконка окна: у заметки — своя, у записи — как у её раздела в меню.
+ * Иконка окна: у заметки и листа персонажа — свои, у записи — как у её
+ * раздела в меню.
  * @param path - путь окна
  */
 export function getScreenWindowIcon(path: string): string {
   if (isScreenNotePath(path)) {
     return DM_SCREEN_ICONS.note;
+  }
+
+  if (resolveScreenSheet(path)) {
+    return DM_SCREEN_ICONS.sheet;
   }
 
   return resolveScreenEntry(path)?.section.icon ?? DM_SCREEN_ICONS.unknown;

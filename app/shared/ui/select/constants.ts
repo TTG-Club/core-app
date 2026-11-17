@@ -159,6 +159,12 @@ export const CATALOG_PICKER_SECTIONS = {
     detailPath: '/api/v2/magic-items',
     previewSection: 'magic-items',
   },
+  creatures: {
+    searchPath: '/api/v2/bestiary/search',
+    filtersPath: '/api/v2/bestiary/filters',
+    filtersKey: 'catalog-picker:creature-filters',
+    detailPath: '/api/v2/bestiary',
+  },
 } as const;
 
 /**
@@ -185,6 +191,12 @@ export const SELECT_LINEAGE_CATALOG_PLACEHOLDERS = {
   multiple: 'Выбери происхождения',
 } as const;
 
+/** Подписи пустого поля выбора существ бестиария. */
+export const SELECT_CREATURE_PLACEHOLDERS = {
+  single: 'Выбери существо',
+  multiple: 'Выбери существ',
+} as const;
+
 /** Заголовки окна выбора по разделам. */
 export const CATALOG_PICKER_TITLES = {
   items: 'Предметы',
@@ -196,6 +208,7 @@ export const CATALOG_PICKER_TITLES = {
   classes: 'Классы',
   subclasses: 'Подклассы',
   lineages: 'Происхождения',
+  creatures: 'Существа',
 } as const;
 
 /** Ключ группы фильтра черт с категориями: им сужается набор поля. */

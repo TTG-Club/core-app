@@ -33,6 +33,11 @@
   import SheetLevelUpStepsRail from './SheetLevelUpStepsRail.vue';
   import SheetPickedFeatChoices from './SheetPickedFeatChoices.vue';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   /**
    * Состояние пункта рельсы относительно текущего шага.
    *
@@ -58,7 +63,7 @@
   const toast = useToast();
 
   const { character, setProgress, setClassLevels, applyLevelUp } =
-    useCharacterSheet();
+    useCharacterSheet(sheetKey);
 
   const {
     steps,
@@ -96,7 +101,7 @@
     isStepValid,
     getStepPendingCount,
     buildPayload,
-  } = useLevelUpWizard();
+  } = useLevelUpWizard(sheetKey);
 
   /** Идёт применение повышения: догружаются описания выбранных черт. */
   const isApplying = ref(false);

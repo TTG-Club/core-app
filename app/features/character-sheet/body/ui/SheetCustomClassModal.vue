@@ -23,12 +23,17 @@
   } from '../../model';
   import SheetChoicePickerField from './SheetChoicePickerField.vue';
 
+  const { sheetKey } = defineProps<{
+    /** Ключ открытого листа: с каким листом работает компонент. */
+    sheetKey: string;
+  }>();
+
   const emit = defineEmits<{
     /** `true` — свой класс применён к листу. */
     close: [isCreated?: boolean];
   }>();
 
-  const { character, setClass } = useCharacterSheet();
+  const { character, setClass } = useCharacterSheet(sheetKey);
 
   const draftName = ref('');
 
