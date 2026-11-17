@@ -13,6 +13,7 @@
     getCreatureExperience,
     MAX_ROW_COUNT,
     MIN_ROW_COUNT,
+    TRANSFER_LABELS,
   } from '../model';
 
   const { creatures, canAdd = true } = defineProps<{
@@ -28,6 +29,7 @@
     ];
     remove: [id: string];
     clear: [];
+    transfer: [];
   }>();
 
   const { searchTerm, options, isLoading } = useCreatureSearch();
@@ -96,10 +98,21 @@
       <UButton
         v-if="creatures.length"
         size="xs"
+        variant="soft"
+        icon="tabler:swords"
+        class="ml-auto"
+        :aria-label="TRANSFER_LABELS.buttonAria"
+        @click.left.exact.prevent="emit('transfer')"
+      >
+        {{ TRANSFER_LABELS.button }}
+      </UButton>
+
+      <UButton
+        v-if="creatures.length"
+        size="xs"
         color="neutral"
         variant="ghost"
         icon="tabler:eraser"
-        class="ml-auto"
         @click.left.exact.prevent="emit('clear')"
       >
         Очистить

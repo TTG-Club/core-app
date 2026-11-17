@@ -10,6 +10,7 @@ import {
   getEncounterDifficulty,
   getExperienceByChallengeRating,
   getPartyBudget,
+  getTransferBatches,
   parseEncounterState,
 } from '~calculator/encounter/model';
 
@@ -171,5 +172,24 @@ describe('parseEncounterState', () => {
     };
 
     expect(parseEncounterState(state)).toEqual(state);
+  });
+});
+
+describe('getTransferBatches', () => {
+  it('складывает строки одного существа в одну пачку', () => {
+    expect(
+      getTransferBatches([
+        makeCreature({ id: 'a', url: 'goblin', count: 3 }),
+        makeCreature({ id: 'b', url: 'wolf', count: 2 }),
+        makeCreature({ id: 'c', url: 'goblin', count: 1, inLair: true }),
+      ]),
+    ).toEqual([
+      { creatureUrl: 'goblin', count: 4 },
+      { creatureUrl: 'wolf', count: 2 },
+    ]);
+  });
+
+  it('без существ пачек нет', () => {
+    expect(getTransferBatches([])).toEqual([]);
   });
 });

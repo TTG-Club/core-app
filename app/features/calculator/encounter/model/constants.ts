@@ -213,3 +213,28 @@ export const GENERATION_ERROR_DESCRIPTION =
 
 /** Фильтры бестиария: в них отмечены источники, включённые в профиле. */
 export const BESTIARY_FILTERS_PATH = '/api/v2/bestiary/filters';
+
+/** Значение «новый трекер» в выборе, куда переносить существ. */
+export const TRANSFER_NEW_TRACKER = 'new';
+
+/** Подписи окна переноса существ в трекер инициативы. */
+export const TRANSFER_LABELS = {
+  button: 'В трекер',
+  buttonAria: 'Перенести существ в трекер инициативы',
+  title: 'Перенести в трекер инициативы',
+  description:
+    'Существа столкновения добавятся в трекер, и он откроется. Персонажей группы добавьте в трекере сами.',
+  newTracker: 'Новый трекер',
+  newTrackerDescription: 'Создать трекер и добавить существ в него',
+  newTrackerLimit: 'Достигнут лимит трекеров — выберите существующий',
+  anonymousLimit: 'Без регистрации доступен один трекер',
+  activeTracker: 'Идёт бой — существам сразу бросится инициатива',
+  preparingTracker: 'Подготовка боя',
+  name: 'Название трекера',
+  cancel: 'Отмена',
+  submit: 'Перенести',
+  loadError: 'Не удалось загрузить трекеры',
+  errorTitle: 'Не удалось перенести существ',
+  partialTitle: 'Перенесены не все существа',
+  capacityTitle: 'В трекере не хватит места',
+} as const;

@@ -5,6 +5,7 @@
     EncounterGeneratorCard,
     EncounterPartyCard,
     EncounterSummary,
+    EncounterTransferModal,
   } from './ui';
 
   const {
@@ -23,6 +24,8 @@
   } = useEncounterCalculator();
 
   const { isGenerating, generate } = useEncounterGenerator(result, addCreature);
+
+  const isTransferOpen = ref(false);
 
   const canGenerate = computed(
     () => canAddCreature.value && result.value.characterCount > 0,
@@ -56,8 +59,14 @@
           @update="updateCreature"
           @remove="removeCreature"
           @clear="clearCreatures"
+          @transfer="isTransferOpen = true"
         />
       </div>
     </div>
+
+    <EncounterTransferModal
+      v-model:open="isTransferOpen"
+      :creatures="creatures"
+    />
   </div>
 </template>
