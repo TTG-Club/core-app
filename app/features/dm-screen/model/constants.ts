@@ -280,6 +280,24 @@ export const DM_SCREEN_BOARD_INSET = { width: 64, height: 72 } as const;
  */
 export const DM_SCREEN_KEEPALIVE_MAX_BYTES = 60000;
 
+/** Как часто окно листа персонажа перечитывает лист, мс. */
+export const DM_SCREEN_SHEET_REFRESH_INTERVAL = 30000;
+
+/** Ключ кеша листа персонажа в окне ширмы; к нему добавляется путь окна. */
+export const DM_SCREEN_SHEET_KEY = 'dm-screen-sheet';
+
+/** Отметка в списке «Персонаж»: чей лист. */
+export const DM_SCREEN_SHEET_SOURCE_LABEL = {
+  own: 'Мой лист',
+  shared: 'Доступен по ссылке',
+} as const;
+
+/** Вид характеристики и навыка на карточке листа: с владением и без. */
+export const DM_SCREEN_SHEET_PROFICIENCY_CLASS = {
+  proficient: 'text-primary',
+  plain: 'text-muted',
+} as const;
+
 /** Сколько записей показывает поиск на ширме. */
 export const DM_SCREEN_SEARCH_LIMIT = 12;
 
@@ -483,6 +501,15 @@ export const DM_SCREEN_ICONS = {
   signIn: 'tabler:login',
   error: 'tabler:alert-triangle',
   loading: 'tabler:loader-2',
+  sheet: 'tabler:id',
+  sheetAvatar: 'tabler:user',
+  sheetHitPoints: 'tabler:heart',
+  sheetArmorClass: 'tabler:shield',
+  sheetInitiative: 'tabler:bolt',
+  sheetSpeed: 'tabler:run',
+  sheetProficiency: 'tabler:award',
+  sheetPassivePerception: 'tabler:eye',
+  refresh: 'tabler:refresh',
   zoomIn: 'tabler:plus',
   zoomOut: 'tabler:minus',
   fit: 'tabler:focus-centered',
@@ -540,6 +567,26 @@ export const DM_SCREEN_TEXT = {
   addFailed: 'Не удалось добавить в ширму',
   limitReached: 'На ширме слишком много окон: закройте лишние',
   unknownError: 'Неизвестная ошибка',
+  addSheet: 'Персонаж',
+  sheetsTitle: 'Листы персонажей',
+  sheetsEmpty:
+    'Листов пока нет. Создайте свой или сохраните лист игрока по его ссылке — он появится здесь.',
+  sheetsFailed: 'Часть листов загрузить не удалось',
+  sheetRefresh: 'Обновить',
+  sheetFailed: 'Лист недоступен',
+  sheetFailedDescription: 'Его удалили либо владелец закрыл доступ по ссылке.',
+  sheetLevel: 'Уровень',
+  sheetHitPoints: 'Хиты',
+  sheetTemporary: 'временные',
+  sheetExhaustion: 'Истощение',
+  sheetArmorClass: 'КД',
+  sheetInitiative: 'Инициатива',
+  sheetSpeed: 'Скорость',
+  sheetProficiency: 'Мастерство',
+  sheetPassivePerception: 'Пасс. внимательность',
+  sheetAbilities: 'Характеристики',
+  sheetSavingThrow: 'спас',
+  sheetSkills: 'Навыки',
   zoomIn: 'Приблизить',
   zoomOut: 'Отдалить',
   zoomReset: 'Вернуть обычный масштаб',

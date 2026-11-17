@@ -7,6 +7,7 @@ import {
   arrangeScreenWindows,
   centerScreenView,
   clampScreenView,
+  createScreenSheetPath,
   DM_SCREEN_FIELD,
   DM_SCREEN_GAP,
   DM_SCREEN_HALVES_LAYOUT,
@@ -31,6 +32,7 @@ import {
   moveScreenSplitter,
   placeScreenWindow,
   resizeScreenWindow,
+  resolveScreenSheet,
   toScreenCanvasRect,
   toScreenFieldPoint,
   zoomScreenView,
@@ -603,5 +605,33 @@ describe('обзор поля', () => {
     expect(
       isScreenRectVisible({ x: 1700, y: 0, width: 480, height: 600 }, board),
     ).toBe(false);
+  });
+});
+
+describe('лист персонажа на ширме', () => {
+  it('свой лист узнаётся по идентификатору, чужой — по токену ссылки', () => {
+    expect(resolveScreenSheet('/tools/character-sheet/abc-1')).toEqual({
+      source: 'own',
+      key: 'abc-1',
+    });
+
+    expect(resolveScreenSheet('/tools/character-sheet/shared/tok-1')).toEqual({
+      source: 'shared',
+      key: 'tok-1',
+    });
+  });
+
+  it('записи сайта, заметки и сам раздел листов — не листы', () => {
+    expect(resolveScreenSheet('/spells/fireball')).toBeUndefined();
+    expect(resolveScreenSheet('note:1')).toBeUndefined();
+    expect(resolveScreenSheet('/tools/character-sheet')).toBeUndefined();
+  });
+
+  it('путь окна собирается обратно в тот же лист', () => {
+    const own = { source: 'own', key: 'abc-1' } as const;
+    const shared = { source: 'shared', key: 'tok-1' } as const;
+
+    expect(resolveScreenSheet(createScreenSheetPath(own))).toEqual(own);
+    expect(resolveScreenSheet(createScreenSheetPath(shared))).toEqual(shared);
   });
 });

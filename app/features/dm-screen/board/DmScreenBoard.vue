@@ -31,6 +31,7 @@
   import DmScreenList from './DmScreenList.vue';
   import DmScreenNavigator from './DmScreenNavigator.vue';
   import DmScreenSearch from './DmScreenSearch.vue';
+  import DmScreenSheetPicker from './DmScreenSheetPicker.vue';
   import DmScreenSplitters from './DmScreenSplitters.vue';
 
   /** Поле начали тянуть: где был указатель и какой был обзор. */
@@ -336,6 +337,8 @@
           variant="outline"
           @click.left.exact.prevent="createNote"
         />
+
+        <DmScreenSheetPicker />
 
         <UTooltip
           v-if="isLayoutControlsVisible"

@@ -77,6 +77,72 @@ export interface ScreenSplitter {
   afterIds: ReadonlyArray<string>;
 }
 
+/**
+ * Лист персонажа на ширме: свой открывается по идентификатору, чужой — по
+ * токену ссылки, которой владелец поделился.
+ */
+export interface ScreenSheetLocation {
+  source: 'own' | 'shared';
+  /** Идентификатор своего листа или токен ссылки чужого. */
+  key: string;
+}
+
+/** Лист персонажа в списке «Персонаж»: его можно поставить на ширму. */
+export interface ScreenSheetOption {
+  /** Путь окна: адрес страницы листа на сайте. */
+  path: string;
+  source: ScreenSheetLocation['source'];
+  name: string;
+  /** Классы с уровнями и вид. */
+  subtitle: string;
+  /** Портрет персонажа; без него — значок. */
+  avatarUrl?: string;
+}
+
+/** Число на карточке листа: КД, инициатива, скорость и подобные. */
+export interface ScreenSheetStat {
+  key: string;
+  label: string;
+  icon: string;
+  value: string;
+}
+
+/** Характеристика на карточке листа: значение, модификатор и спасбросок. */
+export interface ScreenSheetAbility {
+  key: string;
+  /** Сокращённое название: «Сил», «Лов». */
+  label: string;
+  score: number;
+  modifier: string;
+  savingThrow: string;
+  isSavingThrowProficient: boolean;
+}
+
+/** Навык на карточке листа. */
+export interface ScreenSheetSkill {
+  name: string;
+  modifier: string;
+  /** Персонаж владеет навыком хотя бы наполовину. */
+  isProficient: boolean;
+}
+
+/** Карточка листа персонажа в окне ширмы. */
+export interface ScreenSheetCard {
+  name: string;
+  subtitle: string;
+  /** Портрет персонажа; без него — значок. */
+  avatarUrl?: string;
+  /** Текущие хиты и максимум: «31 / 44». */
+  hitPoints: string;
+  /** Временные хиты подписью; без них — ничего. */
+  temporaryHitPoints?: string;
+  /** Уровень истощения подписью; без истощения — ничего. */
+  exhaustion?: string;
+  stats: Array<ScreenSheetStat>;
+  abilities: Array<ScreenSheetAbility>;
+  skills: Array<ScreenSheetSkill>;
+}
+
 /** Просьба положить на ширму запись сайта или заметку. */
 export interface ScreenWindowRequest {
   /** Адрес записи на сайте (`/spells/fireball`) или путь заметки. */

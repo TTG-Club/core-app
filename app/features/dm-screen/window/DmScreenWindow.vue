@@ -28,10 +28,12 @@
     normalizeScreenEntryPath,
     resizeScreenWindow,
     resolveScreenEntry,
+    resolveScreenSheet,
     toScreenRectStyle,
   } from '../model';
   import DmScreenEntry from './DmScreenEntry.vue';
   import DmScreenNote from './DmScreenNote.vue';
+  import DmScreenSheet from './DmScreenSheet.vue';
 
   /** С чего началось перетаскивание или растягивание окна. */
   interface PointerGesture {
@@ -105,6 +107,9 @@
   ]);
 
   const isNote = computed(() => isScreenNotePath(screenWindow.path));
+
+  /** Лист персонажа в окне; у остальных окон его нет. */
+  const sheet = computed(() => resolveScreenSheet(screenWindow.path));
 
   /** Запись сайта в окне; у заметки и у адреса незнакомого раздела её нет. */
   const entry = computed(() => resolveScreenEntry(screenWindow.path));
@@ -447,6 +452,13 @@
         v-if="isNote"
         v-model:editing="isNoteEditing"
         :screen-window="screenWindow"
+      />
+
+      <DmScreenSheet
+        v-else-if="sheet"
+        :key="screenWindow.path"
+        :sheet
+        @loaded="syncTitle"
       />
 
       <DmScreenEntry
