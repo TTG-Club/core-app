@@ -7,5 +7,6 @@ export * from './mock';
 export * from './schemas';
 export * from './sheet-key';
 export * from './sheet-merge';
+export * from './sheet-save-queue';
 export * from './types';
 export * from './utils';

@@ -23,7 +23,8 @@ export type SheetStateName =
   | 'locked'
   | 'readonly-reason'
   | 'editor-access'
-  | 'load-status';
+  | 'load-status'
+  | 'save-status';
 
 /** Все части состояния открытого листа — чтобы очистить их разом. */
 export const SHEET_STATE_NAMES: ReadonlyArray<SheetStateName> = [
@@ -32,6 +33,7 @@ export const SHEET_STATE_NAMES: ReadonlyArray<SheetStateName> = [
   'readonly-reason',
   'editor-access',
   'load-status',
+  'save-status',
 ];
 
 /** Разделитель источника и идентификатора в ключе листа. */
