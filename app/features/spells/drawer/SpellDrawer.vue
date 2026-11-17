@@ -13,13 +13,8 @@
     (e: 'close'): void;
   }>();
 
-  const { data: detail, status } = await useAsyncData(
-    computed(() => `spell-${url}`),
-    () => $fetch<SpellDetailResponse>(`/api/v2/spells/${url}`),
-    {
-      server: false,
-      immediate: true,
-    },
+  const { data: detail, status } = useEntityDetail<SpellDetailResponse>(
+    () => `/api/v2/spells/${url}`,
   );
 
   const isLoading = computed(() => status.value === 'pending');

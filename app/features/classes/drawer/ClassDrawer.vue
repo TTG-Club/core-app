@@ -23,14 +23,8 @@
   /** Текущий URL класса/подкласса — может меняться при inline-навигации */
   const currentUrl = ref(props.url);
 
-  const { data: detail, status } = await useAsyncData(
-    computed(() => `classes-${currentUrl.value}`),
-    () => $fetch<ClassDetailResponse>(`/api/v2/classes/${currentUrl.value}`),
-    {
-      server: false,
-      immediate: true,
-      watch: [currentUrl],
-    },
+  const { data: detail, status } = useEntityDetail<ClassDetailResponse>(
+    () => `/api/v2/classes/${currentUrl.value}`,
   );
 
   const isLoading = computed(() => status.value === 'pending');
@@ -57,7 +51,7 @@
 
   /**
    * Обработчик inline-навигации — обновляет текущий URL,
-   * что триггерит перезагрузку данных через watch в useAsyncData.
+   * и запись перечитывается по новому адресу (`useEntityDetail`).
    */
   function handleNavigate(classUrl: string): void {
     currentUrl.value = classUrl;

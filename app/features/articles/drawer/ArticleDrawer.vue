@@ -22,13 +22,8 @@
 
   const { canEditEntities } = useUserRoles();
 
-  const { data: article, status } = await useAsyncData(
-    computed(() => `article-drawer-${url}`),
-    () => $fetch<ArticleDetailedResponse>(`${ARTICLES_API_PATH}/${url}`),
-    {
-      server: false,
-      immediate: true,
-    },
+  const { data: article, status } = useEntityDetail<ArticleDetailedResponse>(
+    () => `${ARTICLES_API_PATH}/${url}`,
   );
 
   const isLoading = computed(() => status.value === 'pending');

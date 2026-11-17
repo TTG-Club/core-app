@@ -21,16 +21,9 @@
 
   const { canPublishCommunityNews } = useUserRoles();
 
-  const { data: news, status } = await useAsyncData(
-    computed(() => `community-news-drawer-${url}`),
-    async () =>
-      parseCommunityNewsDetailed(
-        await $fetch(`${COMMUNITY_NEWS_API_PATH}/${url}`),
-      ),
-    {
-      server: false,
-      immediate: true,
-    },
+  const { data: news, status } = useEntityDetail(
+    () => `${COMMUNITY_NEWS_API_PATH}/${url}`,
+    async (address) => parseCommunityNewsDetailed(await $fetch(address)),
   );
 
   const isLoading = computed(() => status.value === 'pending');
