@@ -1,19 +1,12 @@
 <script setup lang="ts">
   import { ACTION_LABELS } from '~/shared/consts';
   import { UiDrawer } from '~ui/drawer';
-  import { UiResult } from '~ui/result';
 
-  import { CharacterSheetBody, CharacterSheetSkeleton } from '../body';
-  import {
-    useCharacterSheetAutosave,
-    useCharacterSheetLoader,
-  } from '../composables';
+  import { CharacterSheetHost } from '../host';
   import {
     CHARACTER_SHEET_ROUTE,
     CHARACTER_SHEET_SHARED_ROUTE,
     CHARACTER_SHEET_TITLE,
-    SHEET_DRAWER_LABELS,
-    SHEET_NOT_FOUND_SUBTITLES,
     SHEET_OPEN_ON_PAGE_LABEL,
   } from '../model';
 
@@ -32,27 +25,14 @@
     close: [];
   }>();
 
-  const isShared = computed(() => Boolean(shareToken));
-
-  const { status, load } = useCharacterSheetLoader(
-    () => shareToken || characterId,
-    { shared: isShared },
-  );
-
-  // Правок в чужом листе не бывает: автосейв сам молчит в режиме просмотра.
-  useCharacterSheetAutosave();
-
   const pagePath = computed(() =>
-    isShared.value
+    shareToken
       ? `${CHARACTER_SHEET_SHARED_ROUTE}/${shareToken}`
       : `${CHARACTER_SHEET_ROUTE}/${characterId}`,
   );
 
-  const notFoundSubtitle = computed(() =>
-    isShared.value
-      ? SHEET_NOT_FOUND_SUBTITLES.shared
-      : SHEET_NOT_FOUND_SUBTITLES.own,
-  );
+  // Дровер переиспользуется: другой лист в нём — новый хост
+  const hostKey = computed(() => shareToken || characterId);
 
   /** Открывает лист на отдельной странице и закрывает drawer. */
   function handleExpand() {
@@ -80,41 +60,21 @@
     </template>
 
     <template #default>
-      <CharacterSheetSkeleton
-        v-if="status === 'pending' || status === 'idle'"
-      />
-
-      <UiResult
-        v-else-if="status === 'notFound'"
-        status="404"
-        :title="SHEET_DRAWER_LABELS.notFoundTitle"
-        :sub-title="notFoundSubtitle"
+      <!-- Крестик даёт шапка дровера, поэтому свой у листа скрыт -->
+      <CharacterSheetHost
+        :key="hostKey"
+        :character-id
+        :share-token
+        :can-close="false"
+        @close="emit('close')"
+        @expand="handleExpand"
       >
-        <template #extra>
+        <template #notFoundActions>
           <UButton @click.left.exact.prevent="emit('close')">
             {{ ACTION_LABELS.close }}
           </UButton>
         </template>
-      </UiResult>
-
-      <UiResult
-        v-else-if="status === 'error'"
-        status="error"
-        :title="SHEET_DRAWER_LABELS.errorTitle"
-      >
-        <template #extra>
-          <UButton @click.left.exact.prevent="load">
-            {{ ACTION_LABELS.retry }}
-          </UButton>
-        </template>
-      </UiResult>
-
-      <CharacterSheetBody
-        v-else
-        :can-close="false"
-        @close="emit('close')"
-        @expand="handleExpand"
-      />
+      </CharacterSheetHost>
     </template>
   </UiDrawer>
 </template>

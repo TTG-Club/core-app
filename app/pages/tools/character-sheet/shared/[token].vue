@@ -1,14 +1,11 @@
 <script setup lang="ts">
-  import {
-    CharacterSheetBody,
-    CharacterSheetSkeleton,
-  } from '~character-sheet/body';
-  import { useCharacterSheetLoader } from '~character-sheet/composables';
+  import { CharacterSheetSkeleton } from '~character-sheet/body';
+  import { CharacterSheetHost } from '~character-sheet/host';
   import {
     CHARACTER_SHEET_ROUTE,
     CHARACTER_SHEET_TITLE,
+    SHEET_HOST_LABELS,
   } from '~character-sheet/model';
-  import { UiResult } from '~ui/result';
 
   // Без definePageMeta с `auth`: страница открывается кем угодно, включая
   // анонима. Доступ решает токен, а не сессия — лист отдаёт публичная ручка,
@@ -27,13 +24,6 @@
     return typeof token === 'string' && token ? token : '';
   });
 
-  // shared: лист грузится публичной ручкой, а состояние переводится в режим
-  // просмотра. Автосохранение здесь не подключается сознательно — правок нет,
-  // а его модульная очередь слала бы PUT в чужой лист.
-  const { status, load } = useCharacterSheetLoader(shareToken, {
-    shared: true,
-  });
-
   /**
    * Закрытие чужого листа возвращает к списку листов — там же лежит раздел
    * «Другие листы», из которого этот лист и открывают. Анониму, пришедшему по
@@ -50,35 +40,19 @@
     :title="CHARACTER_SHEET_TITLE"
   >
     <ClientOnly>
-      <CharacterSheetSkeleton
-        v-if="status === 'pending' || status === 'idle'"
-      />
-
-      <UiResult
-        v-else-if="status === 'notFound'"
-        status="404"
-        title="Лист недоступен"
-        sub-title="Ссылка неверна или владелец отключил доступ по ней"
-      >
-        <template #extra>
-          <UButton to="/"> На главную </UButton>
-        </template>
-      </UiResult>
-
-      <UiResult
-        v-else-if="status === 'error'"
-        status="error"
-        title="Не удалось загрузить лист"
-      >
-        <template #extra>
-          <UButton @click.left.exact.prevent="load"> Повторить </UButton>
-        </template>
-      </UiResult>
-
-      <CharacterSheetBody
-        v-else
+      <!-- По ссылке лист грузится публичной ручкой, открыт на просмотр и не
+        сохраняется: всё это решает хост по токену -->
+      <CharacterSheetHost
+        :key="shareToken"
+        :share-token
         @close="handleClose"
-      />
+      >
+        <template #notFoundActions>
+          <UButton to="/">
+            {{ SHEET_HOST_LABELS.toHome }}
+          </UButton>
+        </template>
+      </CharacterSheetHost>
 
       <template #fallback>
         <CharacterSheetSkeleton />

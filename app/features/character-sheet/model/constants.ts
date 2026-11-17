@@ -6337,10 +6337,23 @@ export const SHEET_CLASS_RESOURCE_MODAL_LABELS = {
   recoveryAmount: 'Сколько зарядов вернёт отдых',
 } as const;
 
-/** Подписи заглушек дровера листа. */
-export const SHEET_DRAWER_LABELS = {
-  notFoundTitle: 'Лист не найден',
+/** Заголовок заглушки «лист не нашёлся»: свой лист и чужой по ссылке. */
+export const SHEET_NOT_FOUND_TITLES: Record<'own' | 'shared', string> = {
+  own: 'Лист не найден',
+  shared: 'Лист недоступен',
+};
+
+/**
+ * Подписи хоста листа: заглушка ошибки загрузки и действия, которые
+ * контейнеры предлагают, когда лист не нашёлся.
+ */
+export const SHEET_HOST_LABELS = {
   errorTitle: 'Не удалось загрузить лист',
+  toList: 'К списку листов',
+  toHome: 'На главную',
+  emptyTitle: 'Лист не выбран',
+  emptyDescription:
+    'Выберите лист персонажа из списка, чтобы открыть его здесь',
 } as const;
 
 /** Подписи списка листов персонажа. */
