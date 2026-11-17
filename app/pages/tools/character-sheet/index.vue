@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { SheetKeyTarget } from '~character-sheet/model';
+
   import { USER_TOKEN_COOKIE } from '#shared/consts';
   import { useCharacterSheetDetail } from '~character-sheet/composables';
   import { CharacterSheetControls } from '~character-sheet/controls';
@@ -6,6 +8,7 @@
   import { CharacterSheetList } from '~character-sheet/list';
   import {
     CHARACTER_SHEET_LIST_TITLE,
+    getSheetPagePath,
     SHEET_HOST_LABELS,
     SHEET_LOGIN_PROMPT,
   } from '~character-sheet/model';
@@ -76,6 +79,15 @@
   const detailHostKey = computed(
     () => `${isSharedDetail.value}:${detailTarget.value}`,
   );
+
+  /**
+   * Лист в панели просит показать вместо себя другой: право на правки выдали
+   * или отозвали. Как и раньше, открывается страница этого листа.
+   * @param target - чей лист и чем он открывается; `null` — листа нет
+   */
+  function handleRetarget(target: SheetKeyTarget | null) {
+    navigateTo(getSheetPagePath(target), { replace: true });
+  }
 
   /** Открывает выбранный лист на отдельной странице. */
   function handleExpand() {
@@ -160,6 +172,7 @@
             can-expand
             @close="closeDetail"
             @expand="handleExpand"
+            @retarget="handleRetarget"
           >
             <template #notFoundActions>
               <UButton @click.left.exact.prevent="closeDetail">

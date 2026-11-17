@@ -6,6 +6,7 @@
     PreparedSpellKind,
     ProficiencyGroupKey,
     SavingThrowRow,
+    SheetKeyTarget,
     SheetPdfVariant,
     SheetRollContext,
     SkillRow,
@@ -29,8 +30,6 @@
   import {
     ABILITY_LABELS,
     ARMOR_PROFICIENCY_GROUPS,
-    CHARACTER_SHEET_ROUTE,
-    CHARACTER_SHEET_SHARED_ROUTE,
     combineRollModes,
     DRAFT_CHARACTER_ID,
     EMPTY_DAMAGE_ROLL_SOURCE,
@@ -45,6 +44,7 @@
     getWeaponDamageSource,
     isProficientWeapon,
     LANGUAGE_PROFICIENCY_GROUPS,
+    parseSheetKey,
     SHEET_ARMOR_CLASS_ICON,
     SHEET_BODY_LABELS,
     SHEET_EDIT_REVOKED_TOAST,
@@ -129,11 +129,19 @@
   const emit = defineEmits<{
     close: [];
     expand: [];
+
+    /**
+     * Лист нужно показать по-другому: право на правки выдали (открыть как
+     * свой) или отозвали (открыть по ссылке на просмотр; `null` — ссылки
+     * тоже нет, показывать нечего).
+     */
+    retarget: [target: SheetKeyTarget | null];
   }>();
 
   const {
     character,
     isLocked,
+    isEditorAccess,
     readonlyReason,
     isReadonly,
     toggleLock,
@@ -201,16 +209,15 @@
   } = useCharacterSheetList();
 
   // Доступ по ссылке: состояние читает меню шапки, меняет — модалка.
-  // `viewedShareToken` — токен, по которому открыт чужой лист: им меню
-  // сохраняет его к себе.
-  // `isEditorAccess` — лист чужой, но открыт по праву редактора.
-  const {
-    viewedShareToken,
-    isSheetShared,
-    isEditorAccess,
-    getShareUrl,
-    getShareUrlByToken,
-  } = useCharacterSheetShare();
+  const { isSheetShared, getShareUrl, getShareUrlByToken } =
+    useCharacterSheetShare();
+
+  // Токен, по которому открыт чужой лист: им меню сохраняет его к себе.
+  // Он же — ключ листа, поэтому отдельно его хранить незачем.
+  const sheetTarget = parseSheetKey(sheetKey);
+
+  const viewedShareToken =
+    sheetTarget.source === 'shared' ? sheetTarget.id : null;
 
   const isShared = computed(() => isSheetShared(character.value.id));
 
@@ -275,30 +282,27 @@
   );
 
   const viewedEditStatus = computed(() => {
-    const saved = viewedShareToken.value
-      ? findByToken(viewedShareToken.value)
-      : undefined;
+    const saved = viewedShareToken ? findByToken(viewedShareToken) : undefined;
 
     return saved?.editStatus ?? null;
   });
 
   // Право на правки выдано — промежуточного режима «просмотр с кнопкой правки»
   // нет: лист сразу открывается как свой, по id. Срабатывает и когда право
-  // пришло, пока лист открыт по ссылке.
+  // пришло, пока лист открыт по ссылке. Куда именно «открыть», решает
+  // контейнер: страница меняет адрес, окно ширмы — свой лист.
   watch(
     () => canRequestEdit.value && viewedEditStatus.value === 'APPROVED',
     (isApproved) => {
       if (isApproved) {
-        void navigateTo(`${CHARACTER_SHEET_ROUTE}/${character.value.id}`, {
-          replace: true,
-        });
+        emit('retarget', { source: 'own', id: character.value.id });
       }
     },
     { immediate: true },
   );
 
   const isLinkSaved = computed(() =>
-    viewedShareToken.value ? isTokenSaved(viewedShareToken.value) : false,
+    viewedShareToken ? isTokenSaved(viewedShareToken) : false,
   );
 
   // Экспорт в PDF: сборщик грузится по клику, поэтому у пункта меню есть
@@ -316,8 +320,7 @@
   function handleDownloadPdf(variant: SheetPdfVariant): void {
     void exportToPdf(character.value, {
       shareUrl:
-        getShareUrl(character.value.id)
-        ?? getShareUrlByToken(viewedShareToken.value),
+        getShareUrl(character.value.id) ?? getShareUrlByToken(viewedShareToken),
       ensureShare:
         isOwnSheet.value && character.value.id !== DRAFT_CHARACTER_ID,
       variant,
@@ -348,12 +351,7 @@
     const sheetId = character.value.id;
     const saved = savedSheets.value.find((sheet) => sheet.sheetId === sheetId);
 
-    await navigateTo(
-      saved
-        ? `${CHARACTER_SHEET_SHARED_ROUTE}/${saved.shareToken}`
-        : CHARACTER_SHEET_ROUTE,
-      { replace: true },
-    );
+    emit('retarget', saved ? { source: 'shared', id: saved.shareToken } : null);
   }
 
   watch(
@@ -1341,20 +1339,20 @@
 
   /** Сохранение ссылки на чужой лист в раздел «Другие листы». */
   async function handleSaveLink() {
-    if (!viewedShareToken.value) {
+    if (!viewedShareToken) {
       return;
     }
 
-    await saveLink(viewedShareToken.value);
+    await saveLink(viewedShareToken);
   }
 
   /** Запрос права на правки чужого листа; несохранённая ссылка сохранится. */
   async function handleRequestEdit() {
-    if (!viewedShareToken.value) {
+    if (!viewedShareToken) {
       return;
     }
 
-    await requestEdit(viewedShareToken.value);
+    await requestEdit(viewedShareToken);
   }
 
   /** Подтверждённое удаление: лист уходит в историю, затем закрывается. */

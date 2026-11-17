@@ -62,11 +62,10 @@ export function useCharacterSheetLoader(sheetKey: string) {
   const { source, id: sheetId } = parseSheetKey(sheetKey);
   const isShared = source === 'shared';
 
-  const { loadCharacter, resetCharacter, setReadonly } =
+  const { loadCharacter, resetCharacter, setReadonly, setEditorAccess } =
     useCharacterSheet(sheetKey);
 
-  const { setShareToken, setViewedShareToken, setEditorAccess } =
-    useCharacterSheetShare();
+  const { setShareToken } = useCharacterSheetShare();
 
   const { setSheetVersion } = useCharacterSheetVersion();
   const { user, isAdmin, fetch: fetchProfile } = useUser();
@@ -169,8 +168,6 @@ export function useCharacterSheetLoader(sheetKey: string) {
       loadCharacter(detail.data);
       // У листа по ссылке токена в ответе нет: управление доступом — только у владельца.
       setShareToken(detail.id, detail.shareToken);
-      // Зато известен токен, по которому лист открыт, — им меню сохраняет его к себе.
-      setViewedShareToken(isShared ? sheetId : null);
       // Чужой лист по праву редактора: правки разрешены, управление доступом — нет.
       setEditorAccess(detail.editor);
       status.value = 'ready';
@@ -205,8 +202,6 @@ export function useCharacterSheetLoader(sheetKey: string) {
 
     resetCharacter();
     status.value = 'idle';
-    setShareToken(null, null);
-    setViewedShareToken(null);
     setEditorAccess(false);
     setReadonly(null);
   });

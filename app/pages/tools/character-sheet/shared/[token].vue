@@ -1,9 +1,12 @@
 <script setup lang="ts">
+  import type { SheetKeyTarget } from '~character-sheet/model';
+
   import { CharacterSheetSkeleton } from '~character-sheet/body';
   import { CharacterSheetHost } from '~character-sheet/host';
   import {
     CHARACTER_SHEET_ROUTE,
     CHARACTER_SHEET_TITLE,
+    getSheetPagePath,
     SHEET_HOST_LABELS,
   } from '~character-sheet/model';
 
@@ -23,6 +26,16 @@
 
     return typeof token === 'string' && token ? token : '';
   });
+
+  /**
+   * Лист просит показать вместо себя другой: право на правки выдали или
+   * отозвали. Страница переходит на адрес этого листа, не оставляя прежний
+   * в истории.
+   * @param target - чей лист и чем он открывается; `null` — листа нет
+   */
+  function handleRetarget(target: SheetKeyTarget | null) {
+    navigateTo(getSheetPagePath(target), { replace: true });
+  }
 
   /**
    * Закрытие чужого листа возвращает к списку листов — там же лежит раздел
@@ -46,6 +59,7 @@
         :key="shareToken"
         :share-token
         @close="handleClose"
+        @retarget="handleRetarget"
       >
         <template #notFoundActions>
           <UButton to="/">

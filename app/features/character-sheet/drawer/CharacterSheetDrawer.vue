@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { SheetKeyTarget } from '../model';
+
   import { ACTION_LABELS } from '~/shared/consts';
   import { UiDrawer } from '~ui/drawer';
 
@@ -7,6 +9,7 @@
     CHARACTER_SHEET_ROUTE,
     CHARACTER_SHEET_SHARED_ROUTE,
     CHARACTER_SHEET_TITLE,
+    getSheetPagePath,
     SHEET_OPEN_ON_PAGE_LABEL,
   } from '../model';
 
@@ -33,6 +36,17 @@
 
   // Дровер переиспользуется: другой лист в нём — новый хост
   const hostKey = computed(() => shareToken || characterId);
+
+  /**
+   * Лист просит показать вместо себя другой: право на правки выдали или
+   * отозвали. Как и раньше, открывается страница этого листа, а дровер
+   * закрывается.
+   * @param target - чей лист и чем он открывается; `null` — листа нет
+   */
+  function handleRetarget(target: SheetKeyTarget | null) {
+    navigateTo(getSheetPagePath(target), { replace: true });
+    emit('close');
+  }
 
   /** Открывает лист на отдельной странице и закрывает drawer. */
   function handleExpand() {
@@ -68,6 +82,7 @@
         :can-close="false"
         @close="emit('close')"
         @expand="handleExpand"
+        @retarget="handleRetarget"
       >
         <template #notFoundActions>
           <UButton @click.left.exact.prevent="emit('close')">

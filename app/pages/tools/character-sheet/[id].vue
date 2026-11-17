@@ -1,10 +1,13 @@
 <script setup lang="ts">
+  import type { SheetKeyTarget } from '~character-sheet/model';
+
   import { Role } from '~/shared/types';
   import { CharacterSheetSkeleton } from '~character-sheet/body';
   import { CharacterSheetHost } from '~character-sheet/host';
   import {
     CHARACTER_SHEET_ROUTE,
     CHARACTER_SHEET_TITLE,
+    getSheetPagePath,
     SHEET_HOST_LABELS,
   } from '~character-sheet/model';
 
@@ -26,6 +29,16 @@
     return typeof id === 'string' && id ? id : '';
   });
 
+  /**
+   * Лист просит показать вместо себя другой: право на правки выдали или
+   * отозвали. Страница переходит на адрес этого листа, не оставляя прежний
+   * в истории.
+   * @param target - чей лист и чем он открывается; `null` — листа нет
+   */
+  function handleRetarget(target: SheetKeyTarget | null) {
+    navigateTo(getSheetPagePath(target), { replace: true });
+  }
+
   /** Закрытие листа возвращает к списку листов персонажей. */
   function handleClose() {
     navigateTo(CHARACTER_SHEET_ROUTE);
@@ -43,6 +56,7 @@
         :key="sheetId"
         :character-id="sheetId"
         @close="handleClose"
+        @retarget="handleRetarget"
       >
         <template #notFoundActions>
           <UButton :to="CHARACTER_SHEET_ROUTE">

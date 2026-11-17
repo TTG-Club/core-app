@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { SheetKeyTarget } from '../model';
+
   import { ACTION_LABELS } from '~/shared/consts';
   import { UiResult } from '~ui/result';
 
@@ -48,6 +50,13 @@
   const emit = defineEmits<{
     close: [];
     expand: [];
+
+    /**
+     * Вместо этого листа нужно показать другой: тот же лист, но как свой
+     * (право на правки выдали) или по ссылке (отозвали); `null` — показывать
+     * больше нечего.
+     */
+    retarget: [target: SheetKeyTarget | null];
   }>();
 
   defineSlots<{
@@ -99,6 +108,14 @@
     emit('close');
   }
 
+  /**
+   * Лист просит показать вместо себя другой.
+   * @param target - чей лист и чем он открывается; `null` — листа нет
+   */
+  function handleRetarget(target: SheetKeyTarget | null): void {
+    emit('retarget', target);
+  }
+
   /** Лист просит открыть его на отдельной странице. */
   function handleExpand(): void {
     emit('expand');
@@ -138,5 +155,6 @@
     :can-close
     @close="handleClose"
     @expand="handleExpand"
+    @retarget="handleRetarget"
   />
 </template>

@@ -300,6 +300,15 @@ export function useCharacterSheet(sheetKey: string) {
     () => null,
   );
 
+  /**
+   * Лист чужой, но открыт по праву редактора: править можно, а управлять
+   * доступом — нет. Ставит загрузчик, читают шапка и тело листа.
+   */
+  const isEditorAccess = useState<boolean>(
+    getSheetStateKey('editor-access', sheetKey),
+    () => false,
+  );
+
   /** Лист чужой: зритель может только смотреть (см. {@link readonlyReason}). */
   const isReadonly = computed(() => readonlyReason.value !== null);
 
@@ -388,6 +397,15 @@ export function useCharacterSheet(sheetKey: string) {
    */
   function setReadonly(reason: SheetReadonlyReason | null): void {
     readonlyReason.value = reason;
+  }
+
+  /**
+   * Отмечает, открыт ли лист по праву редактора, а не владельцем.
+   *
+   * @param editorAccess true — лист чужой, правки разрешены владельцем.
+   */
+  function setEditorAccess(editorAccess: boolean): void {
+    isEditorAccess.value = editorAccess;
   }
 
   /**
@@ -3961,6 +3979,8 @@ export function useCharacterSheet(sheetKey: string) {
 
   return {
     character,
+    isEditorAccess: readonly(isEditorAccess),
+    setEditorAccess,
     isLocked,
     // Наружу — только на чтение: режим ставит загрузчик через `setReadonly`
     readonlyReason: readonly(readonlyReason),

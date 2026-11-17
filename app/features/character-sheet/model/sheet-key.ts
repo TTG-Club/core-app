@@ -1,3 +1,8 @@
+import {
+  CHARACTER_SHEET_ROUTE,
+  CHARACTER_SHEET_SHARED_ROUTE,
+} from './constants';
+
 /**
  * Чей лист открыт: свой — по идентификатору, чужой — по токену ссылки,
  * которой поделился владелец.
@@ -17,6 +22,7 @@ export type SheetStateName =
   | 'character'
   | 'locked'
   | 'readonly-reason'
+  | 'editor-access'
   | 'load-status';
 
 /** Все части состояния открытого листа — чтобы очистить их разом. */
@@ -24,6 +30,7 @@ export const SHEET_STATE_NAMES: ReadonlyArray<SheetStateName> = [
   'character',
   'locked',
   'readonly-reason',
+  'editor-access',
   'load-status',
 ];
 
@@ -85,4 +92,19 @@ export function getSheetStateKey(
   }
 
   return [SHEET_STATE_PREFIX, name, sheetKey].join(SHEET_KEY_SEPARATOR);
+}
+
+/**
+ * Адрес страницы листа: свой открывается по идентификатору, чужой — по
+ * токену ссылки. Без листа — адрес списка листов.
+ * @param target - чей лист и чем он открывается; `null` — листа нет
+ */
+export function getSheetPagePath(target: SheetKeyTarget | null): string {
+  if (!target) {
+    return CHARACTER_SHEET_ROUTE;
+  }
+
+  return target.source === 'shared'
+    ? `${CHARACTER_SHEET_SHARED_ROUTE}/${target.id}`
+    : `${CHARACTER_SHEET_ROUTE}/${target.id}`;
 }
