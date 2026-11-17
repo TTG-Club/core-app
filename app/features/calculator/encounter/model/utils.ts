@@ -5,6 +5,7 @@ import type {
   EncounterDifficulty,
   EncounterPartyRow,
   EncounterResult,
+  EncounterTransferBatch,
 } from './types';
 
 import {
@@ -163,4 +164,22 @@ export function getBudgetSegments(
           : 0,
     };
   });
+}
+
+/**
+ * Пачки существ для трекера инициативы: одно существо — один запрос
+ * добавления, даже если в калькуляторе оно стоит несколькими строками (в
+ * логове и вне его). Порядок — как в калькуляторе.
+ * @param creatures Существа калькулятора.
+ */
+export function getTransferBatches(
+  creatures: ReadonlyArray<EncounterCreature>,
+): Array<EncounterTransferBatch> {
+  const counts = new Map<string, number>();
+
+  creatures.forEach(({ url, count }) => {
+    counts.set(url, (counts.get(url) ?? 0) + count);
+  });
+
+  return [...counts].map(([creatureUrl, count]) => ({ creatureUrl, count }));
 }

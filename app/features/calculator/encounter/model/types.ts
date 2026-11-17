@@ -132,3 +132,21 @@ export interface GeneratedCreature {
   candidate: GenerationCandidate;
   count: number;
 }
+
+/** Пачка одинаковых существ для переноса в трекер инициативы. */
+export interface EncounterTransferBatch {
+  /** URL существа в бестиарии. */
+  creatureUrl: string;
+
+  /** Сколько таких существ перенести. */
+  count: number;
+}
+
+/** Трекер инициативы, в который можно перенести существ. */
+export interface EncounterTransferTracker {
+  id: string;
+  name: string;
+
+  /** Идёт ли в трекере бой: новым существам бэкенд сразу бросит инициативу. */
+  isActive: boolean;
+}
