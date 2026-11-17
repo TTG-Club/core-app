@@ -13,13 +13,8 @@
     (e: 'close'): void;
   }>();
 
-  const { data: detail, status } = await useAsyncData(
-    computed(() => `glossary-${url}`),
-    () => $fetch<GlossaryDetailResponse>(`/api/v2/glossary/${url}`),
-    {
-      server: false,
-      immediate: true,
-    },
+  const { data: detail, status } = useEntityDetail<GlossaryDetailResponse>(
+    () => `/api/v2/glossary/${url}`,
   );
 
   const isLoading = computed(() => status.value === 'pending');

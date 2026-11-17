@@ -26,6 +26,7 @@
     isScreenRectVisible,
   } from '../model';
   import { DmScreenWindow } from '../window';
+  import DmScreenArrangePicker from './DmScreenArrangePicker.vue';
   import DmScreenDock from './DmScreenDock.vue';
   import DmScreenLayoutOverlay from './DmScreenLayoutOverlay.vue';
   import DmScreenList from './DmScreenList.vue';
@@ -61,7 +62,6 @@
     setBoard,
     toBoardPoint,
     addNote,
-    arrange,
     minimizeAll,
     restoreAll,
     clear,
@@ -340,18 +340,7 @@
 
         <DmScreenSheetPicker />
 
-        <UTooltip
-          v-if="isLayoutControlsVisible"
-          :text="DM_SCREEN_TEXT.arrange"
-        >
-          <UButton
-            :icon="DM_SCREEN_ICONS.arrange"
-            :aria-label="DM_SCREEN_TEXT.arrange"
-            color="neutral"
-            variant="outline"
-            @click.left.exact.prevent="arrange"
-          />
-        </UTooltip>
+        <DmScreenArrangePicker v-if="isLayoutControlsVisible" />
 
         <UTooltip
           v-if="isLayoutControlsVisible"

@@ -5,6 +5,7 @@ import type {
 } from './schemas';
 import type {
   ScreenDirection,
+  ScreenGrid,
   ScreenLayout,
   ScreenLayoutTarget,
   ScreenLayoutZone,
@@ -257,23 +258,27 @@ function pickGridColumns(count: number, area: ScreenSize): number {
 }
 
 /**
- * Раскладывает окна ровной сеткой на свободном месте холста. Меньше
- * наименьшего окна клетки не становятся: если окон слишком много, нижние
- * ряды уходят за край холста.
+ * Раскладывает окна ровной сеткой на свободном месте холста. Сетку задаёт
+ * мастер; без неё число колонок подбирается само, а рядов берётся столько,
+ * сколько нужно окнам. Меньше наименьшего окна клетки не становятся: если
+ * сетка слишком частая или окон больше, чем клеток, лишние колонки и ряды
+ * уходят за край холста.
  * @param ids - окна в порядке чтения: слева направо, сверху вниз
  * @param board - видимая часть поля
+ * @param grid - сколько колонок и рядов в сетке
  */
 export function arrangeScreenWindows(
   ids: ReadonlyArray<string>,
   board: ScreenRect,
+  grid?: ScreenGrid,
 ): Array<ScreenTile> {
   if (!ids.length) {
     return [];
   }
 
   const area = getScreenArea(board);
-  const columns = pickGridColumns(ids.length, area);
-  const rows = Math.ceil(ids.length / columns);
+  const columns = grid?.columns ?? pickGridColumns(ids.length, area);
+  const rows = grid?.rows ?? Math.ceil(ids.length / columns);
 
   // Шаг сетки — клетка вместе с промежутком. Края клеток округляются по
   // отдельности, поэтому последняя колонка доходит ровно до края холста
@@ -1110,6 +1115,38 @@ export function toScreenRectStyle(
     width: `${rect.width}px`,
     height: `${rect.height}px`,
   };
+}
+
+/**
+ * Клетки поля выбора сетки по рядам: слева направо, сверху вниз.
+ * @param size - сколько клеток по стороне
+ */
+export function getScreenGridCells(size: number): Array<ScreenGrid> {
+  return Array.from({ length: size * size }, (_, index) => ({
+    columns: (index % size) + 1,
+    rows: Math.floor(index / size) + 1,
+  }));
+}
+
+/**
+ * Попадает ли клетка поля выбора в сетку: сетка тянется от левого верхнего
+ * угла до клетки под указателем.
+ * @param cell - клетка: её колонка и ряд
+ * @param grid - выбранная сетка
+ */
+export function isScreenGridCellInside(
+  cell: ScreenGrid,
+  grid: ScreenGrid,
+): boolean {
+  return cell.columns <= grid.columns && cell.rows <= grid.rows;
+}
+
+/**
+ * Сетка подписью: «3 × 2» — три колонки, два ряда.
+ * @param grid - сетка
+ */
+export function formatScreenGrid(grid: ScreenGrid): string {
+  return `${grid.columns} × ${grid.rows}`;
 }
 
 /**

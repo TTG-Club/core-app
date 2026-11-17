@@ -25,6 +25,15 @@ export interface ScreenTile extends ScreenRect {
   id: string;
 }
 
+/**
+ * Сетка окон: сколько в ней колонок и рядов. Тем же видом записана клетка
+ * поля выбора сетки — её колонка и ряд, считая с единицы.
+ */
+export interface ScreenGrid {
+  columns: number;
+  rows: number;
+}
+
 /** Направление по одной оси: `-1` — к началу, `1` — к концу, `0` — нет. */
 export type ScreenDirection = -1 | 0 | 1;
 

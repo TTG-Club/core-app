@@ -141,6 +141,12 @@ export const DM_SCREEN_GAP = 12;
 /** С какого расстояния край окна притягивается к соседнему краю, px. */
 export const DM_SCREEN_MAGNET_DISTANCE = 12;
 
+/** Сколько клеток по стороне в поле выбора сетки окон. */
+export const DM_SCREEN_ARRANGE_GRID_SIZE = 10;
+
+/** Колонки поля выбора сетки: столько же, сколько клеток по стороне. */
+export const DM_SCREEN_ARRANGE_GRID_CLASS = 'grid-cols-10';
+
 /** Сдвиг нового окна от точки клика, px. */
 export const DM_SCREEN_CLICK_OFFSET = 16;
 
@@ -455,7 +461,10 @@ export const DM_SCREEN_NEW_TAB = {
   features: 'noopener',
 } as const;
 
-/** Вид места в панели раскладок: под указателем и остальные. */
+/**
+ * Вид места в панели раскладок и клетки поля выбора сетки: под указателем
+ * (у сетки — внутри выбранного прямоугольника) и остальные.
+ */
 export const DM_SCREEN_ZONE_CLASS = {
   active: 'border-primary bg-primary/40',
   idle: 'border-accented bg-accented/40',
@@ -519,6 +528,10 @@ export const DM_SCREEN_TEXT = {
   signIn: 'Войти',
   addNote: 'Заметка',
   arrange: 'Выровнять по сетке',
+  arrangeTitle: 'Сетка окон',
+  arrangeHint: 'Наведите на клетку',
+  arrangeCell: 'Сетка',
+  arrangeAuto: 'Подобрать автоматически',
   minimizeAll: 'Свернуть все',
   restoreAll: 'Развернуть все',
   pickerSettings: 'Панель раскладок',

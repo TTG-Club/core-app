@@ -19,11 +19,14 @@ import {
   findScreenSplitters,
   fitScreenView,
   fitScreenWindowSize,
+  formatScreenGrid,
   getScreenBounds,
   getScreenEdgeTarget,
+  getScreenGridCells,
   getScreenSplitterPointer,
   getScreenVisibleRect,
   getScreenZoneRect,
+  isScreenGridCellInside,
   isScreenLayoutFitting,
   isScreenPickerBand,
   isScreenRectVisible,
@@ -646,5 +649,66 @@ describe('лист персонажа на ширме', () => {
       width: 500 - DM_SCREEN_MARGIN * 2,
       height: 400 - DM_SCREEN_MARGIN * 2,
     });
+  });
+});
+
+describe('выбранная сетка окон', () => {
+  const ids = ['a', 'b', 'c', 'd', 'e'];
+
+  it('окна встают в столько колонок, сколько выбрано', () => {
+    const tiles = arrangeScreenWindows(ids, BOARD, { columns: 3, rows: 2 });
+    const [first, second, third, fourth] = tiles;
+
+    expect(first?.y).toBe(second?.y);
+    expect(second?.y).toBe(third?.y);
+    expect(fourth?.x).toBe(first?.x);
+    expect(fourth?.y).toBeGreaterThan(first?.y ?? 0);
+  });
+
+  it('клетка занимает свою долю холста, даже если окон меньше клеток', () => {
+    const [only] = arrangeScreenWindows(['a'], BOARD, { columns: 2, rows: 2 });
+
+    expect(only?.x).toBe(DM_SCREEN_MARGIN);
+    expect(only?.width).toBeLessThan(BOARD.width / 2);
+    expect(only?.height).toBeLessThan(BOARD.height / 2);
+  });
+
+  it('окна сверх выбранных рядов идут следующими рядами', () => {
+    const tiles = arrangeScreenWindows(ids, BOARD, { columns: 2, rows: 1 });
+
+    expect(tiles).toHaveLength(ids.length);
+    expect(tiles[4]?.y).toBeGreaterThan(tiles[2]?.y ?? 0);
+  });
+
+  it('слишком частая сетка не делает окна меньше наименьшего', () => {
+    const tiles = arrangeScreenWindows(ids, BOARD, { columns: 10, rows: 10 });
+
+    tiles.forEach((tile) => {
+      expect(tile.width).toBeGreaterThanOrEqual(
+        DM_SCREEN_WINDOW_MIN_SIZE.width,
+      );
+
+      expect(tile.height).toBeGreaterThanOrEqual(
+        DM_SCREEN_WINDOW_MIN_SIZE.height,
+      );
+    });
+  });
+
+  it('поле выбора: клетки идут по рядам и подсвечиваются до указателя', () => {
+    const cells = getScreenGridCells(3);
+
+    expect(cells).toHaveLength(9);
+    expect(cells[0]).toEqual({ columns: 1, rows: 1 });
+    expect(cells[5]).toEqual({ columns: 3, rows: 2 });
+
+    const hovered = { columns: 2, rows: 2 };
+
+    expect(isScreenGridCellInside({ columns: 2, rows: 1 }, hovered)).toBe(true);
+
+    expect(isScreenGridCellInside({ columns: 3, rows: 1 }, hovered)).toBe(
+      false,
+    );
+
+    expect(formatScreenGrid(hovered)).toBe('2 × 2');
   });
 });

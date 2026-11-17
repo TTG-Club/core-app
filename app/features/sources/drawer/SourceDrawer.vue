@@ -15,13 +15,8 @@
 
   const { canEditSources } = useUserRoles();
 
-  const { data: detail, status } = await useAsyncData(
-    computed(() => `source-${url}`),
-    () => $fetch<SourceDetailResponse>(`/api/v2/source/${url}`),
-    {
-      server: false,
-      immediate: true,
-    },
+  const { data: detail, status } = useEntityDetail<SourceDetailResponse>(
+    () => `/api/v2/source/${url}`,
   );
 
   const isLoading = computed(() => status.value === 'pending');

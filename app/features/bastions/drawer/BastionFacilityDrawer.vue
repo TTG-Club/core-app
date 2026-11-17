@@ -19,14 +19,10 @@
     (e: 'close'): void;
   }>();
 
-  const { data: detail, status } = await useAsyncData(
-    computed(() => `bastion-${url}`),
-    () => $fetch<BastionFacilityDetailResponse>(`${BASTION_API_PATH}/${url}`),
-    {
-      server: false,
-      immediate: true,
-    },
-  );
+  const { data: detail, status } =
+    useEntityDetail<BastionFacilityDetailResponse>(
+      () => `${BASTION_API_PATH}/${url}`,
+    );
 
   const isLoading = computed(() => status.value === 'pending');
   const isError = computed(() => status.value === 'error');

@@ -1,5 +1,6 @@
 import type {
   ScreenAddOutcome,
+  ScreenGrid,
   ScreenPoint,
   ScreenRect,
   ScreenTile,
@@ -389,14 +390,17 @@ export const useDmScreen = createSharedComposable(() => {
    * тоже разворачиваются.
    * Порядок — как окна стоят сейчас (сверху вниз, слева направо), свёрнутые
    * встают в конец: раскладка окна не перемешивает.
+   * @param grid - сколько колонок и рядов в сетке; без неё ширма подбирает
+   * сетку сама
    */
-  function arrange(): void {
+  function arrange(grid?: ScreenGrid): void {
     const ordered = sortBy(windows.value, ['isMinimized', 'y', 'x']);
 
     updateRects(
       arrangeScreenWindows(
         ordered.map((screenWindow) => screenWindow.id),
         board.value,
+        grid,
       ),
       { isMinimized: false },
     );

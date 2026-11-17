@@ -13,13 +13,8 @@
     (e: 'close'): void;
   }>();
 
-  const { data: detail, status } = await useAsyncData(
-    computed(() => `items-${url}`),
-    () => $fetch<ItemDetailResponse>(`/api/v2/items/${url}`),
-    {
-      server: false,
-      immediate: true,
-    },
+  const { data: detail, status } = useEntityDetail<ItemDetailResponse>(
+    () => `/api/v2/items/${url}`,
   );
 
   const isLoading = computed(() => status.value === 'pending');
