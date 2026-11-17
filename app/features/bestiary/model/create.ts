@@ -80,6 +80,12 @@ export interface CreatureCreate extends EditorBaseInfoState {
   section: CreateSection;
 
   /**
+   * Спутники — слаги существ, с которыми это существо обычно встречается
+   * (рыцарь и боевой конь). Генератор столкновений охотнее берёт их в свиту.
+   */
+  companions: Array<string>;
+
+  /**
    * Заклинания существа блоками. Ни на карточке сайта, ни в выгрузке markdown
    * они не показываются: статблок описывает заклинания текстом записи, а блоки
    * заведены ради виртуального стола — там у существа своя вкладка заклинаний.
@@ -517,6 +523,7 @@ export function getInitialState(): CreatureCreate {
     },
     spellcasting: [],
     activeEffects: [],
+    companions: [],
     section: {
       name: {
         rus: '',

@@ -184,6 +184,19 @@ export const GENERATION_CREATURES_PER_CHARACTER = 2;
 export const GENERATION_MIN_CREATURES = 4;
 export const GENERATION_MAX_CREATURES = 12;
 
+/**
+ * Очки совместимости кандидата в свиту с главарём: чем теснее связь, тем
+ * охотнее генератор его берёт. Явные спутники из бестиария важнее всего,
+ * затем одно семейство (гоблины), общий подтип (гоблиноиды) и общий тип
+ * (нежить).
+ */
+export const GENERATION_COMPATIBILITY_SCORE = {
+  companion: 12,
+  family: 8,
+  subtype: 5,
+  type: 2,
+} as const;
+
 /** Среда обитания, подходящая для любой местности. */
 export const HABITAT_ANY = 'ANY';
 
@@ -197,3 +210,6 @@ export const GENERATION_NOT_FOUND_DESCRIPTION =
 export const GENERATION_ERROR_TITLE = 'Не удалось сгенерировать столкновение';
 export const GENERATION_ERROR_DESCRIPTION =
   'Бестиарий не ответил. Попробуйте ещё раз.';
+
+/** Фильтры бестиария: в них отмечены источники, включённые в профиле. */
+export const BESTIARY_FILTERS_PATH = '/api/v2/bestiary/filters';

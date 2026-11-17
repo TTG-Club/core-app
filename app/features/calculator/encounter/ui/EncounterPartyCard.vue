@@ -120,7 +120,7 @@
       :disabled="!canAdd"
       @click.left.exact.prevent="emit('add')"
     >
-      Добавить уровень
+      Добавить
     </UButton>
   </section>
 </template>
