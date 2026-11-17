@@ -20,6 +20,12 @@ export function useSheetOverlay(): { create: CreateOverlay } {
   /** Окна, созданные этим компонентом. */
   const createdIds = new Set<symbol>();
 
+  /**
+   * Создаёт окно и запоминает его, чтобы убрать вместе с компонентом.
+   * @param component компонент окна.
+   * @param options пропсы и настройки окна, как у `useOverlay().create`.
+   * @returns созданное окно: его открывают, закрывают и правят как обычно.
+   */
   const create: CreateOverlay = (component, options) => {
     const instance = overlay.create(component, options);
 

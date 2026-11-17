@@ -8,6 +8,7 @@
   import { CharacterSheetList } from '~character-sheet/list';
   import {
     CHARACTER_SHEET_LIST_TITLE,
+    createSheetKey,
     getSheetPagePath,
     SHEET_HOST_LABELS,
     SHEET_LOGIN_PROMPT,
@@ -76,8 +77,11 @@
   );
 
   // Другой лист в панели — новый хост: лист задаётся ему один раз
-  const detailHostKey = computed(
-    () => `${isSharedDetail.value}:${detailTarget.value}`,
+  const detailHostKey = computed(() =>
+    createSheetKey({
+      source: isSharedDetail.value ? 'shared' : 'own',
+      id: detailTarget.value,
+    }),
   );
 
   /**

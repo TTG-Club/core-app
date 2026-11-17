@@ -225,6 +225,32 @@ leaves alone — the end of a fight does not heal.
 The largest tool domain (`body/ui` alone holds 50+ `Sheet*.vue` panels and
 modals), so its capabilities are listed here rather than squeezed into the table.
 
+**Several open sheets**
+
+- A tab can hold several open sheets at once (list panel + drawer, windows of
+  the DM screen). Every open sheet is addressed by a **sheet key**
+  (`model/sheet-key.ts`: `own:<id>` for an own sheet, `shared:<token>` for one
+  opened by a share link). `useCharacterSheet(sheetKey)` requires the key and
+  keeps the character, the lock, the read-only reason, the editor access, the
+  load status and the save status in `useState` cells named after it; an empty
+  key throws instead of silently merging sheets into one cell.
+- Panels and modals get the key as the `sheetKey` prop — modals are rendered by
+  `useOverlay` outside the sheet's tree, so the prop is the only way in.
+  `overlay.create(SheetXModal)` without props is **not** caught by the compiler:
+  pass `sheetKey` in `create` or in every `open`.
+- `host/CharacterSheetHost.vue` is the only place that loads a sheet and attaches
+  autosave; the page, the list panel, the drawer and the DM screen window render
+  it with a `:key`. A sheet shown in two places is one sheet: `useSheetSessions`
+  counts the places, the first one loads it, the last one resets it.
+- Autosave is one queue per sheet — `createSheetSaveQueue`
+  (`model/sheet-save-queue.ts`, no Nuxt dependencies, unit-tested): debounce,
+  retries with backoff, merge on a version conflict. Share tokens, editor lists,
+  versions and remote versions are records keyed by sheet id.
+- The body never navigates by itself: when edit access is granted or revoked it
+  emits `retarget`, and the container decides what that means.
+- `useSheetOverlay` removes a sheet's modals from Nuxt UI's shared overlay list
+  when the sheet goes away (Nuxt UI never does it on its own).
+
 **Sheet lifecycle**
 
 - Wizards for species / class / background; rolls go through `dice-roller`

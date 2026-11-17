@@ -1,8 +1,9 @@
 /**
  * Сколько мест сейчас показывают каждый открытый лист. Один лист может
  * стоять сразу в панели списка и в дровере: его состояние общее и живёт,
- * пока лист открыт хотя бы в одном месте. Листы открываются только на
- * клиенте, поэтому счётчик между запросами сервера не делится.
+ * пока лист открыт хотя бы в одном месте. Счёт ведётся только на клиенте:
+ * на сервере переменная модуля общая для всех запросов, и листы одного
+ * посетителя не должны считаться открытыми у другого.
  */
 const sessionHolders = new Map<string, number>();
 
@@ -12,6 +13,10 @@ const sessionHolders = new Map<string, number>();
  * @returns true, если до этого лист нигде открыт не был
  */
 export function acquireSheetSession(sheetKey: string): boolean {
+  if (import.meta.server) {
+    return true;
+  }
+
   const holders = sessionHolders.get(sheetKey) ?? 0;
 
   sessionHolders.set(sheetKey, holders + 1);
@@ -25,6 +30,10 @@ export function acquireSheetSession(sheetKey: string): boolean {
  * @returns true, если лист больше нигде не открыт
  */
 export function releaseSheetSession(sheetKey: string): boolean {
+  if (import.meta.server) {
+    return true;
+  }
+
   const holders = (sessionHolders.get(sheetKey) ?? 0) - 1;
 
   if (holders > 0) {

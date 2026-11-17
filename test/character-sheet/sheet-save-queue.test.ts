@@ -16,6 +16,20 @@ import {
   SHEET_SAVE_RETRY_LIMIT,
 } from '~character-sheet/model';
 
+/** Что видно вокруг очереди: сервер, шапка листа и сам открытый лист. */
+interface HarnessState {
+  /** Версия листа, с которой идёт правка. */
+  version: number | null;
+  /** Состояния сохранения, как их видела шапка листа. */
+  statuses: Array<SheetSaveStatus>;
+  /** Документы, которые очередь положила в открытый лист. */
+  documents: Array<Character>;
+  /** Что ушло на сервер. */
+  saved: Array<{ data: Character; version: number | null }>;
+  /** Лист на сервере; без него сервер недоступен. */
+  server: CharacterSheetDetail | undefined;
+}
+
 /** Отказ сервера «лист изменён в другом месте». */
 const CONFLICT = new Error('conflict');
 
@@ -40,12 +54,12 @@ function createCharacter(id: string, name: string, current = 10): Character {
  * @param sheetId - идентификатор листа
  */
 function createHarness(sheetId: string) {
-  const state = {
-    version: 1 as number | null,
-    statuses: [] as Array<SheetSaveStatus>,
-    documents: [] as Array<Character>,
-    saved: [] as Array<{ data: Character; version: number | null }>,
-    server: undefined as CharacterSheetDetail | undefined,
+  const state: HarnessState = {
+    version: 1,
+    statuses: [],
+    documents: [],
+    saved: [],
+    server: undefined,
   };
 
   const save = vi.fn<SheetSaveQueueDeps['save']>((data, version) => {
