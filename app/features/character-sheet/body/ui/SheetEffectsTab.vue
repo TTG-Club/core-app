@@ -451,7 +451,7 @@
         {{ SHEET_EFFECT_LABELS.conditionsTitle }}
       </h3>
 
-      <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      <div class="grid grid-cols-2 gap-2 @xl:grid-cols-3">
         <UTooltip
           v-for="tile in conditionTiles"
           :key="tile.key"

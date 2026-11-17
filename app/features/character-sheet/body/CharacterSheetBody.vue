@@ -1456,17 +1456,19 @@
 
       <DefineSummary>
         <!--
-          На мобильном (< sm) колонки-обёртки и пары плиток схлопываются в
-          display:contents: все блоки становятся прямыми элементами сетки.
+          В узком месте (контейнер уже @xl: телефон, окно ширмы) колонки-обёртки
+          и пары плиток схлопываются в display:contents: все блоки становятся
+          прямыми элементами сетки. Меряется сам лист, а не экран: узкое окно
+          на широком мониторе получает ту же раскладку, что телефон.
           Четыре плитки показателей без order-* всплывают наверх (2×2, а с @md —
           одной строкой), остальные блоки растягиваются на всю ширину и идут в
           порядке order-*: здоровье → истощение → ресурсы класса → навыки →
-          спасброски → владения. На sm колонки восстанавливаются —
+          спасброски → владения. С @xl колонки восстанавливаются —
           двухколоночная раскладка прежняя.
         -->
-        <div class="grid grid-cols-2 gap-4 max-sm:@md:grid-cols-4">
-          <div class="flex flex-col gap-4 max-sm:contents">
-            <div class="grid grid-cols-2 gap-4 max-sm:contents">
+        <div class="grid grid-cols-2 gap-4 @max-xl:@md:grid-cols-4">
+          <div class="flex flex-col gap-4 @max-xl:contents">
+            <div class="grid grid-cols-2 gap-4 @max-xl:contents">
               <SheetStatTile
                 :label="SHEET_BODY_LABELS.proficiencyBonus"
                 :value="formattedProficiencyBonus"
@@ -1489,21 +1491,21 @@
               :max-hit-points-hint="maxHitPointsHint"
               :hit-dice="character.hitDice"
               :extra-hit-dice="character.extraHitDice"
-              class="max-sm:order-1 max-sm:col-span-full"
+              class="@max-xl:order-1 @max-xl:col-span-full"
               @edit="handleHealthEdit"
             />
 
             <SheetExhaustionPanel
               :level="character.health.exhaustion"
               :speed-unit="character.speed.unit"
-              class="max-sm:order-2 max-sm:col-span-full"
+              class="@max-xl:order-2 @max-xl:col-span-full"
               @select="setExhaustion"
             />
 
             <SheetSavingThrowsPanel
               :sheet-key="sheetKey"
               :rows="savingThrowRows"
-              class="max-sm:order-5 max-sm:col-span-full"
+              class="@max-xl:order-5 @max-xl:col-span-full"
               @roll="handleSavingThrowRoll"
               @settings="handleSavingThrowsSettings"
               @toggle="toggleSavingThrowProficiency"
@@ -1512,7 +1514,7 @@
             <SheetProficienciesPanel
               :sheet-key="sheetKey"
               :proficiencies="character.proficiencies"
-              class="max-sm:order-6 max-sm:col-span-full"
+              class="@max-xl:order-6 @max-xl:col-span-full"
               @edit="handleProficienciesEdit"
             />
 
@@ -1523,12 +1525,12 @@
               v-if="hasFeatDefences"
               :defences="featDefences"
               :unit="character.speed.unit"
-              class="max-sm:order-7 max-sm:col-span-full"
+              class="@max-xl:order-7 @max-xl:col-span-full"
             />
           </div>
 
-          <div class="flex flex-col gap-4 max-sm:contents">
-            <div class="grid grid-cols-2 gap-4 max-sm:contents">
+          <div class="flex flex-col gap-4 @max-xl:contents">
+            <div class="grid grid-cols-2 gap-4 @max-xl:contents">
               <SheetSpeedTile
                 :speed="effectiveSpeed"
                 @edit="handleSpeedEdit"
@@ -1545,7 +1547,7 @@
             <SheetClassResourcesPanel
               :sheet-key="sheetKey"
               :resources="character.classResources"
-              class="max-sm:order-3 max-sm:col-span-full"
+              class="@max-xl:order-3 @max-xl:col-span-full"
               @adjust="adjustClassResource"
               @edit="handleClassResourcesEdit"
             />
@@ -1554,7 +1556,7 @@
               :sheet-key="sheetKey"
               :groups="skillGroups"
               :highlighted-ability="highlightedAbility"
-              class="grow max-sm:order-4 max-sm:col-span-full"
+              class="grow @max-xl:order-4 @max-xl:col-span-full"
               @cycle="cycleSkillProficiency"
               @roll="handleSkillRoll"
               @settings="handleSkillsSettings"
