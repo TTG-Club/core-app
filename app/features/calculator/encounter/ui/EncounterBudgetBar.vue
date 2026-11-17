@@ -3,7 +3,9 @@
 
   import {
     DIFFICULTY_LABEL,
+    formatExperience,
     getBudgetSegments,
+    getBudgetSpentLabel,
     SEGMENT_CLASSES,
   } from '../model';
 
@@ -16,7 +18,7 @@
     getBudgetSegments(totalExperience, budget).map((segment) => ({
       ...segment,
       label: DIFFICULTY_LABEL[segment.difficulty],
-      threshold: budget[segment.difficulty],
+      thresholdText: formatExperience(budget[segment.difficulty]),
       trackClass: SEGMENT_CLASSES[segment.difficulty].track,
       fillClass: SEGMENT_CLASSES[segment.difficulty].fill,
       widthStyle: { width: `${segment.width * 100}%` },
@@ -28,8 +30,8 @@
     () => budget.high > 0 && totalExperience > budget.high,
   );
 
-  const spentPercent = computed(() =>
-    budget.high > 0 ? Math.round((totalExperience / budget.high) * 100) : 0,
+  const spentLabel = computed(() =>
+    getBudgetSpentLabel(totalExperience, budget),
   );
 </script>
 
@@ -41,7 +43,7 @@
       :aria-valuenow="totalExperience"
       :aria-valuemin="0"
       :aria-valuemax="budget.high"
-      :aria-valuetext="`Потрачено ${spentPercent}% бюджета высокой сложности`"
+      :aria-valuetext="spentLabel"
     >
       <div
         v-for="segment in segments"
@@ -74,7 +76,7 @@
         <span class="truncate text-muted">{{ segment.label }}</span>
 
         <span class="font-medium text-highlighted tabular-nums">
-          {{ segment.threshold.toLocaleString('ru-RU') }}
+          {{ segment.thresholdText }}
         </span>
       </div>
     </div>

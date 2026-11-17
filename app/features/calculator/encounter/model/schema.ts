@@ -2,6 +2,8 @@ import type { EncounterState, GenerationCandidate } from './types';
 
 import { z } from 'zod';
 
+import { toCreatureExperience } from '~initiative/model';
+
 import {
   DEFAULT_ENCOUNTER_STATE,
   MAX_CHARACTER_LEVEL,
@@ -70,15 +72,6 @@ const generationSearchResponseSchema = z
   .catch([]);
 
 /**
- * Приводит опыт к числу: отсутствующее или отрицательное значение (так
- * бэкенд помечает неизвестный опыт) даёт `undefined`.
- * @param value Сырое значение опыта.
- */
-function toExperience(value: number | null | undefined): number | undefined {
-  return typeof value === 'number' && value >= 0 ? value : undefined;
-}
-
-/**
  * Разбирает ответ `/api/v2/bestiary/search` в кандидатов генератора. Опыт,
  * которого бэкенд не прислал, берётся по уровню опасности; строки сравнения
  * (подтип, семейство) приводятся к нижнему регистру.
@@ -91,14 +84,14 @@ export function parseGenerationCandidates(
   const list = Array.isArray(parsed) ? parsed : parsed.value;
 
   return list.map((creature) => {
-    const experienceInLair = toExperience(creature.experienceInLair);
+    const experienceInLair = toCreatureExperience(creature.experienceInLair);
 
     return {
       url: creature.url,
       label: creature.name.rus,
       challengeRating: creature.challengeRailing,
       experience:
-        toExperience(creature.experience)
+        toCreatureExperience(creature.experience)
         ?? getExperienceByChallengeRating(creature.challengeRailing),
       ...(experienceInLair === undefined ? {} : { experienceInLair }),
       typeCodes: creature.typeCodes ?? [],

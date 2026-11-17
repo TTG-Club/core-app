@@ -5,6 +5,29 @@ import type {
   GenerationDifficulty,
 } from './types';
 
+/** Адрес страницы калькулятора столкновений. */
+export const ENCOUNTER_CALCULATOR_ROUTE = '/calculators/encounter';
+
+/** Название калькулятора: заголовок страницы, пункт меню, плитка главной. */
+export const ENCOUNTER_CALCULATOR_TITLE = 'Калькулятор столкновений';
+
+/** Иконка калькулятора в меню и на главной. */
+export const ENCOUNTER_CALCULATOR_ICON = 'tabler:scale';
+
+/** Описание страницы для поисковиков. */
+export const ENCOUNTER_CALCULATOR_DESCRIPTION =
+  'Калькулятор столкновений — оценка сложности боя для группы персонажей D&D 5 по правилам редакции 2024 года.';
+
+/** Локаль, в которой показываются числа опыта (пробел между тысячами). */
+export const NUMBER_LOCALE = 'ru-RU';
+
+/** Нулевой бюджет: группы нет или уровень вне таблицы. */
+export const EMPTY_BUDGET: EncounterBudget = { low: 0, moderate: 0, high: 0 };
+
+/** Подписи пустого списка в поиске существ. */
+export const CREATURE_SEARCH_NOT_FOUND_LABEL = 'Ничего не найдено';
+export const CREATURE_SEARCH_HINT_LABEL = 'Начните вводить название существа';
+
 /** Префикс страницы существа в бестиарии. */
 export const BESTIARY_PAGE_PREFIX = '/bestiary/';
 
@@ -210,9 +233,6 @@ export const GENERATION_NOT_FOUND_DESCRIPTION =
 export const GENERATION_ERROR_TITLE = 'Не удалось сгенерировать столкновение';
 export const GENERATION_ERROR_DESCRIPTION =
   'Бестиарий не ответил. Попробуйте ещё раз.';
-
-/** Фильтры бестиария: в них отмечены источники, включённые в профиле. */
-export const BESTIARY_FILTERS_PATH = '/api/v2/bestiary/filters';
 
 /** Значение «новый трекер» в выборе, куда переносить существ. */
 export const TRANSFER_NEW_TRACKER = 'new';

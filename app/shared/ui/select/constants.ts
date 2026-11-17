@@ -191,6 +191,12 @@ export const SELECT_LINEAGE_CATALOG_PLACEHOLDERS = {
   multiple: 'Выбери происхождения',
 } as const;
 
+/** Подписи пустого поля выбора существ бестиария. */
+export const SELECT_CREATURE_PLACEHOLDERS = {
+  single: 'Выбери существо',
+  multiple: 'Выбери существ',
+} as const;
+
 /** Заголовки окна выбора по разделам. */
 export const CATALOG_PICKER_TITLES = {
   items: 'Предметы',

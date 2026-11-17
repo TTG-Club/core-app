@@ -7,6 +7,7 @@
     MIN_CHARACTER_LEVEL,
     MIN_ROW_COUNT,
   } from '../model';
+  import EncounterNumberInput from './EncounterNumberInput.vue';
 
   const { party, canAdd = true } = defineProps<{
     party: Array<EncounterPartyRow>;
@@ -25,24 +26,6 @@
   const characterCount = computed(() =>
     party.reduce((total, row) => total + row.count, 0),
   );
-
-  function handleCountUpdate(
-    id: string,
-    value: number | null | undefined,
-  ): void {
-    if (typeof value === 'number') {
-      emit('update', id, { count: value });
-    }
-  }
-
-  function handleLevelUpdate(
-    id: string,
-    value: number | null | undefined,
-  ): void {
-    if (typeof value === 'number') {
-      emit('update', id, { level: value });
-    }
-  }
 </script>
 
 <template>
@@ -81,12 +64,12 @@
           label="Персонажей"
           class="flex-1"
         >
-          <UInputNumber
+          <EncounterNumberInput
             :model-value="row.count"
             :min="MIN_ROW_COUNT"
             :max="MAX_ROW_COUNT"
             class="w-full"
-            @update:model-value="handleCountUpdate(row.id, $event)"
+            @update:model-value="emit('update', row.id, { count: $event })"
           />
         </UFormField>
 
@@ -94,12 +77,12 @@
           label="Уровень"
           class="flex-1"
         >
-          <UInputNumber
+          <EncounterNumberInput
             :model-value="row.level"
             :min="MIN_CHARACTER_LEVEL"
             :max="MAX_CHARACTER_LEVEL"
             class="w-full"
-            @update:model-value="handleLevelUpdate(row.id, $event)"
+            @update:model-value="emit('update', row.id, { level: $event })"
           />
         </UFormField>
 

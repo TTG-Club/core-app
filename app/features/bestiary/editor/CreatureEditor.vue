@@ -129,6 +129,11 @@
       transformBeforeSubmit: transformCreatureBeforeSubmit,
     });
 
+  /** Само существо в спутники себе не годится: его слаг из выбора убран. */
+  const companionExcludeUrls = computed(() =>
+    state.value.url ? [state.value.url] : [],
+  );
+
   /**
    * Лента вкладок: прокручивается по горизонтали, полоса прокрутки скрыта.
    * Своей константой, а не объектом в шаблоне: строка длинная, и в атрибуте
@@ -246,7 +251,7 @@
               <SelectCreature
                 v-model="state.companions"
                 multiple
-                :exclude-urls="state.url ? [state.url] : []"
+                :exclude-urls="companionExcludeUrls"
               />
             </UFormField>
           </UCard>

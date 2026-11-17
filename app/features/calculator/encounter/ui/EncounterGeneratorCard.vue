@@ -26,10 +26,12 @@
       : undefined,
   );
 
+  /** Сбрасывает среду обитания: генератор берёт существ любой местности. */
   function clearHabitat(): void {
     habitat.value = undefined;
   }
 
+  /** Запускает генерацию с выбранными сложностью и средой обитания. */
   function submit(): void {
     if (loading || disabled) {
       return;

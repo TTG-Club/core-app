@@ -5,6 +5,7 @@
     DIFFICULTY_COLOR,
     DIFFICULTY_HINT,
     DIFFICULTY_LABEL,
+    formatExperience,
   } from '../model';
   import EncounterBudgetBar from './EncounterBudgetBar.vue';
 
@@ -17,11 +18,11 @@
   const difficultyHint = computed(() => DIFFICULTY_HINT[result.difficulty]);
 
   const totalExperienceText = computed(() =>
-    result.totalExperience.toLocaleString('ru-RU'),
+    formatExperience(result.totalExperience),
   );
 
   const perCharacterText = computed(() =>
-    result.experiencePerCharacter.toLocaleString('ru-RU'),
+    formatExperience(result.experiencePerCharacter),
   );
 </script>
 

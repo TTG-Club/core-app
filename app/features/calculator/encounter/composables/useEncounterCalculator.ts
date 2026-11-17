@@ -25,6 +25,10 @@ import {
  * повреждённое значение из localStorage не сломало калькулятор.
  */
 const stateSerializer = {
+  /**
+   * Читает состояние из строки хранилища.
+   * @param raw Строка из localStorage.
+   */
   read: (raw: string): EncounterState => {
     try {
       return parseEncounterState(JSON.parse(raw));
@@ -32,6 +36,11 @@ const stateSerializer = {
       return DEFAULT_ENCOUNTER_STATE;
     }
   },
+
+  /**
+   * Превращает состояние в строку для хранилища.
+   * @param value Текущее состояние калькулятора.
+   */
   write: (value: EncounterState): string => JSON.stringify(value),
 };
 

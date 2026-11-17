@@ -147,6 +147,13 @@ describe('getBudgetSegments', () => {
     ]);
   });
 
+  it('без группы делит шкалу поровну и ничего не заполняет', () => {
+    const segments = getBudgetSegments(500, { low: 0, moderate: 0, high: 0 });
+
+    expect(segments.map(({ width }) => width)).toEqual([1 / 3, 1 / 3, 1 / 3]);
+    expect(segments.map(({ fill }) => fill)).toEqual([0, 0, 0]);
+  });
+
   it('заполняет зоны по порядку', () => {
     expect(getBudgetSegments(250, budget).map(({ fill }) => fill)).toEqual([
       1, 0.5, 0,

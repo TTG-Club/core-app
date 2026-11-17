@@ -156,7 +156,9 @@ const creatureLinkSchema = z.object({
  * значение (так бэкенд помечает неизвестный опыт) даёт `undefined`.
  * @param value Сырое значение опыта.
  */
-function toExperience(value: number | null | undefined): number | undefined {
+export function toCreatureExperience(
+  value: number | null | undefined,
+): number | undefined {
   return typeof value === 'number' && value >= 0 ? value : undefined;
 }
 
@@ -182,8 +184,8 @@ export function parseCreatureOptions(input: unknown): Array<CreatureOption> {
     url: creature.url,
     label: creature.name.rus,
     challengeRating: creature.challengeRailing,
-    experience: toExperience(creature.experience),
-    experienceInLair: toExperience(creature.experienceInLair),
+    experience: toCreatureExperience(creature.experience),
+    experienceInLair: toCreatureExperience(creature.experienceInLair),
   }));
 }
 

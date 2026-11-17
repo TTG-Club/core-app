@@ -10,11 +10,15 @@
 
   import {
     BESTIARY_PAGE_PREFIX,
+    CREATURE_SEARCH_HINT_LABEL,
+    CREATURE_SEARCH_NOT_FOUND_LABEL,
+    formatExperience,
     getCreatureExperience,
     MAX_ROW_COUNT,
     MIN_ROW_COUNT,
     TRANSFER_LABELS,
   } from '../model';
+  import EncounterNumberInput from './EncounterNumberInput.vue';
 
   const { creatures, canAdd = true } = defineProps<{
     creatures: Array<EncounterCreature>;
@@ -40,8 +44,8 @@
 
   const emptyLabel = computed(() =>
     searchTerm.value.trim()
-      ? 'Ничего не найдено'
-      : 'Начните вводить название существа',
+      ? CREATURE_SEARCH_NOT_FOUND_LABEL
+      : CREATURE_SEARCH_HINT_LABEL,
   );
 
   const rows = computed(() =>
@@ -52,12 +56,13 @@
         ...creature,
         href: `${BESTIARY_PAGE_PREFIX}${creature.url}`,
         hasLair: creature.experienceInLair !== undefined,
-        experienceText: experience.toLocaleString('ru-RU'),
-        totalText: (experience * creature.count).toLocaleString('ru-RU'),
+        experienceText: formatExperience(experience),
+        totalText: formatExperience(experience * creature.count),
       };
     }),
   );
 
+  /** Добавляет выбранное существо в столкновение и очищает форму поиска. */
   function submit(): void {
     if (!selected.value || !canAdd) {
       return;
@@ -68,19 +73,6 @@
     selected.value = undefined;
     searchTerm.value = '';
     batchCount.value = MIN_ROW_COUNT;
-  }
-
-  function handleCountUpdate(
-    id: string,
-    value: number | null | undefined,
-  ): void {
-    if (typeof value === 'number') {
-      emit('update', id, { count: value });
-    }
-  }
-
-  function handleLairUpdate(id: string, value: boolean): void {
-    emit('update', id, { inLair: value });
   }
 </script>
 
@@ -140,14 +132,14 @@
           class="w-full"
           :disabled="!canAdd"
         >
-          <template #item-trailing="{ item }">
+          <template #item-trailing="{ item: option }">
             <UBadge
-              v-if="item.challengeRating"
+              v-if="option.challengeRating"
               size="sm"
               color="neutral"
               variant="subtle"
             >
-              ПО {{ item.challengeRating }}
+              ПО {{ option.challengeRating }}
             </UBadge>
           </template>
 
@@ -198,13 +190,13 @@
         class="flex flex-wrap items-center gap-x-3 gap-y-2 py-2"
       >
         <div class="flex min-w-40 flex-1 flex-col">
-          <NuxtLink
+          <ULink
             :to="row.href"
             class="font-medium text-highlighted hover:text-primary"
             @click.left.exact.prevent="openCreature(row.url)"
           >
             {{ row.name }}
-          </NuxtLink>
+          </ULink>
 
           <span class="text-xs text-muted tabular-nums">
             ПО {{ row.challengeRating }} · опыт {{ row.experienceText }} · всего
@@ -216,16 +208,16 @@
           v-if="row.hasLair"
           :model-value="row.inLair"
           label="В логове"
-          @update:model-value="handleLairUpdate(row.id, $event)"
+          @update:model-value="emit('update', row.id, { inLair: $event })"
         />
 
-        <UInputNumber
+        <EncounterNumberInput
           :model-value="row.count"
           :min="MIN_ROW_COUNT"
           :max="MAX_ROW_COUNT"
           class="w-24"
           aria-label="Количество существ"
-          @update:model-value="handleCountUpdate(row.id, $event)"
+          @update:model-value="emit('update', row.id, { count: $event })"
         />
 
         <UButton

@@ -1,5 +1,9 @@
 <script setup lang="ts">
-  import { CATALOG_PICKER_SECTIONS, CATALOG_PICKER_TITLES } from './constants';
+  import {
+    CATALOG_PICKER_SECTIONS,
+    CATALOG_PICKER_TITLES,
+    SELECT_CREATURE_PLACEHOLDERS,
+  } from './constants';
   import SelectCatalogEntity from './SelectCatalogEntity.vue';
 
   /**
@@ -17,6 +21,13 @@
   }>();
 
   const model = defineModel<string | Array<string>>({ default: '' });
+
+  /** Подпись пустого поля: у выбора одного существа и нескольких она разная. */
+  const placeholder = computed(() =>
+    multiple
+      ? SELECT_CREATURE_PLACEHOLDERS.multiple
+      : SELECT_CREATURE_PLACEHOLDERS.single,
+  );
 </script>
 
 <template>
@@ -27,6 +38,6 @@
     :multiple="multiple"
     :disabled="disabled"
     :exclude-urls="excludeUrls"
-    :placeholder="`Выбери существ${multiple ? '' : 'о'}`"
+    :placeholder="placeholder"
   />
 </template>

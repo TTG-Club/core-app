@@ -150,3 +150,21 @@ export interface EncounterTransferTracker {
   /** Идёт ли в трекере бой: новым существам бэкенд сразу бросит инициативу. */
   isActive: boolean;
 }
+
+/** Источник случайных чисел в диапазоне [0, 1) — подменяется в тестах. */
+export type RandomSource = () => number;
+
+/** Кандидат в свиту и его вес при случайном выборе. */
+export interface RetinueOption {
+  candidate: GenerationCandidate;
+  weight: number;
+}
+
+/** Промежуточный итог одной попытки генерации. */
+export interface GenerationAttempt {
+  picks: Array<GeneratedCreature>;
+  total: number;
+
+  /** Свита подобрана по совместимости, а не наугад. */
+  isThemed: boolean;
+}

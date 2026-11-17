@@ -1,17 +1,20 @@
 <script setup lang="ts">
   import { CalculatorEncounter } from '~calculator/encounter';
+  import {
+    ENCOUNTER_CALCULATOR_DESCRIPTION,
+    ENCOUNTER_CALCULATOR_TITLE,
+  } from '~calculator/encounter/model';
 
   useSeoMeta({
-    title: 'Калькулятор столкновений',
-    description:
-      'Калькулятор столкновений — оценка сложности боя для группы персонажей D&D 5 по правилам редакции 2024 года.',
+    title: ENCOUNTER_CALCULATOR_TITLE,
+    description: ENCOUNTER_CALCULATOR_DESCRIPTION,
   });
 </script>
 
 <template>
   <NuxtLayout
     name="detail"
-    title="Калькулятор столкновений"
+    :title="ENCOUNTER_CALCULATOR_TITLE"
   >
     <ClientOnly>
       <CalculatorEncounter />

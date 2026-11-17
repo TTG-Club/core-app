@@ -1,9 +1,12 @@
 import type {
   EncounterBudget,
   GeneratedCreature,
+  GenerationAttempt,
   GenerationCandidate,
   GenerationDifficulty,
   GenerationWindow,
+  RandomSource,
+  RetinueOption,
 } from './types';
 
 import {
@@ -19,9 +22,6 @@ import {
   GENERATION_REPEAT_CHANCE,
   GENERATION_STOP_CHANCE,
 } from './constants';
-
-/** Источник случайных чисел в диапазоне [0, 1) — подменяется в тестах. */
-export type RandomSource = () => number;
 
 /**
  * Нижняя граница опыта для сложности: для низкой — доля её бюджета, для
@@ -98,39 +98,39 @@ export function getGenerationCreatureLimit(characterCount: number): number {
 
 /**
  * Случайный элемент массива.
- * @param items Непустой массив.
+ * @param choices Непустой массив.
  * @param random Источник случайных чисел.
  */
 function pickRandom<T>(
-  items: ReadonlyArray<T>,
+  choices: ReadonlyArray<T>,
   random: RandomSource,
 ): T | undefined {
-  return items[Math.floor(random() * items.length)];
+  return choices[Math.floor(random() * choices.length)];
 }
 
 /**
- * Случайный элемент с учётом весов: элемент с весом 8 выпадает вчетверо
- * чаще элемента с весом 2.
- * @param items Пары «элемент — положительный вес».
+ * Случайный кандидат свиты с учётом весов: кандидат с весом 8 выпадает
+ * вчетверо чаще кандидата с весом 2.
+ * @param options Кандидаты с положительными весами.
  * @param random Источник случайных чисел.
  */
-function pickWeighted<T>(
-  items: ReadonlyArray<{ item: T; weight: number }>,
+function pickWeighted(
+  options: ReadonlyArray<RetinueOption>,
   random: RandomSource,
-): T | undefined {
-  const total = items.reduce((sum, { weight }) => sum + weight, 0);
+): GenerationCandidate | undefined {
+  const total = options.reduce((sum, { weight }) => sum + weight, 0);
 
   let roll = random() * total;
 
-  for (const { item, weight } of items) {
+  for (const { candidate, weight } of options) {
     roll -= weight;
 
     if (roll < 0) {
-      return item;
+      return candidate;
     }
   }
 
-  return items.at(-1)?.item;
+  return options.at(-1)?.candidate;
 }
 
 /**
@@ -181,12 +181,6 @@ export function getCompatibilityScore(
     : 0;
 }
 
-/** Кандидат в свиту и его вес при случайном выборе. */
-interface RetinueOption {
-  item: GenerationCandidate;
-  weight: number;
-}
-
 /**
  * Свита главаря: существа не сильнее его, с весом по совместимости. Если
  * совместимых нет совсем, годится любое существо с равным весом — группа
@@ -205,7 +199,10 @@ function getRetinue(
   );
 
   const themed = weaker
-    .map((item) => ({ item, weight: getCompatibilityScore(leader, item) }))
+    .map((candidate) => ({
+      candidate,
+      weight: getCompatibilityScore(leader, candidate),
+    }))
     .filter(({ weight }) => weight > 0);
 
   if (themed.length) {
@@ -213,18 +210,9 @@ function getRetinue(
   }
 
   return {
-    options: weaker.map((item) => ({ item, weight: 1 })),
+    options: weaker.map((candidate) => ({ candidate, weight: 1 })),
     isThemed: false,
   };
-}
-
-/** Промежуточный итог одной попытки генерации. */
-interface GenerationAttempt {
-  picks: Array<GeneratedCreature>;
-  total: number;
-
-  /** Свита подобрана по совместимости, а не наугад. */
-  isThemed: boolean;
 }
 
 /**
@@ -252,18 +240,19 @@ function addPick(
  * пока опыт не попадёт в окно и не сработает случайная остановка либо не
  * кончится бюджет.
  * @param pool Кандидаты, каждый из которых умещается в бюджет.
- * @param window Диапазон опыта, который надо добавить.
+ * @param experienceWindow Диапазон опыта, который надо добавить.
  * @param creatureLimit Сколько существ можно добавить.
  * @param random Источник случайных чисел.
  */
 function runAttempt(
   pool: ReadonlyArray<GenerationCandidate>,
-  window: GenerationWindow,
+  experienceWindow: GenerationWindow,
   creatureLimit: number,
   random: RandomSource,
 ): GenerationAttempt {
   const leaders = pool.filter(
-    ({ experience }) => experience >= window.max * GENERATION_LEADER_RATIO,
+    ({ experience }) =>
+      experience >= experienceWindow.max * GENERATION_LEADER_RATIO,
   );
 
   const leader = pickRandom(leaders.length ? leaders : pool, random);
@@ -279,9 +268,9 @@ function runAttempt(
   let creatureCount = 1;
 
   while (creatureCount < creatureLimit) {
-    const remaining = window.max - total;
+    const remaining = experienceWindow.max - total;
 
-    if (total >= window.min && random() < GENERATION_STOP_CHANCE) {
+    if (total >= experienceWindow.min && random() < GENERATION_STOP_CHANCE) {
       break;
     }
 
@@ -292,9 +281,11 @@ function runAttempt(
     const newcomers =
       picks.length < GENERATION_MAX_KINDS
         ? retinue.options.filter(
-            ({ item }) =>
-              item.experience <= remaining
-              && !picks.some(({ candidate }) => candidate.url === item.url),
+            (option) =>
+              option.candidate.experience <= remaining
+              && !picks.some(
+                ({ candidate }) => candidate.url === option.candidate.url,
+              ),
           )
         : [];
 
@@ -329,19 +320,19 @@ function runAttempt(
  * если таких нет — первую удачную, а если нет и их — попытку с наибольшим
  * опытом (он всегда не больше верхней границы).
  * @param candidates Существа бестиария с известным опытом.
- * @param window Диапазон опыта, который надо добавить.
+ * @param experienceWindow Диапазон опыта, который надо добавить.
  * @param creatureLimit Сколько существ можно добавить.
  * @param random Источник случайных чисел.
  * @returns Существа с количествами; пустой массив — подобрать некого.
  */
 export function generateCreatures(
   candidates: ReadonlyArray<GenerationCandidate>,
-  window: GenerationWindow,
+  experienceWindow: GenerationWindow,
   creatureLimit: number,
   random: RandomSource = Math.random,
 ): Array<GeneratedCreature> {
   const pool = candidates.filter(
-    ({ experience }) => experience > 0 && experience <= window.max,
+    ({ experience }) => experience > 0 && experience <= experienceWindow.max,
   );
 
   if (!pool.length || creatureLimit < 1) {
@@ -352,9 +343,9 @@ export function generateCreatures(
   let best: GenerationAttempt = { picks: [], total: 0, isThemed: false };
 
   for (let attempt = 0; attempt < GENERATION_ATTEMPTS; attempt += 1) {
-    const result = runAttempt(pool, window, creatureLimit, random);
+    const result = runAttempt(pool, experienceWindow, creatureLimit, random);
 
-    if (result.total >= window.min) {
+    if (result.total >= experienceWindow.min) {
       if (result.isThemed) {
         return result.picks;
       }

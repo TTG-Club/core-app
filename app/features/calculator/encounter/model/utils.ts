@@ -9,13 +9,13 @@ import type {
 } from './types';
 
 import {
+  EMPTY_BUDGET,
   EXPERIENCE_BUDGET_BY_LEVEL,
   EXPERIENCE_BY_CHALLENGE_RATING,
   MAX_CHARACTER_LEVEL,
   MIN_CHARACTER_LEVEL,
+  NUMBER_LOCALE,
 } from './constants';
-
-const EMPTY_BUDGET: EncounterBudget = { low: 0, moderate: 0, high: 0 };
 
 /**
  * Возвращает бюджет опыта одного персонажа по уровню (DMG 2024). Уровень вне
@@ -135,6 +135,8 @@ export function calculateEncounter(
 /**
  * Делит шкалу бюджета на три зоны (низкая, умеренная, высокая) и считает,
  * насколько каждая заполнена опытом. Вся шкала — бюджет высокой сложности.
+ * Без группы бюджет нулевой: зоны делят шкалу поровну, чтобы подписи не
+ * слипались в одну точку.
  * @param totalExperience Суммарный опыт существ.
  * @param budget Бюджет группы.
  */
@@ -157,7 +159,7 @@ export function getBudgetSegments(
 
     return {
       difficulty,
-      width: budget.high > 0 ? size / budget.high : 0,
+      width: budget.high > 0 ? size / budget.high : 1 / zones.length,
       fill:
         size > 0
           ? Math.min(1, Math.max(0, (totalExperience - start) / size))
@@ -182,4 +184,28 @@ export function getTransferBatches(
   });
 
   return [...counts].map(([creatureUrl, count]) => ({ creatureUrl, count }));
+}
+
+/**
+ * Число опыта для показа: с пробелами между тысячами.
+ * @param experience Опыт.
+ */
+export function formatExperience(experience: number): string {
+  return experience.toLocaleString(NUMBER_LOCALE);
+}
+
+/**
+ * Подпись шкалы для экранных читалок: какая доля бюджета высокой сложности
+ * уже потрачена.
+ * @param totalExperience Суммарный опыт существ.
+ * @param budget Бюджет группы.
+ */
+export function getBudgetSpentLabel(
+  totalExperience: number,
+  budget: EncounterBudget,
+): string {
+  const percent =
+    budget.high > 0 ? Math.round((totalExperience / budget.high) * 100) : 0;
+
+  return `Потрачено ${percent}% бюджета высокой сложности`;
 }

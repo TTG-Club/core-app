@@ -7,9 +7,9 @@ import type { EncounterResult, GenerationDifficulty } from '../model';
 
 import { buildSearchQuery, parseFilter } from '~infrastructure/filter';
 import { BESTIARY_SEARCH_PATH } from '~initiative/model';
+import { CATALOG_PICKER_SECTIONS } from '~ui/select';
 
 import {
-  BESTIARY_FILTERS_PATH,
   generateCreatures,
   GENERATION_BUDGET_SPENT_DESCRIPTION,
   GENERATION_BUDGET_SPENT_TITLE,
@@ -32,10 +32,10 @@ import {
  */
 async function loadSourceQuery(): Promise<LocationQuery> {
   try {
-    const response = await $fetch<unknown>(BESTIARY_FILTERS_PATH, {
-      method: 'GET',
-      retry: 0,
-    });
+    const response = await $fetch<unknown>(
+      CATALOG_PICKER_SECTIONS.creatures.filtersPath,
+      { method: 'GET', retry: 0 },
+    );
 
     return buildSearchQuery({
       filters: [],
@@ -70,13 +70,13 @@ export function useEncounterGenerator(
     difficulty: GenerationDifficulty,
     habitat: string | undefined,
   ): Promise<void> {
-    const window = getGenerationWindow(
+    const experienceWindow = getGenerationWindow(
       difficulty,
       result.value.budget,
       result.value.totalExperience,
     );
 
-    if (!window) {
+    if (!experienceWindow) {
       toast.add({
         title: GENERATION_BUDGET_SPENT_TITLE,
         description: GENERATION_BUDGET_SPENT_DESCRIPTION,
@@ -97,7 +97,7 @@ export function useEncounterGenerator(
         method: 'GET',
         query: {
           ...sourceQuery,
-          cr: getAffordableExperienceValues(window.max).join(','),
+          cr: getAffordableExperienceValues(experienceWindow.max).join(','),
           // Существа «любой» среды обитания подходят к любой местности.
           habitat: habitat ? `${habitat},${HABITAT_ANY}` : undefined,
         },
@@ -106,7 +106,7 @@ export function useEncounterGenerator(
 
       const picks = generateCreatures(
         parseGenerationCandidates(response),
-        window,
+        experienceWindow,
         getGenerationCreatureLimit(result.value.characterCount),
       );
 
