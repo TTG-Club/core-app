@@ -21,7 +21,7 @@
   } from '~infrastructure/filter';
   import { ItemDrawer } from '~items/drawer';
 
-  import { useCharacterSheet } from '../../composables';
+  import { useCharacterSheet, useSheetOverlay } from '../../composables';
   import {
     buildInventoryItem,
     fetchItemSummary,
@@ -48,7 +48,7 @@
 
   const toast = useToast();
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
   const { character, addInventoryItems, purchaseInventoryItems } =
     useCharacterSheet(sheetKey);

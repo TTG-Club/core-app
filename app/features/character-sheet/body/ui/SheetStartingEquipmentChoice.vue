@@ -3,6 +3,7 @@
 
   import { ItemDrawer } from '~items/drawer';
 
+  import { useSheetOverlay } from '../../composables';
   import {
     getStartingEquipmentCoinsLabel,
     getStartingEquipmentItemLabel,
@@ -52,7 +53,7 @@
     default: STARTING_EQUIPMENT_SKIP_VALUE,
   });
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
   // Дровер описания предмета; без destroyOnClose — повторный open() после
   // закрытия иначе падает («Overlay not found»).

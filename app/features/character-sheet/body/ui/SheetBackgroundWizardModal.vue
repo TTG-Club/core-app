@@ -26,6 +26,7 @@
     useCharacterSheet,
     useChoiceHints,
     useChoiceSpellPools,
+    useSheetOverlay,
     useToolCatalog,
   } from '../../composables';
   import {
@@ -89,7 +90,7 @@
 
   const toast = useToast();
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
   const { character, setBackground, removeBackground } =
     useCharacterSheet(sheetKey);

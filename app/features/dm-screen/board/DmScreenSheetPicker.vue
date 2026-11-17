@@ -6,13 +6,15 @@
     DM_SCREEN_ICONS,
     DM_SCREEN_SEARCH_MARK_CLASS,
     DM_SCREEN_SHEET_SOURCE_LABEL,
+    DM_SCREEN_SHEET_WINDOW_SIZE,
     DM_SCREEN_TEXT,
   } from '../model';
 
   /**
    * Кнопка «Персонаж» в шапке ширмы: список листов персонажей, которые
    * мастер может поставить на ширму окном, — свои и чужие, к которым ему
-   * дали доступ. Гостю кнопка не показывается: листы есть только у
+   * дали доступ. В окне встаёт настоящий лист: свой правится и сохраняется,
+   * чужой открыт на просмотр. Гостю кнопка не показывается: листы есть только у
    * вошедшего. Список перечитывается при каждом открытии.
    */
   const { add, windows } = useDmScreen();
@@ -51,7 +53,11 @@
    * @param option - выбранный лист
    */
   function addSheet(option: ScreenSheetOption): void {
-    add({ path: option.path, title: option.name });
+    add({
+      path: option.path,
+      title: option.name,
+      size: DM_SCREEN_SHEET_WINDOW_SIZE,
+    });
 
     isOpen.value = false;
   }

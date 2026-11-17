@@ -11,7 +11,7 @@
   import { ItemDrawer } from '~items/drawer';
   import { MagicItemDrawer } from '~magic-items/drawer';
 
-  import { useCharacterSheet } from '../../composables';
+  import { useCharacterSheet, useSheetOverlay } from '../../composables';
   import {
     ATTUNEMENT_LABELS,
     CARRYING_CAPACITY_LABELS,
@@ -77,7 +77,7 @@
     onAddCustomItem: () => emit('add-custom-item'),
   });
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
   // Дроверы описаний предметов; без destroyOnClose — повторный open()
   // после закрытия иначе падает («Overlay not found»).

@@ -26,6 +26,7 @@
     useCharacterSheetSaved,
     useCharacterSheetSaveStatus,
     useCharacterSheetShare,
+    useSheetOverlay,
   } from '../composables';
   import {
     ABILITY_LABELS,
@@ -327,7 +328,7 @@
     });
   }
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
   const toast = useToast();
 

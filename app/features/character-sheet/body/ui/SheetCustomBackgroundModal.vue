@@ -12,6 +12,7 @@
   import {
     useCharacterSheet,
     useLazyCatalogSourceQuery,
+    useSheetOverlay,
     useToolCatalog,
   } from '../../composables';
   import {
@@ -51,7 +52,7 @@
 
   const toast = useToast();
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
   const { character, setBackground } = useCharacterSheet(sheetKey);
 

@@ -86,21 +86,25 @@ export function getScreenArea(board: ScreenRect): ScreenRect {
 }
 
 /**
- * Размер нового окна: обычный, но не больше свободного места холста и не
- * меньше наименьшего окна.
+ * Размер нового окна: желаемый (без него — обычный), но не больше свободного
+ * места холста и не меньше наименьшего окна.
  * @param board - видимая часть поля
+ * @param preferred - желаемый размер окна
  */
-export function fitScreenWindowSize(board: ScreenRect): ScreenSize {
+export function fitScreenWindowSize(
+  board: ScreenRect,
+  preferred: ScreenSize = DM_SCREEN_WINDOW_SIZE,
+): ScreenSize {
   const area = getScreenArea(board);
 
   return {
     width: Math.max(
       DM_SCREEN_WINDOW_MIN_SIZE.width,
-      Math.min(DM_SCREEN_WINDOW_SIZE.width, area.width),
+      Math.min(preferred.width, area.width),
     ),
     height: Math.max(
       DM_SCREEN_WINDOW_MIN_SIZE.height,
-      Math.min(DM_SCREEN_WINDOW_SIZE.height, area.height),
+      Math.min(preferred.height, area.height),
     ),
   };
 }
@@ -189,7 +193,7 @@ export function appendScreenWindow(
     };
   }
 
-  const size = fitScreenWindowSize(board);
+  const size = fitScreenWindowSize(board, request.size);
 
   const position = placeScreenWindow(
     board,

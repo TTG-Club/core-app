@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { useCharacterSheet } from '../../composables';
+  import { useCharacterSheet, useSheetOverlay } from '../../composables';
   import {
     CLASSES_MODAL_LABELS,
     getCharacterClasses,
@@ -18,7 +18,7 @@
     close: [];
   }>();
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
   const { character, canEdit, removeClass } = useCharacterSheet(sheetKey);
 

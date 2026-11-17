@@ -54,7 +54,7 @@ export function useDmScreenSheets() {
               ? [
                   buildScreenSheetOption(sheet.data, {
                     source: 'own',
-                    key: sheet.id,
+                    id: sheet.id,
                   }),
                 ]
               : [],
@@ -68,7 +68,7 @@ export function useDmScreenSheets() {
               ? [
                   buildScreenSheetOption(saved.data, {
                     source: 'shared',
-                    key: saved.shareToken,
+                    id: saved.shareToken,
                   }),
                 ]
               : [],

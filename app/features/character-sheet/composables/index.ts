@@ -33,6 +33,7 @@ export { useLevelUpWizard } from './useLevelUpWizard';
 export { usePickedFeatChoices } from './usePickedFeatChoices';
 export { useSheetActiveEffects } from './useSheetActiveEffects';
 export { useSheetAvatar } from './useSheetAvatar';
+export { useSheetOverlay } from './useSheetOverlay';
 export { useSpellCatalogMechanics } from './useSpellCatalogMechanics';
 export { useSpellCatalogSearch } from './useSpellCatalogSearch';
 export { useToolCatalog } from './useToolCatalog';

@@ -28,6 +28,7 @@
     useChoiceSpellPools,
     useLazyCatalogSourceQuery,
     usePickedFeatChoices,
+    useSheetOverlay,
     useToolCatalog,
   } from '../../composables';
   import {
@@ -150,7 +151,7 @@
 
   const toast = useToast();
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
   const { character, setSpecies, removeSpecies } = useCharacterSheet(sheetKey);
 

@@ -17,6 +17,7 @@
 
   import {
     useCharacterSheet,
+    useSheetOverlay,
     useSpellCatalogMechanics,
   } from '../../composables';
   import {
@@ -280,7 +281,7 @@
     return value !== null && count >= value;
   }
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
   // Дровер описания заклинания; без destroyOnClose — повторный open()
   // после закрытия иначе падает («Overlay not found»).

@@ -3,7 +3,7 @@
 
   import { ACTION_LABELS } from '~/shared/consts';
 
-  import { useCharacterSheet } from '../../composables';
+  import { useCharacterSheet, useSheetOverlay } from '../../composables';
   import {
     CLASS_RESOURCE_MODAL_TITLES,
     FEAT_RESOURCE_HINT,
@@ -30,7 +30,7 @@
     close: [];
   }>();
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
   const { character, setClassResources } = useCharacterSheet(sheetKey);
 

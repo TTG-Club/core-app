@@ -26,7 +26,7 @@
   import { useMagicItemRarityGroupOrder } from '~magic-items/composable';
   import { MagicItemDrawer } from '~magic-items/drawer';
 
-  import { useCharacterSheet } from '../../composables';
+  import { useCharacterSheet, useSheetOverlay } from '../../composables';
   import {
     buildMagicItemInventoryItem,
     fetchMagicItemSummary,
@@ -57,7 +57,7 @@
 
   const toast = useToast();
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
   const { character, addInventoryItems, purchaseInventoryItems } =
     useCharacterSheet(sheetKey);

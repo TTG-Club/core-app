@@ -1,7 +1,11 @@
 <script setup lang="ts">
   import { ImageCropModal } from '~ui/image-crop';
 
-  import { useCharacterSheet, useSheetAvatar } from '../../composables';
+  import {
+    useCharacterSheet,
+    useSheetAvatar,
+    useSheetOverlay,
+  } from '../../composables';
   import { SHEET_AVATAR_LABELS } from '../../model';
 
   const { sheetKey } = defineProps<{
@@ -14,7 +18,7 @@
   const { avatarUrl, isUploading, replaceAvatar, clearAvatar } =
     useSheetAvatar(sheetKey);
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
   /** Ссылка есть, но файл не открылся (пропал из хранилища). */
   const isImageBroken = ref(false);

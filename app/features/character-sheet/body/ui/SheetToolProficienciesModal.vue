@@ -9,7 +9,11 @@
   import { ACTION_LABELS } from '~/shared/consts';
   import { ItemDrawer } from '~items/drawer';
 
-  import { useCharacterSheet, useToolCatalog } from '../../composables';
+  import {
+    useCharacterSheet,
+    useSheetOverlay,
+    useToolCatalog,
+  } from '../../composables';
   import {
     CUSTOM_TOOL_NAME_MAX_LENGTH,
     findToolInCatalog,
@@ -41,7 +45,7 @@
     close: [];
   }>();
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
   const { character, setToolProficiencies } = useCharacterSheet(sheetKey);
 

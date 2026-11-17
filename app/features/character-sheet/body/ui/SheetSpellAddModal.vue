@@ -7,7 +7,11 @@
   import { FilterDrawer } from '~infrastructure/filter';
   import { SpellDrawer } from '~spells/drawer';
 
-  import { useCharacterSheet, useSpellCatalogSearch } from '../../composables';
+  import {
+    useCharacterSheet,
+    useSheetOverlay,
+    useSpellCatalogSearch,
+  } from '../../composables';
   import {
     getExpandedSpellListSpells,
     getFilterChipClass,
@@ -32,7 +36,7 @@
     close: [];
   }>();
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
   const { character, setSpells } = useCharacterSheet(sheetKey);
 

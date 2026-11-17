@@ -2,12 +2,12 @@ import type { ScreenTile, ScreenWindow } from '~dm-screen/model';
 
 import { describe, expect, it } from 'vitest';
 
+import { getSheetPagePath } from '~character-sheet/model';
 import {
   appendScreenWindow,
   arrangeScreenWindows,
   centerScreenView,
   clampScreenView,
-  createScreenSheetPath,
   DM_SCREEN_FIELD,
   DM_SCREEN_GAP,
   DM_SCREEN_HALVES_LAYOUT,
@@ -612,12 +612,12 @@ describe('лист персонажа на ширме', () => {
   it('свой лист узнаётся по идентификатору, чужой — по токену ссылки', () => {
     expect(resolveScreenSheet('/tools/character-sheet/abc-1')).toEqual({
       source: 'own',
-      key: 'abc-1',
+      id: 'abc-1',
     });
 
     expect(resolveScreenSheet('/tools/character-sheet/shared/tok-1')).toEqual({
       source: 'shared',
-      key: 'tok-1',
+      id: 'tok-1',
     });
   });
 
@@ -627,11 +627,24 @@ describe('лист персонажа на ширме', () => {
     expect(resolveScreenSheet('/tools/character-sheet')).toBeUndefined();
   });
 
-  it('путь окна собирается обратно в тот же лист', () => {
-    const own = { source: 'own', key: 'abc-1' } as const;
-    const shared = { source: 'shared', key: 'tok-1' } as const;
+  it('путь окна — адрес страницы листа и разбирается обратно', () => {
+    const own = { source: 'own', id: 'abc-1' } as const;
+    const shared = { source: 'shared', id: 'tok-1' } as const;
 
-    expect(resolveScreenSheet(createScreenSheetPath(own))).toEqual(own);
-    expect(resolveScreenSheet(createScreenSheetPath(shared))).toEqual(shared);
+    expect(resolveScreenSheet(getSheetPagePath(own))).toEqual(own);
+    expect(resolveScreenSheet(getSheetPagePath(shared))).toEqual(shared);
+  });
+
+  it('окно листа просит свой размер, но не больше свободного места', () => {
+    const preferred = { width: 620, height: 760 };
+
+    expect(fitScreenWindowSize(BOARD, preferred)).toEqual(preferred);
+
+    expect(
+      fitScreenWindowSize({ x: 0, y: 0, width: 500, height: 400 }, preferred),
+    ).toEqual({
+      width: 500 - DM_SCREEN_MARGIN * 2,
+      height: 400 - DM_SCREEN_MARGIN * 2,
+    });
   });
 });

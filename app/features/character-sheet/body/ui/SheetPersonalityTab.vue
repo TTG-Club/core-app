@@ -4,7 +4,7 @@
   import { BackgroundDrawer } from '~backgrounds/drawer';
   import { MarkupRender } from '~ui/markup';
 
-  import { useCharacterSheet } from '../../composables';
+  import { useCharacterSheet, useSheetOverlay } from '../../composables';
   import {
     ABILITY_LABELS,
     ABILITY_ORDER,
@@ -34,7 +34,7 @@
   // а сами плитки остаются на местах — читать личность можно и с чужого листа.
   const { character, editControlClass } = useCharacterSheet(sheetKey);
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
   // Дровер описания предыстории; без destroyOnClose — повторный open() после
   // закрытия иначе падает («Overlay not found»).

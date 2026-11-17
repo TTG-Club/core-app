@@ -459,6 +459,8 @@
         :key="screenWindow.path"
         :sheet
         @loaded="syncTitle"
+        @navigate="navigateWindow"
+        @close="closeWindow"
       />
 
       <DmScreenEntry

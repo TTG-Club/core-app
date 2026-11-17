@@ -33,6 +33,7 @@
     useChoiceHints,
     useChoiceSpellPools,
     usePickedFeatChoices,
+    useSheetOverlay,
     useToolCatalog,
   } from '../../composables';
   import {
@@ -171,7 +172,7 @@
 
   const toast = useToast();
 
-  const overlay = useOverlay();
+  const overlay = useSheetOverlay();
 
   const { character, setClass, addClass } = useCharacterSheet(sheetKey);
 
