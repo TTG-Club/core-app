@@ -45,8 +45,6 @@ export interface CreatureDetailResponse {
   actions: Array<CreatureActionResponse>;
   reactions: Array<CreatureActionResponse>;
   bonusActions: Array<CreatureActionResponse>;
-  legendaryAction: number;
-  legendaryActionInLair: number;
   legendary: {
     /**
      * Пустоту бэкенд не присылает вовсе: `LegendaryActionResponse` помечен
@@ -55,7 +53,8 @@ export interface CreatureDetailResponse {
      */
     actions?: Array<CreatureActionResponse>;
     count: string;
-    description: string;
+    /** Тоже `NON_NULL`: у большинства существ описания нет и ключа нет. */
+    description?: string;
   };
   lair: {
     name: string;
@@ -101,7 +100,8 @@ export interface CreatureHitResponse {
   /** `null` у призванных существ: их хиты описаны в `text` (`avatar-of-death-dmg`). */
   hit: number | null;
   formula: string;
-  text: string;
+  /** Пояснение к хитам; у обычных существ приходит `null`. */
+  text: string | null;
 }
 
 export interface CreatureAbilityResponse {
