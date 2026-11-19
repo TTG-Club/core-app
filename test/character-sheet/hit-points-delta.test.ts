@@ -75,6 +75,20 @@ describe('parseHitPointsExpression (ввод калькулятора хитов
     expect(parseHitPointsExpression('+3')).toEqual({ amount: 3, delta: 3 });
   });
 
+  it('слагаемые складываются: дописанное к текущим хитам и серия ударов', () => {
+    expect(parseHitPointsExpression('5+5')).toEqual({
+      amount: 10,
+      delta: null,
+    });
+
+    expect(parseHitPointsExpression('-28 - 32')).toEqual({
+      amount: 60,
+      delta: -60,
+    });
+
+    expect(parseHitPointsExpression('+10-4')).toEqual({ amount: 6, delta: 6 });
+  });
+
   it('невалидный ввод не разбирается', () => {
     expect(parseHitPointsExpression('')).toBeNull();
     expect(parseHitPointsExpression('7 урона')).toBeNull();

@@ -180,6 +180,7 @@ import {
   mapValues,
   omit,
   round,
+  sumBy,
   union,
   uniq,
   uniqBy,
@@ -350,6 +351,7 @@ import {
   HEAVY_WEAPON_RIDER_EFFECT_IDS,
   HIT_DICE_ROLL_COUNT,
   HIT_POINT_INPUT_PATTERN,
+  HIT_POINT_INPUT_TERM_PATTERN,
   HIT_POINTS_LEVEL_GAIN_MIN,
   HIT_POINTS_MIN,
   INNATE_SPELL_REMOVE_MENU_LABEL,
@@ -6288,7 +6290,9 @@ export function clampHitPoints(value: number, max: number): number {
 
 /**
  * Разбор ввода калькулятора хитов: `20` — точное значение текущих хитов,
- * `-7` — урон, `+3` — лечение. Пробелы по краям не мешают.
+ * `-7` — урон, `+3` — лечение. Слагаемые складываются: `5+5` — точные
+ * хиты 10 (так получается, если дописать `+5` к текущему значению в поле),
+ * `-28-32` — урон 60. Пробелы не мешают.
  *
  * @param input текст из поля калькулятора.
  * @returns число и сдвиг хитов или `null`, если ввод не подходит.
@@ -6296,20 +6300,23 @@ export function clampHitPoints(value: number, max: number): number {
 export function parseHitPointsExpression(
   input: string,
 ): HitPointsExpression | null {
-  const match = HIT_POINT_INPUT_PATTERN.exec(input.trim());
+  const trimmed = input.trim();
+  const match = HIT_POINT_INPUT_PATTERN.exec(trimmed);
 
   if (!match) {
     return null;
   }
 
-  const [, sign, digits] = match;
-  const amount = Number(digits);
+  const total = sumBy(
+    Array.from(trimmed.matchAll(HIT_POINT_INPUT_TERM_PATTERN)),
+    ([, sign, digits]) => (sign === '-' ? -Number(digits) : Number(digits)),
+  );
 
-  if (!sign) {
-    return { amount, delta: null };
+  if (!match[1]) {
+    return { amount: total, delta: null };
   }
 
-  return { amount, delta: sign === '-' ? -amount : amount };
+  return { amount: Math.abs(total), delta: total };
 }
 
 /**
