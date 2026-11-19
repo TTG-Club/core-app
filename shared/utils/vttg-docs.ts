@@ -1,5 +1,6 @@
 import type { VttgDocsChannel } from '../consts/vttg-docs';
 import type {
+  VttgDocsAccess,
   VttgDocsPageLink,
   VttgDocsRoute,
   VttgDocsSettings,
@@ -10,10 +11,10 @@ import { uniq } from 'es-toolkit';
 import { z } from 'zod';
 
 import {
+  VTTG_DOCS_CHANNEL_ROLES_MAX_COUNT,
   VTTG_DOCS_CHANNELS,
   VTTG_DOCS_DEFAULT_CHANNEL,
   VTTG_DOCS_DEV_CHANNEL,
-  VTTG_DOCS_DEV_ROLES_MAX_COUNT,
   VTTG_DOCS_ROLE_MAX_LENGTH,
   VTTG_DOCS_ROLE_PATTERN,
   VTTG_DOCS_ROUTE,
@@ -40,22 +41,80 @@ export const vttgDocsRoleSchema = z
 
 /**
  * Схема настройки раздела. Одна на обе стороны: сервер проверяет ей файл из
- * хранилища, клиент — ответ API админки.
+ * хранилища, клиент — ответ API админки. Файл, сохранённый до появления
+ * настройки релизного канала, читается как «релиз открыт всем».
  */
 export const vttgDocsSettingsSchema: z.ZodType<VttgDocsSettings> = z.object({
+  isReleaseChannelPublic: z.boolean().default(true),
+  releaseChannelRoles: z.array(z.string()).default([]),
   devChannelRoles: z.array(z.string()),
   updatedAt: z.string().nullable(),
   updatedBy: z.string().nullable(),
 });
 
-/** Схема тела запроса админки: роли без повторов. */
+/** Схема ролей одного канала в форме: без повторов и не больше предела. */
+const vttgDocsChannelRolesSchema = z
+  .array(vttgDocsRoleSchema)
+  .max(VTTG_DOCS_CHANNEL_ROLES_MAX_COUNT)
+  .transform((roles) => uniq(roles));
+
+/** Схема тела запроса админки. */
 export const vttgDocsSettingsUpdateSchema: z.ZodType<VttgDocsSettingsUpdate> =
   z.object({
-    devChannelRoles: z
-      .array(vttgDocsRoleSchema)
-      .max(VTTG_DOCS_DEV_ROLES_MAX_COUNT)
-      .transform((roles) => uniq(roles)),
+    isReleaseChannelPublic: z.boolean(),
+    releaseChannelRoles: vttgDocsChannelRolesSchema,
+    devChannelRoles: vttgDocsChannelRolesSchema,
   });
+
+/** Схема ответа о доступе к разделу. */
+export const vttgDocsAccessSchema: z.ZodType<VttgDocsAccess> = z.object({
+  channels: z.array(vttgDocsChannelSchema),
+});
+
+/**
+ * Есть ли у посетителя хотя бы одна из ролей канала.
+ *
+ * @param visitorRoles роли посетителя из токена
+ * @param channelRoles роли, которым открыт канал
+ */
+function hasChannelRole(
+  visitorRoles: string[],
+  channelRoles: string[],
+): boolean {
+  return visitorRoles.some((role) => channelRoles.includes(role));
+}
+
+/**
+ * Каналы документации, открытые посетителю. Администратор видит оба канала
+ * всегда; релиз — всем, если он открыт всем, иначе его ролям; канал
+ * разработки — только своим ролям.
+ *
+ * @param visitorRoles роли посетителя (пусто — без входа)
+ * @param isAdmin посетитель — администратор
+ * @param settings настройка раздела
+ */
+export function getVttgDocsVisibleChannels(
+  visitorRoles: string[],
+  isAdmin: boolean,
+  settings: Pick<
+    VttgDocsSettings,
+    'isReleaseChannelPublic' | 'releaseChannelRoles' | 'devChannelRoles'
+  >,
+): VttgDocsChannel[] {
+  if (isAdmin) {
+    return [...VTTG_DOCS_CHANNELS];
+  }
+
+  const isReleaseVisible =
+    settings.isReleaseChannelPublic
+    || hasChannelRole(visitorRoles, settings.releaseChannelRoles);
+
+  const isDevVisible = hasChannelRole(visitorRoles, settings.devChannelRoles);
+
+  return VTTG_DOCS_CHANNELS.filter((channel) =>
+    isVttgDocsDevChannel(channel) ? isDevVisible : isReleaseVisible,
+  );
+}
 
 /**
  * Query канала для адреса раздела: у релиза его нет — ссылки релизных доков
@@ -88,6 +147,26 @@ export function getVttgDocsIndexRoute(channel: VttgDocsChannel): VttgDocsRoute {
 }
 
 /**
+ * Адрес раздела строкой из адреса для роутера.
+ *
+ * @param docsRoute путь и query канала
+ */
+function toVttgDocsPath(docsRoute: VttgDocsRoute): string {
+  const queryString = new URLSearchParams(docsRoute.query).toString();
+
+  return queryString ? `${docsRoute.path}?${queryString}` : docsRoute.path;
+}
+
+/**
+ * Адрес оглавления канала строкой — для пунктов меню сайта.
+ *
+ * @param channel канал документации
+ */
+export function getVttgDocsIndexPath(channel: VttgDocsChannel): string {
+  return toVttgDocsPath(getVttgDocsIndexRoute(channel));
+}
+
+/**
  * Адрес страницы раздела для роутера.
  *
  * @param channel канал документации
@@ -113,10 +192,7 @@ export function getVttgDocsPagePath(
   channel: VttgDocsChannel,
   pageLink: Pick<VttgDocsPageLink, 'groupSlug' | 'pageSlug'>,
 ): string {
-  const { path, query } = getVttgDocsPageRoute(channel, pageLink);
-  const queryString = new URLSearchParams(query).toString();
-
-  return queryString ? `${path}?${queryString}` : path;
+  return toVttgDocsPath(getVttgDocsPageRoute(channel, pageLink));
 }
 
 /**

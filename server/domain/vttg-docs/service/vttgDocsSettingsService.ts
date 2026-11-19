@@ -5,13 +5,15 @@ import type { VttgDocsSettings, VttgDocsSettingsUpdate } from '#shared/types';
 
 import { S3Service } from '#server/domain/s3';
 import { parseAuthJwtPayload } from '#server/utils/authService';
-import { vttgDocsSettingsSchema } from '#shared/utils';
+import {
+  getVttgDocsVisibleChannels,
+  vttgDocsSettingsSchema,
+} from '#shared/utils';
 import { Role } from '~/shared/types';
 
 import {
-  VTTG_DOCS_ALL_CHANNELS,
   VTTG_DOCS_DEFAULT_SETTINGS,
-  VTTG_DOCS_PUBLIC_CHANNELS,
+  VTTG_DOCS_FALLBACK_SETTINGS,
   VTTG_DOCS_SETTINGS_CACHE_KEY,
   VTTG_DOCS_SETTINGS_CACHE_MAX_AGE_SECONDS,
   VTTG_DOCS_SETTINGS_CACHE_NAME,
@@ -21,6 +23,7 @@ import {
   VTTG_DOCS_SETTINGS_INVALID_LOG,
   VTTG_DOCS_SETTINGS_KEY,
   VTTG_DOCS_SETTINGS_MISSING_ERROR,
+  VTTG_DOCS_SETTINGS_UNAVAILABLE_LOG,
 } from '../model';
 
 /**
@@ -71,9 +74,9 @@ const getCachedVttgDocsSettings = defineCachedFunction(readVttgDocsSettings, {
 });
 
 /**
- * Сохраняет настройку и сбрасывает её кеш — новые роли видят dev-канал сразу.
+ * Сохраняет настройку и сбрасывает её кеш — новые права действуют сразу.
  *
- * @param settingsUpdate роли из формы админки
+ * @param settingsUpdate права из формы админки
  * @param username кто сохранил
  * @returns сохранённая настройка
  */
@@ -82,6 +85,8 @@ export async function saveVttgDocsSettings(
   username: string,
 ): Promise<VttgDocsSettings> {
   const settings: VttgDocsSettings = {
+    isReleaseChannelPublic: settingsUpdate.isReleaseChannelPublic,
+    releaseChannelRoles: settingsUpdate.releaseChannelRoles,
     devChannelRoles: settingsUpdate.devChannelRoles,
     updatedAt: new Date().toISOString(),
     updatedBy: username,
@@ -100,8 +105,22 @@ export async function saveVttgDocsSettings(
 }
 
 /**
+ * Настройка для проверки прав. Хранилище недоступно — раздел закрыт всем,
+ * кроме администраторов.
+ */
+async function getAccessSettings(): Promise<VttgDocsSettings> {
+  try {
+    return await getCachedVttgDocsSettings();
+  } catch (error) {
+    consola.error(VTTG_DOCS_SETTINGS_UNAVAILABLE_LOG, error);
+
+    return VTTG_DOCS_FALLBACK_SETTINGS;
+  }
+}
+
+/**
  * Роли посетителя из токена запроса. Нет токена, он истёк или битый — ролей
- * нет: такой посетитель видит только релизный канал.
+ * нет: посетитель считается гостем.
  *
  * @param event запрос к сайту
  */
@@ -118,9 +137,8 @@ async function getRequestRoles(event: H3Event): Promise<string[]> {
 }
 
 /**
- * Каналы документации, которые видит посетитель. Релиз — все; dev —
- * администраторы и роли из настройки. Недоступное хранилище настройки dev-канал
- * не открывает никому, кроме администраторов.
+ * Каналы документации, которые видит посетитель: администратор — оба,
+ * остальные — по настройке раздела в админке.
  *
  * @param event запрос к сайту
  */
@@ -128,26 +146,32 @@ export async function getVttgDocsChannels(
   event: H3Event,
 ): Promise<VttgDocsChannel[]> {
   const roles = await getRequestRoles(event);
+  const isAdmin = roles.includes(Role.ADMIN);
 
-  if (roles.includes(Role.ADMIN)) {
-    return VTTG_DOCS_ALL_CHANNELS;
+  // Администратору настройка не нужна — не читаем её лишний раз.
+  if (isAdmin) {
+    return getVttgDocsVisibleChannels(
+      roles,
+      isAdmin,
+      VTTG_DOCS_DEFAULT_SETTINGS,
+    );
   }
 
-  if (!roles.length) {
-    return VTTG_DOCS_PUBLIC_CHANNELS;
-  }
+  return getVttgDocsVisibleChannels(roles, isAdmin, await getAccessSettings());
+}
 
-  let devChannelRoles: string[];
-
-  try {
-    ({ devChannelRoles } = await getCachedVttgDocsSettings());
-  } catch (error) {
-    consola.error(VTTG_DOCS_SETTINGS_INVALID_LOG, error);
-
-    devChannelRoles = [];
-  }
-
-  return roles.some((role) => devChannelRoles.includes(role))
-    ? VTTG_DOCS_ALL_CHANNELS
-    : VTTG_DOCS_PUBLIC_CHANNELS;
+/**
+ * Канал открыт всем, в том числе без входа, — его страницы можно показывать
+ * поисковикам.
+ *
+ * @param channel канал документации
+ */
+export async function isVttgDocsChannelPublic(
+  channel: VttgDocsChannel,
+): Promise<boolean> {
+  return getVttgDocsVisibleChannels(
+    [],
+    false,
+    await getAccessSettings(),
+  ).includes(channel);
 }

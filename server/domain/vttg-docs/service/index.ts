@@ -1,5 +1,6 @@
 export {
   getVttgDocsChannels,
+  isVttgDocsChannelPublic,
   readVttgDocsSettings,
   saveVttgDocsSettings,
 } from './vttgDocsSettingsService';

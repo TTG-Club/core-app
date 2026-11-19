@@ -1,12 +1,13 @@
 import type { VttgDocsSettingsUpdate } from '#shared/types';
 
-import { xor } from 'es-toolkit';
-
 import { VTTG_DOCS_ADMIN_API_PATH } from '#shared/consts';
 import { vttgDocsSettingsSchema } from '#shared/utils';
 
 import {
+  isVttgDocsSettingsChanged,
+  toVttgDocsSettingsForm,
   VTTG_DOCS_ADMIN_DATA_KEY,
+  VTTG_DOCS_ADMIN_EMPTY_FORM,
   VTTG_DOCS_ADMIN_SAVE_ERROR_TITLE,
   VTTG_DOCS_ADMIN_SAVE_SUCCESS_MESSAGE,
 } from '../model';
@@ -36,7 +37,10 @@ export function useVttgDocsSettingsEditor() {
     { server: false, lazy: true },
   );
 
-  const settingsForm = ref<VttgDocsSettingsUpdate>({ devChannelRoles: [] });
+  const settingsForm = ref<VttgDocsSettingsUpdate>(
+    toVttgDocsSettingsForm(VTTG_DOCS_ADMIN_EMPTY_FORM),
+  );
+
   const isSaving = ref(false);
 
   // Форма получает копию сохранённой настройки при загрузке и после сохранения.
@@ -44,21 +48,15 @@ export function useVttgDocsSettingsEditor() {
   whenever(
     savedSettings,
     (loadedSettings) => {
-      settingsForm.value = {
-        devChannelRoles: [...loadedSettings.devChannelRoles],
-      };
+      settingsForm.value = toVttgDocsSettingsForm(loadedSettings);
     },
     { immediate: true },
   );
 
-  // Наборы ролей без повторов: порядок выбора не делает форму изменённой.
   const isDirty = computed(
     () =>
       !!savedSettings.value
-      && xor(
-        settingsForm.value.devChannelRoles,
-        savedSettings.value.devChannelRoles,
-      ).length > 0,
+      && isVttgDocsSettingsChanged(settingsForm.value, savedSettings.value),
   );
 
   /** Сохраняет форму; ответ сервера становится сохранённой настройкой. */

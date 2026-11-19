@@ -5,14 +5,15 @@ import { StatusCodes } from 'http-status-codes';
 import {
   getVttgDocsChannels,
   getVttgDocsIndex,
+  isVttgDocsChannelPublic,
   VTTG_DOCS_ERROR_LOG,
 } from '#server/domain/vttg-docs';
 import { vttgDocsChannelQuerySchema } from '#shared/utils';
 
 /**
- * Оглавление канала документации VTTG (`?channel=release|dev`) и список
- * каналов, доступных посетителю. Релиз открыт всем, dev — администраторам и
- * ролям из настройки раздела, остальным 403.
+ * Оглавление канала документации VTTG (`?channel=release|dev`), список
+ * каналов, доступных посетителю, и открыт ли канал всем. Кому виден какой
+ * канал — по настройке раздела в админке; закрытый канал — 403.
  */
 export default defineEventHandler(
   async (event): Promise<VttgDocsIndexResponse> => {
@@ -30,7 +31,12 @@ export default defineEventHandler(
     }
 
     try {
-      return { index: await getVttgDocsIndex(channel), channels };
+      const [index, isPublic] = await Promise.all([
+        getVttgDocsIndex(channel),
+        isVttgDocsChannelPublic(channel),
+      ]);
+
+      return { index, channels, isPublic };
     } catch (error) {
       consola.error(VTTG_DOCS_ERROR_LOG, error);
 

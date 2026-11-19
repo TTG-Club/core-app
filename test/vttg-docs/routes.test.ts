@@ -5,17 +5,22 @@ import {
   getVttgDocsPagePath,
   getVttgDocsPageRoute,
   parseVttgDocsChannel,
+  vttgDocsSettingsSchema,
   vttgDocsSettingsUpdateSchema,
 } from '#shared/utils';
 import {
+  findVttgDocsActiveHeadingId,
   formatVttgDocsSubtitle,
+  getVttgDocsAccessDataKey,
   getVttgDocsLinkAction,
   getVttgDocsLoadFailure,
-  getVttgDocsTocIndentClass,
+  getVttgDocsTocLinkClass,
   toVttgDocsRouteParam,
 } from '~vttg-docs/model';
 
 const QUICK_START_PAGE = { groupSlug: 'systems', pageSlug: 'quick-start' };
+
+const ACTIVE_OFFSET = 96;
 
 describe('адреса раздела документации VTTG', () => {
   it('у релиза адрес без канала, у dev — с каналом', () => {
@@ -76,9 +81,56 @@ describe('страница документации VTTG на сайте', () =>
     expect(getVttgDocsLinkAction('https://nuxt.com', '_blank')).toBe('browser');
   });
 
-  it('третий уровень заголовка в оглавлении сдвинут', () => {
-    expect(getVttgDocsTocIndentClass(2)).toBeUndefined();
-    expect(getVttgDocsTocIndentClass(3)).toBe('pl-3');
+  it('третий уровень заголовка в оглавлении сдвинут, текущий выделен', () => {
+    expect(getVttgDocsTocLinkClass(2, false)[0]).toBe('pl-3');
+    expect(getVttgDocsTocLinkClass(3, false)[0]).toBe('pl-6');
+    expect(getVttgDocsTocLinkClass(2, true)[1]).toContain('text-primary');
+  });
+
+  it('текущий заголовок — последний, поднявшийся к верху окна', () => {
+    const headingPositions = [
+      { id: 'obzor', top: -400 },
+      { id: 'primer', top: 40 },
+      { id: 'detali', top: 600 },
+    ];
+
+    expect(
+      findVttgDocsActiveHeadingId(headingPositions, ACTIVE_OFFSET, false),
+    ).toBe('primer');
+  });
+
+  it('пока ни один заголовок не поднялся, текущий — первый', () => {
+    expect(
+      findVttgDocsActiveHeadingId(
+        [
+          { id: 'obzor', top: 300 },
+          { id: 'primer', top: 900 },
+        ],
+        ACTIVE_OFFSET,
+        false,
+      ),
+    ).toBe('obzor');
+  });
+
+  it('в самом низу страницы текущий — последний заголовок', () => {
+    expect(
+      findVttgDocsActiveHeadingId(
+        [
+          { id: 'obzor', top: -900 },
+          { id: 'primer', top: 300 },
+        ],
+        ACTIVE_OFFSET,
+        true,
+      ),
+    ).toBe('primer');
+  });
+
+  it('доступ перечитывается при смене ролей, порядок ролей не важен', () => {
+    expect(getVttgDocsAccessDataKey([])).toBe('vttg-docs-access:guest');
+
+    expect(getVttgDocsAccessDataKey(['USER', 'MODERATOR'])).toBe(
+      getVttgDocsAccessDataKey(['MODERATOR', 'USER']),
+    );
   });
 
   it('код ответа определяет заглушку', () => {
@@ -94,14 +146,33 @@ describe('настройка dev-канала документации VTTG', ()
   it('повторы ролей убираются, чужие имена не принимаются', () => {
     expect(
       vttgDocsSettingsUpdateSchema.parse({
+        isReleaseChannelPublic: false,
+        releaseChannelRoles: ['USER', 'USER'],
         devChannelRoles: ['MODERATOR', 'MODERATOR', 'TESTER'],
       }),
-    ).toEqual({ devChannelRoles: ['MODERATOR', 'TESTER'] });
+    ).toEqual({
+      isReleaseChannelPublic: false,
+      releaseChannelRoles: ['USER'],
+      devChannelRoles: ['MODERATOR', 'TESTER'],
+    });
 
     expect(
-      vttgDocsSettingsUpdateSchema.safeParse({ devChannelRoles: ['tester'] })
-        .success,
+      vttgDocsSettingsUpdateSchema.safeParse({
+        isReleaseChannelPublic: true,
+        releaseChannelRoles: [],
+        devChannelRoles: ['tester'],
+      }).success,
     ).toBe(false);
+  });
+
+  it('файл настройки без полей релиза читается как «релиз открыт всем»', () => {
+    expect(
+      vttgDocsSettingsSchema.parse({
+        devChannelRoles: ['MODERATOR'],
+        updatedAt: null,
+        updatedBy: null,
+      }),
+    ).toMatchObject({ isReleaseChannelPublic: true, releaseChannelRoles: [] });
   });
 });
 

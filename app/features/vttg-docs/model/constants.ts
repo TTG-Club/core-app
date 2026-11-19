@@ -20,8 +20,8 @@ export const VTTG_DOCS_CHANNEL_ICONS: Record<VttgDocsChannel, string> = {
 /** Иконка подсказки над доками dev-канала — та же, что у канала. */
 export const VTTG_DOCS_DEV_NOTICE_ICON = VTTG_DOCS_CHANNEL_ICONS.dev;
 
-/** Доки dev-канала поисковикам не показываем. */
-export const VTTG_DOCS_DEV_ROBOTS = 'noindex, nofollow';
+/** Доки канала, открытого не всем, поисковикам не показываем. */
+export const VTTG_DOCS_PRIVATE_ROBOTS = 'noindex, nofollow';
 
 /** Подсказка над доками dev-канала: они не для всех. */
 export const VTTG_DOCS_DEV_NOTICE =
@@ -78,6 +78,18 @@ export const VTTG_DOCS_ICON = 'tabler:book-2';
 /** Префикс ключа данных оглавления канала. */
 export const VTTG_DOCS_INDEX_DATA_KEY = 'vttg-docs-index';
 
+/** Префикс ключа данных доступа к разделу. */
+export const VTTG_DOCS_ACCESS_DATA_KEY = 'vttg-docs-access';
+
+/** Часть ключа доступа для гостя без ролей. */
+export const VTTG_DOCS_GUEST_KEY = 'guest';
+
+/** Разделитель ролей в ключе доступа. */
+export const VTTG_DOCS_ROLES_KEY_SEPARATOR = ',';
+
+/** Подпись пункта в меню сайта: раздел уже внутри группы Virtual TTG. */
+export const VTTG_DOCS_MENU_LABEL = 'Документация';
+
 /** Префикс ключа данных страницы. */
 export const VTTG_DOCS_PAGE_DATA_KEY = 'vttg-docs-page';
 
@@ -87,8 +99,38 @@ export const VTTG_DOCS_DATA_KEY_SEPARATOR = ':';
 /** Уровень заголовка, который в оглавлении страницы идёт без отступа. */
 export const VTTG_DOCS_TOC_TOP_DEPTH = 2;
 
+/**
+ * Открытая страница в меню разделов: подложка основного цвета вместо серой,
+ * чтобы выбранный пункт был заметен в длинном списке.
+ */
+export const VTTG_DOCS_SIDEBAR_ACTIVE_CLASS =
+  'font-medium before:bg-primary/15';
+
+/** Отступ заголовка в оглавлении страницы от линии слева. */
+export const VTTG_DOCS_TOC_TOP_CLASS = 'pl-3';
+
 /** Отступ вложенного заголовка в оглавлении страницы. */
-export const VTTG_DOCS_TOC_NESTED_CLASS = 'pl-3';
+export const VTTG_DOCS_TOC_NESTED_CLASS = 'pl-6';
+
+/** Заголовок, который сейчас читают: линия и текст основного цвета. */
+export const VTTG_DOCS_TOC_ACTIVE_CLASS =
+  'border-primary font-medium text-primary';
+
+/** Остальные заголовки оглавления. */
+export const VTTG_DOCS_TOC_INACTIVE_CLASS =
+  'border-transparent text-muted hover:border-accented hover:text-highlighted';
+
+/**
+ * Насколько ниже верха окна заголовок ещё считается текущим (пикселей):
+ * чуть больше отступа прокрутки к якорю, чтобы клик по пункту подсвечивал его.
+ */
+export const VTTG_DOCS_ACTIVE_HEADING_OFFSET = 96;
+
+/** Как часто пересчитывать текущий заголовок при прокрутке (мс). */
+export const VTTG_DOCS_ACTIVE_HEADING_THROTTLE = 100;
+
+/** Запас до конца страницы (пикселей), в котором она считается докрученной. */
+export const VTTG_DOCS_PAGE_BOTTOM_TOLERANCE = 2;
 
 /** Переключатель каналов нужен, только если каналов больше одного. */
 export const VTTG_DOCS_CHANNEL_SWITCH_MIN_COUNT = 2;

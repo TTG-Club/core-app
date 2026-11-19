@@ -2,24 +2,24 @@
   import type { AlertProps } from '@nuxt/ui';
 
   import { vttgDocsSettingsUpdateSchema } from '#shared/utils';
-  import { MAINTENANCE_ADMIN_ROLE_LABELS } from '~admin/maintenance/model';
 
   import { useVttgDocsSettingsEditor } from '../composables';
   import {
-    addVttgDocsCustomRole,
     describeVttgDocsSettingsUpdate,
     VTTG_DOCS_ADMIN_DATE_FORMAT,
+    VTTG_DOCS_ADMIN_DEV_ROLES_LABEL,
     VTTG_DOCS_ADMIN_LOAD_ERROR_ICON,
     VTTG_DOCS_ADMIN_LOAD_ERROR_TITLE,
+    VTTG_DOCS_ADMIN_RELEASE_PUBLIC_HINT,
+    VTTG_DOCS_ADMIN_RELEASE_PUBLIC_LABEL,
+    VTTG_DOCS_ADMIN_RELEASE_ROLES_LABEL,
     VTTG_DOCS_ADMIN_RETRY_LABEL,
-    VTTG_DOCS_ADMIN_ROLES_HINT,
-    VTTG_DOCS_ADMIN_ROLES_LABEL,
-    VTTG_DOCS_ADMIN_ROLES_PLACEHOLDER,
     VTTG_DOCS_ADMIN_SAVE_ICON,
     VTTG_DOCS_ADMIN_SAVE_LABEL,
   } from '../model';
+  import VttgDocsRolesField from './VttgDocsRolesField.vue';
 
-  /** Форма: каким ролям виден канал разработки документации VTTG. */
+  /** Форма: кому виден релизный канал документации VTTG и кому — dev. */
   const { format } = useDayjs();
 
   const {
@@ -41,37 +41,6 @@
     },
   ];
 
-  /**
-   * Роли для выбора: известные сайту — с подписями (те же, что в режиме
-   * обновления), вписанные вручную — под своим именем.
-   */
-  const roleItems = computed(() => {
-    const knownItems = Object.entries(MAINTENANCE_ADMIN_ROLE_LABELS).map(
-      ([value, label]) => ({ value, label }),
-    );
-
-    const customItems = settingsForm.value.devChannelRoles
-      .filter(
-        (role) => !knownItems.some((knownItem) => knownItem.value === role),
-      )
-      .map((role) => ({ value: role, label: role }));
-
-    return [...knownItems, ...customItems];
-  });
-
-  /**
-   * Добавляет вписанную вручную роль: имя приводится к виду из токена, чужие
-   * символы и повторы не принимаются.
-   *
-   * @param typedRole что вписал администратор
-   */
-  function addCustomRole(typedRole: string): void {
-    settingsForm.value.devChannelRoles = addVttgDocsCustomRole(
-      settingsForm.value.devChannelRoles,
-      typedRole,
-    );
-  }
-
   const updatedText = computed(() => {
     if (!savedSettings.value) {
       return undefined;
@@ -88,6 +57,11 @@
   const isSettingsLoading = computed(() => !savedSettings.value);
 
   const isSaveDisabled = computed(() => !isDirty.value);
+
+  /** Роли релиза нужны, только когда он открыт не всем. */
+  const isReleaseRolesShown = computed(
+    () => !settingsForm.value.isReleaseChannelPublic,
+  );
 </script>
 
 <template>
@@ -119,22 +93,26 @@
       :state="settingsForm"
       @submit="save"
     >
-      <UFormField
-        name="devChannelRoles"
-        :label="VTTG_DOCS_ADMIN_ROLES_LABEL"
-        :help="VTTG_DOCS_ADMIN_ROLES_HINT"
-      >
-        <USelectMenu
-          v-model="settingsForm.devChannelRoles"
-          class="w-full"
-          :items="roleItems"
-          value-key="value"
-          multiple
-          create-item
-          :placeholder="VTTG_DOCS_ADMIN_ROLES_PLACEHOLDER"
-          @create="addCustomRole"
+      <UFormField name="isReleaseChannelPublic">
+        <USwitch
+          v-model="settingsForm.isReleaseChannelPublic"
+          :label="VTTG_DOCS_ADMIN_RELEASE_PUBLIC_LABEL"
+          :description="VTTG_DOCS_ADMIN_RELEASE_PUBLIC_HINT"
         />
       </UFormField>
+
+      <VttgDocsRolesField
+        v-if="isReleaseRolesShown"
+        v-model="settingsForm.releaseChannelRoles"
+        name="releaseChannelRoles"
+        :label="VTTG_DOCS_ADMIN_RELEASE_ROLES_LABEL"
+      />
+
+      <VttgDocsRolesField
+        v-model="settingsForm.devChannelRoles"
+        name="devChannelRoles"
+        :label="VTTG_DOCS_ADMIN_DEV_ROLES_LABEL"
+      />
 
       <div class="flex justify-end">
         <UButton

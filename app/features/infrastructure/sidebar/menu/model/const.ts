@@ -1,5 +1,6 @@
 import type { MenuSection } from './types';
 
+import { VTTG_DOCS_ROUTE } from '#shared/consts';
 import { Role } from '~/shared/types';
 import {
   DICE_CALCULATOR_ICON,
@@ -49,6 +50,7 @@ import {
   USER_AGREEMENT_PAGE_TITLE,
   USER_AGREEMENT_ROUTE,
 } from '~infrastructure/user-agreement/model';
+import { VTTG_DOCS_ICON, VTTG_DOCS_MENU_LABEL } from '~vttg-docs/model';
 import {
   VTTG_LANDING_PATH,
   VTTG_PASSWORD_RESET_PAGE,
@@ -237,6 +239,12 @@ export const MENU_SECTIONS: Array<MenuSection> = [
         href: VTTG_LANDING_PATH,
         label: 'Информация',
         icon: 'tabler:info-circle',
+      },
+      {
+        href: VTTG_DOCS_ROUTE,
+        label: VTTG_DOCS_MENU_LABEL,
+        icon: VTTG_DOCS_ICON,
+        access: 'vttg-docs',
       },
       {
         href: VTTG_PASSWORD_RESET_PATH,

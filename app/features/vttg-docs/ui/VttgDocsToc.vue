@@ -1,24 +1,32 @@
 <script setup lang="ts">
   import type { VttgDocsHeading } from '#shared/types';
 
+  import { useVttgDocsActiveHeading } from '../composables';
   import {
-    getVttgDocsTocIndentClass,
+    getVttgDocsTocLinkClass,
     VTTG_DOCS_ANCHOR_PREFIX,
     VTTG_DOCS_TOC_TITLE,
   } from '../model';
 
-  /** Оглавление текущей страницы: заголовки второго и третьего уровня. */
+  /**
+   * Оглавление текущей страницы: заголовки второго и третьего уровня, тот, что
+   * сейчас читают, подсвечен.
+   */
   const { headings } = defineProps<{
     headings: VttgDocsHeading[];
   }>();
 
   const { scrollToAnchor } = useAnchorScroll();
+  const { activeHeadingId } = useVttgDocsActiveHeading(() => headings);
 
   const headingLinks = computed(() =>
     headings.map((heading) => ({
       ...heading,
       href: `${VTTG_DOCS_ANCHOR_PREFIX}${heading.id}`,
-      class: getVttgDocsTocIndentClass(heading.depth),
+      class: getVttgDocsTocLinkClass(
+        heading.depth,
+        heading.id === activeHeadingId.value,
+      ),
     })),
   );
 
@@ -45,15 +53,17 @@
       {{ VTTG_DOCS_TOC_TITLE }}
     </span>
 
-    <a
-      v-for="link in headingLinks"
-      :key="link.id"
-      :href="link.href"
-      class="text-sm leading-5 text-muted transition-colors hover:text-highlighted"
-      :class="link.class"
-      @click.left.exact.prevent="scrollToHeading(link.href)"
-    >
-      {{ link.text }}
-    </a>
+    <div class="flex flex-col border-l border-default">
+      <a
+        v-for="link in headingLinks"
+        :key="link.id"
+        :href="link.href"
+        class="-ml-px border-l py-1 text-sm leading-5 transition-colors"
+        :class="link.class"
+        @click.left.exact.prevent="scrollToHeading(link.href)"
+      >
+        {{ link.text }}
+      </a>
+    </div>
   </nav>
 </template>

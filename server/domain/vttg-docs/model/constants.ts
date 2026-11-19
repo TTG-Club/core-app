@@ -1,14 +1,9 @@
-import type { VttgDocsChannel } from '#shared/consts';
 import type { VttgDocsSettings } from '#shared/types';
 
 import { StatusCodes } from 'http-status-codes';
 import ms from 'ms';
 
-import {
-  VTTG_DOCS_CHANNELS,
-  VTTG_DOCS_DEFAULT_CHANNEL,
-  VTTG_DOCS_SLUG_SOURCE,
-} from '#shared/consts';
+import { VTTG_DOCS_SLUG_SOURCE } from '#shared/consts';
 
 /**
  * Сколько Nitro держит оглавление канала (сек). Его `latest.json` сборка VTTG
@@ -45,22 +40,26 @@ export const VTTG_DOCS_MISSING_STATUSES: number[] = [
 /** Уровни заголовков, которые попадают в оглавление справа. */
 export const VTTG_DOCS_TOC_DEPTHS = [2, 3];
 
-/** Настройка, пока админ её не сохранял: dev-канал видят только администраторы. */
+/**
+ * Настройка, пока админ её не сохранял: релиз открыт всем, канал разработки —
+ * только администраторам.
+ */
 export const VTTG_DOCS_DEFAULT_SETTINGS: VttgDocsSettings = {
+  isReleaseChannelPublic: true,
+  releaseChannelRoles: [],
   devChannelRoles: [],
   updatedAt: null,
   updatedBy: null,
 };
 
-/** Каналы для посетителя без доступа к dev-каналу. */
-export const VTTG_DOCS_PUBLIC_CHANNELS: VttgDocsChannel[] = [
-  VTTG_DOCS_DEFAULT_CHANNEL,
-];
-
-/** Каналы для администратора и ролей из настройки. */
-export const VTTG_DOCS_ALL_CHANNELS: VttgDocsChannel[] = [
-  ...VTTG_DOCS_CHANNELS,
-];
+/**
+ * Права, когда настройку не удалось прочитать: раздел закрывается всем, кроме
+ * администраторов, — иначе сбой хранилища открыл бы закрытый канал.
+ */
+export const VTTG_DOCS_FALLBACK_SETTINGS: VttgDocsSettings = {
+  ...VTTG_DOCS_DEFAULT_SETTINGS,
+  isReleaseChannelPublic: false,
+};
 
 /** Имя кеша Nitro для оглавления канала. */
 export const VTTG_DOCS_INDEX_CACHE_NAME = 'vttg-docs-index';
@@ -133,6 +132,10 @@ export const VTTG_DOCS_ERROR_LOG = '[VTTG Docs Error]:';
 /** Файл настройки не разбирается как JSON или не совпал со схемой. */
 export const VTTG_DOCS_SETTINGS_INVALID_LOG =
   '[VTTG Docs] Settings file is broken, defaults are used:';
+
+/** Настройку не удалось прочитать при проверке прав: раздел закрыт. */
+export const VTTG_DOCS_SETTINGS_UNAVAILABLE_LOG =
+  '[VTTG Docs] Settings are unavailable, docs are closed to non-admins:';
 
 /** Оглавление канала не совпало со схемой. */
 export const VTTG_DOCS_INDEX_INVALID_LOG =

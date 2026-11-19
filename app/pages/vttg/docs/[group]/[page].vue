@@ -10,7 +10,7 @@
     VTTG_DOCS_DATE_FORMAT,
     VTTG_DOCS_DEV_NOTICE,
     VTTG_DOCS_DEV_NOTICE_ICON,
-    VTTG_DOCS_DEV_ROBOTS,
+    VTTG_DOCS_PRIVATE_ROBOTS,
     VTTG_DOCS_SECTIONS_ICON,
     VTTG_DOCS_SECTIONS_LABEL,
     VTTG_DOCS_SEO_TITLE_SEPARATOR,
@@ -34,7 +34,7 @@
   const groupSlug = computed(() => toVttgDocsRouteParam(route.params.group));
   const pageSlug = computed(() => toVttgDocsRouteParam(route.params.page));
 
-  const { index, channels } = await useVttgDocsIndex(channel);
+  const { index, channels, isPublic } = await useVttgDocsIndex(channel);
 
   const {
     data: page,
@@ -88,7 +88,7 @@
         ? `${page.value.page.title}${VTTG_DOCS_SEO_TITLE_SEPARATOR}${VTTG_DOCS_TITLE}`
         : VTTG_DOCS_TITLE,
     description: () => page.value?.page.description ?? undefined,
-    robots: () => (isDevChannel.value ? VTTG_DOCS_DEV_ROBOTS : undefined),
+    robots: () => (isPublic.value ? undefined : VTTG_DOCS_PRIVATE_ROBOTS),
   });
 
   // Выбор страницы в выезжающем меню на телефоне закрывает меню.

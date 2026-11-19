@@ -1,6 +1,8 @@
-import type { VttgDocsSettings } from '#shared/types';
+import type { VttgDocsSettings, VttgDocsSettingsUpdate } from '#shared/types';
 
-import { VTTG_DOCS_DEV_ROLES_MAX_COUNT } from '#shared/consts';
+import { xor } from 'es-toolkit';
+
+import { VTTG_DOCS_CHANNEL_ROLES_MAX_COUNT } from '#shared/consts';
 import { vttgDocsRoleSchema } from '#shared/utils';
 
 import {
@@ -28,7 +30,7 @@ export function addVttgDocsCustomRole(
   if (
     !parsedRole.success
     || selectedRoles.includes(parsedRole.data)
-    || selectedRoles.length >= VTTG_DOCS_DEV_ROLES_MAX_COUNT
+    || selectedRoles.length >= VTTG_DOCS_CHANNEL_ROLES_MAX_COUNT
   ) {
     return selectedRoles;
   }
@@ -56,4 +58,39 @@ export function describeVttgDocsSettingsUpdate(
   ]
     .filter(Boolean)
     .join(VTTG_DOCS_ADMIN_UPDATED_SEPARATOR);
+}
+
+/**
+ * Форма с копией сохранённой настройки: правки формы не трогают сохранённое.
+ *
+ * @param savedSettings сохранённая настройка
+ */
+export function toVttgDocsSettingsForm(
+  savedSettings: VttgDocsSettingsUpdate,
+): VttgDocsSettingsUpdate {
+  return {
+    isReleaseChannelPublic: savedSettings.isReleaseChannelPublic,
+    releaseChannelRoles: [...savedSettings.releaseChannelRoles],
+    devChannelRoles: [...savedSettings.devChannelRoles],
+  };
+}
+
+/**
+ * Форма отличается от сохранённой настройки. Роли сравниваются как наборы:
+ * порядок выбора форму изменённой не делает.
+ *
+ * @param settingsForm форма
+ * @param savedSettings сохранённая настройка
+ */
+export function isVttgDocsSettingsChanged(
+  settingsForm: VttgDocsSettingsUpdate,
+  savedSettings: VttgDocsSettingsUpdate,
+): boolean {
+  return (
+    settingsForm.isReleaseChannelPublic !== savedSettings.isReleaseChannelPublic
+    || xor(settingsForm.releaseChannelRoles, savedSettings.releaseChannelRoles)
+      .length > 0
+    || xor(settingsForm.devChannelRoles, savedSettings.devChannelRoles).length
+      > 0
+  );
 }

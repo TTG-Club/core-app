@@ -6,7 +6,12 @@
 
   import { getVttgDocsPageRoute } from '#shared/utils';
 
-  /** Оглавление канала: группы подписями, страницы ссылками. */
+  import { VTTG_DOCS_SIDEBAR_ACTIVE_CLASS } from '../model';
+
+  /**
+   * Оглавление канала: группы подписями, страницы ссылками. Открытая страница
+   * выделена основным цветом.
+   */
   const {
     index,
     channel,
@@ -22,14 +27,19 @@
   const navigationGroups = computed<NavigationMenuItem[][]>(() =>
     index.groups.map((group) => [
       { label: group.title, type: 'label' },
-      ...group.pages.map<NavigationMenuItem>((page) => ({
-        label: page.title,
-        to: getVttgDocsPageRoute(channel, {
-          groupSlug: group.slug,
-          pageSlug: page.slug,
-        }),
-        active: group.slug === activeGroup && page.slug === activePage,
-      })),
+      ...group.pages.map<NavigationMenuItem>((page) => {
+        const isActive = group.slug === activeGroup && page.slug === activePage;
+
+        return {
+          label: page.title,
+          to: getVttgDocsPageRoute(channel, {
+            groupSlug: group.slug,
+            pageSlug: page.slug,
+          }),
+          active: isActive,
+          class: isActive ? VTTG_DOCS_SIDEBAR_ACTIVE_CLASS : undefined,
+        };
+      }),
     ]),
   );
 </script>
@@ -37,8 +47,8 @@
 <template>
   <UNavigationMenu
     orientation="vertical"
-    color="neutral"
-    highlight
+    color="primary"
+    :highlight="false"
     :items="navigationGroups"
     class="w-full"
     :ui="{ link: 'text-sm', label: 'pt-3 first:pt-1' }"

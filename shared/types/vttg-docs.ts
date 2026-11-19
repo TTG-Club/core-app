@@ -26,13 +26,23 @@ export interface VttgDocsIndex {
   groups: VttgDocsGroup[];
 }
 
+/** Каналы документации, открытые текущему посетителю. */
+export interface VttgDocsAccess {
+  /** Пустой список — раздел посетителю не виден, и в меню его нет. */
+  channels: VttgDocsChannel[];
+}
+
 /**
  * Ответ оглавления: `index: null` — канал ещё ни разу не выкладывался.
  * `channels` — каналы, которые доступны текущему посетителю.
  */
-export interface VttgDocsIndexResponse {
+export interface VttgDocsIndexResponse extends VttgDocsAccess {
   index: VttgDocsIndex | null;
-  channels: VttgDocsChannel[];
+  /**
+   * Канал открыт всем, в том числе без входа, — только такие страницы
+   * показываются поисковикам.
+   */
+  isPublic: boolean;
 }
 
 /** Заголовок страницы для оглавления справа. */
@@ -74,11 +84,17 @@ export interface VttgDocsPage {
 }
 
 /**
- * Настройка раздела: какие роли видят dev-канал помимо администраторов (те
- * видят всегда). Строки, а не `Role`: роль, заведённая в core-api позже, чем
- * обновился сайт, тоже должна сохраняться и работать.
+ * Настройка раздела: кому виден релизный канал и кому — канал разработки.
+ * Администраторы видят оба всегда. Роли — строки, а не `Role`: роль,
+ * заведённая в core-api позже, чем обновился сайт, тоже должна сохраняться и
+ * работать.
  */
 export interface VttgDocsSettings {
+  /** Релизный канал открыт всем, в том числе без входа. */
+  isReleaseChannelPublic: boolean;
+  /** Кому виден релизный канал, когда он открыт не всем. */
+  releaseChannelRoles: string[];
+  /** Кому виден канал разработки. */
   devChannelRoles: string[];
   /** Когда настройку сохранили (ISO); `null` — не сохраняли. */
   updatedAt: string | null;
@@ -87,4 +103,7 @@ export interface VttgDocsSettings {
 }
 
 /** То, что администратор меняет в форме. */
-export type VttgDocsSettingsUpdate = Pick<VttgDocsSettings, 'devChannelRoles'>;
+export type VttgDocsSettingsUpdate = Pick<
+  VttgDocsSettings,
+  'isReleaseChannelPublic' | 'releaseChannelRoles' | 'devChannelRoles'
+>;

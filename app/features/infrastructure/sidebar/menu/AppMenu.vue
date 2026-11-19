@@ -6,9 +6,11 @@
   } from '~/shared/consts';
   import { MulticlassDrawer } from '~classes/multiclass-drawer';
   import { HamburgerIcon, SvgLogo } from '~ui/icon';
+  import { useVttgDocsAccess } from '~vttg-docs/composables';
 
   import { SidebarPopover } from '../popover';
   import {
+    applyMenuSectionsAccess,
     MENU_LINKS,
     MENU_SECTIONS,
     MENU_SITE_DESCRIPTION,
@@ -18,6 +20,13 @@
   import { MenuContacts, MenuSection, MenuSupport } from './ui';
 
   const overlay = useOverlay();
+
+  const { docsPath: vttgDocsPath } = useVttgDocsAccess();
+
+  /** Разделы меню без закрытых посетителю пунктов. */
+  const menuSections = computed(() =>
+    applyMenuSectionsAccess(MENU_SECTIONS, { 'vttg-docs': vttgDocsPath.value }),
+  );
 
   const multiclassDrawer = overlay.create(MulticlassDrawer, {
     props: {
@@ -76,7 +85,7 @@
       <nav :class="$style.navigation">
         <div :class="$style.content">
           <MenuSection
-            v-for="section in MENU_SECTIONS"
+            v-for="section in menuSections"
             :key="section.label"
             v-bind="section"
             @action="handleMenuAction"

@@ -15,6 +15,13 @@ export const VTTG_DOCS_ADMIN_ROUTE = '/admin/vttg-docs';
 
 export const VTTG_DOCS_ADMIN_DATA_KEY = 'admin-vttg-docs-settings';
 
+/** Форма до загрузки настройки — как настройка по умолчанию на сервере. */
+export const VTTG_DOCS_ADMIN_EMPTY_FORM: VttgDocsSettingsUpdate = {
+  isReleaseChannelPublic: true,
+  releaseChannelRoles: [],
+  devChannelRoles: [],
+};
+
 export const VTTG_DOCS_ADMIN_PAGE_TITLE = VTTG_DOCS_TITLE;
 
 export const VTTG_DOCS_ADMIN_SEO_TITLE = `${VTTG_DOCS_ADMIN_PAGE_TITLE}: Настройки`;
@@ -22,12 +29,21 @@ export const VTTG_DOCS_ADMIN_SEO_TITLE = `${VTTG_DOCS_ADMIN_PAGE_TITLE}: Нас�
 export const VTTG_DOCS_ADMIN_NAVIGATION_ICON = VTTG_DOCS_ICON;
 
 export const VTTG_DOCS_ADMIN_PAGE_HINT =
-  'Документацию выкладывает сам VTTG при каждой сборке: из ветки main — в релизный канал, его видят все, из ветки dev — в канал разработки. Здесь настраивается, кому на сайте виден канал разработки.';
+  'Документацию выкладывает сам VTTG при каждой сборке: из ветки main — в релизный канал, из ветки dev — в канал разработки. Здесь настраивается, кому на сайте виден каждый канал. Администраторы видят оба всегда; кому не виден ни один канал, у того нет и пункта «Документация» в меню.';
 
-export const VTTG_DOCS_ADMIN_ROLES_LABEL = 'Кому виден канал разработки';
+export const VTTG_DOCS_ADMIN_RELEASE_PUBLIC_LABEL =
+  'Релизный канал открыт всем';
 
+export const VTTG_DOCS_ADMIN_RELEASE_PUBLIC_HINT =
+  'Его видят все, в том числе без входа, и поисковики. Выключите, чтобы открыть его только выбранным ролям.';
+
+export const VTTG_DOCS_ADMIN_RELEASE_ROLES_LABEL = 'Кому виден релизный канал';
+
+export const VTTG_DOCS_ADMIN_DEV_ROLES_LABEL = 'Кому виден канал разработки';
+
+/** Подсказка к выбору ролей — одна у обоих каналов. */
 export const VTTG_DOCS_ADMIN_ROLES_HINT =
-  'Администраторы видят его всегда. Роли, которой нет в списке, впишите её имя из core-api латиницей (например, TESTER) и нажмите Enter.';
+  'Роли, которой нет в списке, впишите её имя из core-api латиницей (например, TESTER) и нажмите Enter.';
 
 export const VTTG_DOCS_ADMIN_ROLES_PLACEHOLDER = 'Только администраторы';
 

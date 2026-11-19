@@ -8,9 +8,9 @@
     VTTG_DOCS_DESCRIPTION,
     VTTG_DOCS_DEV_NOTICE,
     VTTG_DOCS_DEV_NOTICE_ICON,
-    VTTG_DOCS_DEV_ROBOTS,
     VTTG_DOCS_EMPTY_DESCRIPTION,
     VTTG_DOCS_EMPTY_TITLE,
+    VTTG_DOCS_PRIVATE_ROBOTS,
     VTTG_DOCS_SKELETON_COUNT,
     VTTG_DOCS_TITLE,
   } from '~vttg-docs/model';
@@ -19,7 +19,7 @@
   const { format } = useDayjs();
   const channel = useVttgDocsChannel();
 
-  const { index, channels, failure, isLoading, refresh } =
+  const { index, channels, isPublic, failure, isLoading, refresh } =
     await useVttgDocsIndex(channel);
 
   const isDevChannel = computed(() => isVttgDocsDevChannel(channel.value));
@@ -30,7 +30,7 @@
   useSeoMeta({
     title: VTTG_DOCS_TITLE,
     description: VTTG_DOCS_DESCRIPTION,
-    robots: () => (isDevChannel.value ? VTTG_DOCS_DEV_ROBOTS : undefined),
+    robots: () => (isPublic.value ? undefined : VTTG_DOCS_PRIVATE_ROBOTS),
   });
 
   const versionLabel = computed(() => {

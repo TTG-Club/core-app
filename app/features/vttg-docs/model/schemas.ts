@@ -40,6 +40,7 @@ export const vttgDocsIndexResponseSchema: z.ZodType<VttgDocsIndexResponse> =
       })
       .nullable(),
     channels: z.array(vttgDocsChannelSchema),
+    isPublic: z.boolean(),
   });
 
 /** Ответ страницы документации. */

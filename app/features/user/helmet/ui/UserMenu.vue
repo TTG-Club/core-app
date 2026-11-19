@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { VTTG_DOCS_ROUTE } from '#shared/consts';
   import {
     MY_BUGS_NAVIGATION_LABEL,
     MY_BUGS_ROUTE,
@@ -42,6 +41,7 @@
   } from '~profile/activation/model';
   import { KbdShortcut } from '~ui/kbd-shortcut';
   import { UpdatesDot } from '~ui/updates-dot';
+  import { useVttgDocsAccess } from '~vttg-docs/composables';
   import { VTTG_DOCS_ICON, VTTG_DOCS_TITLE } from '~vttg-docs/model';
   import {
     VTTG_MODULES_ICON,
@@ -62,6 +62,9 @@
 
   const { isAdmin, canEditEntities, canAccessModerationPanel } = useUserRoles();
   const { isTablet } = useBreakpoints();
+
+  const { docsPath: vttgDocsPath, hasAccess: hasVttgDocsAccess } =
+    useVttgDocsAccess();
 
   const isMenuOpened = ref(false);
 
@@ -320,14 +323,15 @@
               {{ VTTG_MODULES_TITLE }}
             </UButton>
 
-            <!-- Документация VTTG для авторов систем и модулей -->
+            <!-- Документация VTTG: видна тем, кому раздел открыт в админке -->
             <UButton
+              v-if="hasVttgDocsAccess"
               :icon="VTTG_DOCS_ICON"
               color="neutral"
               variant="ghost"
               class="w-full"
               size="lg"
-              :to="VTTG_DOCS_ROUTE"
+              :to="vttgDocsPath"
               @click.left.exact="closeMenu"
             >
               {{ VTTG_DOCS_TITLE }}

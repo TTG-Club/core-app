@@ -1,14 +1,20 @@
 import type { VttgDocsChannel } from '#shared/consts';
 
 import {
+  VTTG_DOCS_ACCESS_DATA_KEY,
   VTTG_DOCS_ANCHOR_PREFIX,
   VTTG_DOCS_DATA_KEY_SEPARATOR,
+  VTTG_DOCS_GUEST_KEY,
   VTTG_DOCS_INDEX_DATA_KEY,
   VTTG_DOCS_NEW_TAB_TARGET,
   VTTG_DOCS_PAGE_DATA_KEY,
+  VTTG_DOCS_ROLES_KEY_SEPARATOR,
   VTTG_DOCS_SITE_PATH_PREFIX,
   VTTG_DOCS_SUBTITLE_SEPARATOR,
+  VTTG_DOCS_TOC_ACTIVE_CLASS,
+  VTTG_DOCS_TOC_INACTIVE_CLASS,
   VTTG_DOCS_TOC_NESTED_CLASS,
+  VTTG_DOCS_TOC_TOP_CLASS,
   VTTG_DOCS_TOC_TOP_DEPTH,
   VTTG_DOCS_UPDATED_PREFIX,
   VTTG_DOCS_VERSION_PREFIX,
@@ -68,6 +74,22 @@ export function getVttgDocsIndexDataKey(channel: VttgDocsChannel): string {
 }
 
 /**
+ * Ключ данных доступа: свой у каждого набора ролей, поэтому вход и выход
+ * перечитывают доступ сами.
+ *
+ * @param roles роли посетителя (пусто — гость)
+ */
+export function getVttgDocsAccessDataKey(roles: readonly string[]): string {
+  const rolesKey = roles.length
+    ? [...roles].sort().join(VTTG_DOCS_ROLES_KEY_SEPARATOR)
+    : VTTG_DOCS_GUEST_KEY;
+
+  return [VTTG_DOCS_ACCESS_DATA_KEY, rolesKey].join(
+    VTTG_DOCS_DATA_KEY_SEPARATOR,
+  );
+}
+
+/**
  * Ключ данных страницы: канал, группа и страница.
  *
  * @param channel канал документации
@@ -84,15 +106,55 @@ export function getVttgDocsPageDataKey(
   );
 }
 
+/** Положение заголовка статьи относительно верха окна. */
+export interface VttgDocsHeadingPosition {
+  id: string;
+  /** Расстояние от верха окна до заголовка (пикселей), выше окна — меньше 0. */
+  top: number;
+}
+
 /**
- * Класс отступа заголовка в оглавлении страницы: третий уровень сдвинут.
+ * Классы пункта оглавления страницы: третий уровень сдвинут, текущий
+ * заголовок выделен.
  *
  * @param depth уровень заголовка
+ * @param isActive заголовок сейчас читают
  */
-export function getVttgDocsTocIndentClass(depth: number): string | undefined {
-  return depth > VTTG_DOCS_TOC_TOP_DEPTH
-    ? VTTG_DOCS_TOC_NESTED_CLASS
-    : undefined;
+export function getVttgDocsTocLinkClass(
+  depth: number,
+  isActive: boolean,
+): string[] {
+  return [
+    depth > VTTG_DOCS_TOC_TOP_DEPTH
+      ? VTTG_DOCS_TOC_NESTED_CLASS
+      : VTTG_DOCS_TOC_TOP_CLASS,
+    isActive ? VTTG_DOCS_TOC_ACTIVE_CLASS : VTTG_DOCS_TOC_INACTIVE_CLASS,
+  ];
+}
+
+/**
+ * Заголовок, который сейчас читают: последний из поднявшихся к верху окна.
+ * Пока ни один не поднялся — первый; докрутили до конца — последний, иначе
+ * короткие разделы в конце страницы не подсветились бы никогда.
+ *
+ * @param headingPositions заголовки статьи по порядку
+ * @param activeOffset насколько ниже верха окна заголовок ещё текущий
+ * @param isPageBottom страница докручена до конца
+ */
+export function findVttgDocsActiveHeadingId(
+  headingPositions: VttgDocsHeadingPosition[],
+  activeOffset: number,
+  isPageBottom: boolean,
+): string | undefined {
+  if (isPageBottom) {
+    return headingPositions.at(-1)?.id;
+  }
+
+  const passedHeadings = headingPositions.filter(
+    (headingPosition) => headingPosition.top <= activeOffset,
+  );
+
+  return (passedHeadings.at(-1) ?? headingPositions[0])?.id;
 }
 
 /**

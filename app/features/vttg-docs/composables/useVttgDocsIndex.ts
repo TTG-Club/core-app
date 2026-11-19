@@ -41,11 +41,14 @@ export async function useVttgDocsIndex(channel: Ref<VttgDocsChannel>) {
 
   const channels = computed(() => indexResponse.value?.channels ?? []);
 
+  /** Пока ответа нет (загрузка, отказ), канал считается закрытым. */
+  const isPublic = computed(() => indexResponse.value?.isPublic ?? false);
+
   const failure = computed(() =>
     indexError.value ? getVttgDocsLoadFailure(indexError.value) : null,
   );
 
   const isLoading = computed(() => indexStatus.value === 'pending');
 
-  return { index, channels, failure, isLoading, refresh };
+  return { index, channels, isPublic, failure, isLoading, refresh };
 }

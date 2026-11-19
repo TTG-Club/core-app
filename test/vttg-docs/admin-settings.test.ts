@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { VTTG_DOCS_DEV_ROLES_MAX_COUNT } from '#shared/consts';
+import { VTTG_DOCS_CHANNEL_ROLES_MAX_COUNT } from '#shared/consts';
 import {
   addVttgDocsCustomRole,
   describeVttgDocsSettingsUpdate,
+  isVttgDocsSettingsChanged,
+  toVttgDocsSettingsForm,
 } from '~admin/vttg-docs/model';
 
 const SELECTED_ROLES = ['MODERATOR'];
@@ -28,7 +30,7 @@ describe('роль, вписанная вручную в настройку до
 
   it('сверх предела роль не добавляется', () => {
     const fullRoles = Array.from(
-      { length: VTTG_DOCS_DEV_ROLES_MAX_COUNT },
+      { length: VTTG_DOCS_CHANNEL_ROLES_MAX_COUNT },
       (_, roleNumber) => `ROLE_${roleNumber}`,
     );
 
@@ -50,5 +52,46 @@ describe('строка о сохранении настройки докумен
         '19.11.2026 14:05',
       ),
     ).toBe('Сохранено 19.11.2026 14:05 · admin');
+  });
+});
+
+describe('изменена ли форма настройки документации VTTG', () => {
+  const SAVED_SETTINGS = {
+    isReleaseChannelPublic: false,
+    releaseChannelRoles: ['USER', 'MODERATOR'],
+    devChannelRoles: ['TESTER'],
+  };
+
+  it('копия формы не меняет сохранённую настройку', () => {
+    const settingsForm = toVttgDocsSettingsForm(SAVED_SETTINGS);
+
+    settingsForm.releaseChannelRoles.push('TESTER');
+
+    expect(SAVED_SETTINGS.releaseChannelRoles).toEqual(['USER', 'MODERATOR']);
+  });
+
+  it('порядок ролей форму изменённой не делает', () => {
+    expect(
+      isVttgDocsSettingsChanged(
+        { ...SAVED_SETTINGS, releaseChannelRoles: ['MODERATOR', 'USER'] },
+        SAVED_SETTINGS,
+      ),
+    ).toBe(false);
+  });
+
+  it('переключатель «открыт всем» и новая роль делают форму изменённой', () => {
+    expect(
+      isVttgDocsSettingsChanged(
+        { ...SAVED_SETTINGS, isReleaseChannelPublic: true },
+        SAVED_SETTINGS,
+      ),
+    ).toBe(true);
+
+    expect(
+      isVttgDocsSettingsChanged(
+        { ...SAVED_SETTINGS, devChannelRoles: ['TESTER', 'USER'] },
+        SAVED_SETTINGS,
+      ),
+    ).toBe(true);
   });
 });

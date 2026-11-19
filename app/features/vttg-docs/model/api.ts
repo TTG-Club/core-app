@@ -1,9 +1,18 @@
 import type { VttgDocsChannel } from '#shared/consts';
-import type { VttgDocsIndexResponse, VttgDocsPage } from '#shared/types';
+import type {
+  VttgDocsAccess,
+  VttgDocsIndexResponse,
+  VttgDocsPage,
+} from '#shared/types';
 
 import { StatusCodes } from 'http-status-codes';
 
-import { VTTG_DOCS_API_PATH, VTTG_DOCS_PAGES_API_PATH } from '#shared/consts';
+import {
+  VTTG_DOCS_ACCESS_API_PATH,
+  VTTG_DOCS_API_PATH,
+  VTTG_DOCS_PAGES_API_PATH,
+} from '#shared/consts';
+import { vttgDocsAccessSchema } from '#shared/utils';
 
 import { vttgDocsIndexResponseSchema, vttgDocsPageSchema } from './schemas';
 
@@ -24,6 +33,19 @@ export async function fetchVttgDocsIndex(
 ): Promise<VttgDocsIndexResponse> {
   return vttgDocsIndexResponseSchema.parse(
     await requestFetch<unknown>(VTTG_DOCS_API_PATH, { query: { channel } }),
+  );
+}
+
+/**
+ * Читает, какие каналы открыты посетителю.
+ *
+ * @param requestFetch `$fetch` с куками запроса
+ */
+export async function fetchVttgDocsAccess(
+  requestFetch: Fetcher,
+): Promise<VttgDocsAccess> {
+  return vttgDocsAccessSchema.parse(
+    await requestFetch<unknown>(VTTG_DOCS_ACCESS_API_PATH),
   );
 }
 

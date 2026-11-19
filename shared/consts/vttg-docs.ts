@@ -22,6 +22,9 @@ export const VTTG_DOCS_DEV_CHANNEL: VttgDocsChannel = 'dev';
 /** Публичный роут оглавления канала: `/api/vttg/docs?channel=dev`. */
 export const VTTG_DOCS_API_PATH = '/api/vttg/docs';
 
+/** Публичный роут: какие каналы открыты посетителю (для меню сайта). */
+export const VTTG_DOCS_ACCESS_API_PATH = '/api/vttg/docs/access';
+
 /**
  * Публичный роут страницы: `/api/vttg/docs/pages/<group>/<page>?channel=dev`.
  */
@@ -43,8 +46,8 @@ export const VTTG_DOCS_SLUG_SOURCE = '[a-z0-9][a-z0-9-]*';
 /** Slug группы и страницы целиком. */
 export const VTTG_DOCS_SLUG_PATTERN = new RegExp(`^${VTTG_DOCS_SLUG_SOURCE}$`);
 
-/** Сколько ролей можно пустить в dev-канал. */
-export const VTTG_DOCS_DEV_ROLES_MAX_COUNT = 20;
+/** Сколько ролей можно пустить в один канал. */
+export const VTTG_DOCS_CHANNEL_ROLES_MAX_COUNT = 20;
 
 /** Самое длинное имя роли, которое принимает форма. */
 export const VTTG_DOCS_ROLE_MAX_LENGTH = 50;
