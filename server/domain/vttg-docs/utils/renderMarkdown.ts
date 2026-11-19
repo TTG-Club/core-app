@@ -10,6 +10,10 @@ import { Marked } from 'marked';
 import { getVttgDocsPagePath } from '#shared/utils';
 
 import {
+  VTTG_DOCS_ALERT_CLASS,
+  VTTG_DOCS_ALERT_MARKER_PATTERN,
+  VTTG_DOCS_ALERT_TITLE_CLASS,
+  VTTG_DOCS_ALERT_TITLES,
   VTTG_DOCS_ANCHOR_PREFIX,
   VTTG_DOCS_EXTERNAL_IMAGE_PATTERN,
   VTTG_DOCS_EXTERNAL_LINK_ATTRIBUTES,
@@ -25,6 +29,14 @@ import {
 export interface RenderedVttgDocsPage {
   html: string;
   headings: VttgDocsHeading[];
+}
+
+/** Цитата, оказавшаяся блоком-предупреждением GitHub. */
+interface VttgDocsAlert {
+  /** Вид метки: `NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`. */
+  alertType: string;
+  /** Содержимое цитаты без метки. */
+  bodyTokens: Token[];
 }
 
 /** Куда ведёт ссылка после разбора. */
@@ -120,6 +132,53 @@ function resolveLink(
 }
 
 /**
+ * Разбирает цитату как блок-предупреждение GitHub (`> [!NOTE]` и т. п.).
+ * Метка убирается из первого абзаца; абзац, в котором кроме метки ничего не
+ * было, выпадает. `undefined` — это обычная цитата.
+ *
+ * @param quoteTokens содержимое цитаты
+ */
+function parseAlert(quoteTokens: Token[]): VttgDocsAlert | undefined {
+  const [firstBlock, ...restBlocks] = quoteTokens;
+
+  if (firstBlock?.type !== 'paragraph') {
+    return undefined;
+  }
+
+  const [firstInline, ...restInline] = firstBlock.tokens ?? [];
+
+  if (firstInline?.type !== 'text') {
+    return undefined;
+  }
+
+  const markerMatch = firstInline.raw.match(VTTG_DOCS_ALERT_MARKER_PATTERN);
+  const alertType = markerMatch?.[1];
+
+  if (
+    !markerMatch
+    || !alertType
+    || !Object.hasOwn(VTTG_DOCS_ALERT_TITLES, alertType)
+  ) {
+    return undefined;
+  }
+
+  const textAfterMarker = firstInline.raw.slice(markerMatch[0].length);
+
+  const paragraphInline: Token[] = textAfterMarker
+    ? [
+        { type: 'text', raw: textAfterMarker, text: textAfterMarker },
+        ...restInline,
+      ]
+    : restInline;
+
+  const bodyTokens: Token[] = paragraphInline.length
+    ? [{ ...firstBlock, tokens: paragraphInline }, ...restBlocks]
+    : restBlocks;
+
+  return { alertType, bodyTokens };
+}
+
+/**
  * Атрибут `title`, если он задан в исходнике.
  *
  * @param title подсказка ссылки или картинки
@@ -139,6 +198,8 @@ function getTitleAttribute(title: string | null | undefined): string {
  *   становятся адресами сайта, внешние открываются в новой вкладке, остальные
  *   (в закрытый репозиторий) превращаются в текст.
  * - Таблицы оборачиваются в блок с горизонтальной прокруткой.
+ * - Цитаты с меткой GitHub (`> [!NOTE]`, `> [!WARNING]` и т. д.) становятся
+ *   блоками-предупреждениями с заголовком.
  *
  * @param markdown тело страницы
  * @param channel канал, из которого страница
@@ -192,6 +253,19 @@ export function renderVttgDocsMarkdown(
         }
 
         return `<img src="${escape(href)}" alt="${escape(text)}"${getTitleAttribute(title)} loading="lazy">`;
+      },
+
+      blockquote({ tokens }: Tokens.Blockquote): string {
+        const alert = parseAlert(tokens);
+
+        if (!alert) {
+          return `<blockquote>\n${this.parser.parse(tokens)}</blockquote>\n`;
+        }
+
+        const { alertType, bodyTokens } = alert;
+        const alertModifier = `${VTTG_DOCS_ALERT_CLASS}--${alertType.toLowerCase()}`;
+
+        return `<div class="${VTTG_DOCS_ALERT_CLASS} ${alertModifier}"><p class="${VTTG_DOCS_ALERT_TITLE_CLASS}">${VTTG_DOCS_ALERT_TITLES[alertType]}</p>${this.parser.parse(bodyTokens)}</div>\n`;
       },
 
       table(tableToken: Tokens.Table): string {

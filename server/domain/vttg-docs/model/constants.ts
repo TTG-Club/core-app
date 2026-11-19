@@ -122,6 +122,27 @@ export const VTTG_DOCS_PAGE_FILE_PATH_PATTERN = new RegExp(
 /** Обёртка таблицы с горизонтальной прокруткой; стили — у статьи на сайте. */
 export const VTTG_DOCS_TABLE_CLASS = 'vttg-docs-table';
 
+/**
+ * Метка блока-предупреждения GitHub в первой строке цитаты: `> [!NOTE]`.
+ * Метка стоит отдельной строкой, как того требует GitHub.
+ */
+export const VTTG_DOCS_ALERT_MARKER_PATTERN = /^\[!([A-Z]+)\][ \t]*(?:\n|$)/;
+
+/** Заголовки блоков-предупреждений по виду метки — те же пять видов, что у GitHub. */
+export const VTTG_DOCS_ALERT_TITLES: Record<string, string> = {
+  NOTE: 'Примечание',
+  TIP: 'Совет',
+  IMPORTANT: 'Важно',
+  WARNING: 'Внимание',
+  CAUTION: 'Осторожно',
+};
+
+/** Блок-предупреждение; вид добавляется модификатором `--note`, `--tip` и т. д. */
+export const VTTG_DOCS_ALERT_CLASS = 'vttg-docs-alert';
+
+/** Заголовок блока-предупреждения. */
+export const VTTG_DOCS_ALERT_TITLE_CLASS = 'vttg-docs-alert-title';
+
 /** Атрибуты внешней ссылки: новая вкладка без доступа к сайту. */
 export const VTTG_DOCS_EXTERNAL_LINK_ATTRIBUTES =
   ' target="_blank" rel="noopener noreferrer"';

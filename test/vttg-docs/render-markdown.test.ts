@@ -94,3 +94,47 @@ describe('заголовки и безопасность страницы док
     expect(html).toMatch(/^<div class="vttg-docs-table"><table>/);
   });
 });
+
+describe('блоки-предупреждения GitHub в документации VTTG', () => {
+  it('метка становится заголовком блока, текст остаётся', () => {
+    const { html } = renderReleasePage(
+      '> [!NOTE]\n> **Жирно** и текст\n>\n> Второй абзац',
+    );
+
+    expect(html).toContain(
+      '<div class="vttg-docs-alert vttg-docs-alert--note"><p class="vttg-docs-alert-title">Примечание</p><p><strong>Жирно</strong> и текст</p>',
+    );
+
+    expect(html).toContain('<p>Второй абзац</p>');
+    expect(html).not.toContain('[!NOTE]');
+    expect(html).not.toContain('<blockquote');
+  });
+
+  it('у каждого вида свой заголовок', () => {
+    expect(renderReleasePage('> [!IMPORTANT]\n> Текст').html).toContain(
+      '>Важно</p>',
+    );
+
+    expect(renderReleasePage('> [!WARNING]\n> Текст').html).toContain(
+      'vttg-docs-alert--warning',
+    );
+  });
+
+  it('метка отдельным абзацем — пустой абзац не появляется', () => {
+    const { html } = renderReleasePage(
+      '> [!TIP]\n>\n> Совет отдельным абзацем',
+    );
+
+    expect(html).toContain(
+      '<p class="vttg-docs-alert-title">Совет</p><p>Совет отдельным абзацем</p>',
+    );
+  });
+
+  it('обычная цитата и неизвестная метка остаются цитатой', () => {
+    expect(renderReleasePage('> Просто цитата').html).toContain('<blockquote>');
+
+    expect(renderReleasePage('> [!UNKNOWN]\n> Текст').html).toContain(
+      '<blockquote>',
+    );
+  });
+});

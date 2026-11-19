@@ -169,6 +169,54 @@
     color: var(--ui-text-toned);
   }
 
+  /*
+    Блоки-предупреждения GitHub: `> [!NOTE]`, `> [!WARNING]` и т. д. Цвет
+    вида задаётся одной переменной, остальное общее.
+  */
+  .vttg-docs-article :deep(.vttg-docs-alert) {
+    --vttg-docs-alert-color: var(--ui-info);
+
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+    border: 1px solid
+      color-mix(in oklab, var(--vttg-docs-alert-color) 35%, transparent);
+    border-left-color: var(--vttg-docs-alert-color);
+    border-left-width: 4px;
+    border-radius: calc(var(--ui-radius) * 1.5);
+
+    background: color-mix(
+      in oklab,
+      var(--vttg-docs-alert-color) 8%,
+      transparent
+    );
+  }
+
+  .vttg-docs-article :deep(.vttg-docs-alert--tip) {
+    --vttg-docs-alert-color: var(--ui-success);
+  }
+
+  .vttg-docs-article :deep(.vttg-docs-alert--important) {
+    --vttg-docs-alert-color: var(--ui-primary);
+  }
+
+  .vttg-docs-article :deep(.vttg-docs-alert--warning) {
+    --vttg-docs-alert-color: var(--ui-warning);
+  }
+
+  .vttg-docs-article :deep(.vttg-docs-alert--caution) {
+    --vttg-docs-alert-color: var(--ui-error);
+  }
+
+  .vttg-docs-article :deep(.vttg-docs-alert > :last-child) {
+    margin-bottom: 0;
+  }
+
+  .vttg-docs-article :deep(.vttg-docs-alert-title) {
+    margin: 0 0 0.25rem;
+    font-weight: 600;
+    color: var(--vttg-docs-alert-color);
+  }
+
   .vttg-docs-article :deep(hr) {
     margin: 2rem 0;
     border-color: var(--ui-border);
