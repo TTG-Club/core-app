@@ -1,0 +1,1 @@
+export { useVttgDocsSettingsEditor } from './useVttgDocsSettingsEditor';

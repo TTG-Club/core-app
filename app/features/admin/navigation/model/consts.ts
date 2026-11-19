@@ -45,6 +45,11 @@ import {
   VTTG_COMPENDIUM_PAGE_TITLE,
 } from '~admin/vttg-compendium/model';
 import {
+  VTTG_DOCS_ADMIN_NAVIGATION_ICON,
+  VTTG_DOCS_ADMIN_PAGE_TITLE,
+  VTTG_DOCS_ADMIN_ROUTE,
+} from '~admin/vttg-docs/model';
+import {
   ARTICLES_ADMIN_CREATE_ROUTE,
   ARTICLES_ADMIN_ROUTE,
 } from '~articles/model';
@@ -144,6 +149,12 @@ const ADMIN_VTTG_COMPENDIUM_ITEM: NavigationItem = {
   to: VTTG_COMPENDIUM_ADMIN_ROUTE,
 };
 
+const ADMIN_VTTG_DOCS_ITEM: NavigationItem = {
+  label: VTTG_DOCS_ADMIN_PAGE_TITLE,
+  icon: VTTG_DOCS_ADMIN_NAVIGATION_ICON,
+  to: VTTG_DOCS_ADMIN_ROUTE,
+};
+
 /**
  * Элементы главной навигации админ-панели
  */
@@ -162,6 +173,7 @@ export const ADMIN_NAVIGATION_ITEMS: NavigationItem[] = [
   ADMIN_VK_VIDEO_ITEM,
   ADMIN_MAILING_ITEM,
   ADMIN_VTTG_COMPENDIUM_ITEM,
+  ADMIN_VTTG_DOCS_ITEM,
 ];
 
 /** Группа разделов «Пользователи»: к ней же на дашборде относится выключатель оплаты. */
@@ -192,7 +204,7 @@ export const ADMIN_CONTENT_SECTION_GROUP: NavigationGroup = {
 export const ADMIN_VTTG_SECTION_GROUP: NavigationGroup = {
   title: 'VTTG',
   icon: 'tabler:device-desktop',
-  items: [ADMIN_VTTG_COMPENDIUM_ITEM],
+  items: [ADMIN_VTTG_COMPENDIUM_ITEM, ADMIN_VTTG_DOCS_ITEM],
 };
 
 export const ADMIN_TOOLS_SECTION_GROUP: NavigationGroup = {

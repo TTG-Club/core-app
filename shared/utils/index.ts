@@ -11,3 +11,4 @@ export * from './sortString';
 export * from './subscription-sales';
 export * from './user-avatar';
 export * from './vk-video';
+export * from './vttg-docs';

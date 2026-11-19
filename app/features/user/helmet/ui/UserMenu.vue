@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { VTTG_DOCS_ROUTE } from '#shared/consts';
   import {
     MY_BUGS_NAVIGATION_LABEL,
     MY_BUGS_ROUTE,
@@ -41,6 +42,7 @@
   } from '~profile/activation/model';
   import { KbdShortcut } from '~ui/kbd-shortcut';
   import { UpdatesDot } from '~ui/updates-dot';
+  import { VTTG_DOCS_ICON, VTTG_DOCS_TITLE } from '~vttg-docs/model';
   import {
     VTTG_MODULES_ICON,
     VTTG_MODULES_ROUTE,
@@ -316,6 +318,19 @@
               @click.left.exact="closeMenu"
             >
               {{ VTTG_MODULES_TITLE }}
+            </UButton>
+
+            <!-- Документация VTTG для авторов систем и модулей -->
+            <UButton
+              :icon="VTTG_DOCS_ICON"
+              color="neutral"
+              variant="ghost"
+              class="w-full"
+              size="lg"
+              :to="VTTG_DOCS_ROUTE"
+              @click.left.exact="closeMenu"
+            >
+              {{ VTTG_DOCS_TITLE }}
             </UButton>
 
             <UButton

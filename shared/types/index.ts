@@ -5,3 +5,4 @@ export * from './maintenance';
 export * from './subscription-sales';
 export * from './vk-video';
 export * from './vttg';
+export * from './vttg-docs';
