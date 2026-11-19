@@ -4,8 +4,8 @@
     DamageRollSource,
     PreparedSpellKind,
     SpellcastingBreakdown,
-    SpellcastingClassRow,
     SpellCastingKind,
+    SpellCastRequest,
     SpellDamageRoll,
     SpellSlotKind,
     SpellSlotRow,
@@ -33,6 +33,7 @@
     getOrderedSpellCastingKinds,
     getPreparedSpellsHint,
     getPreparedSpellsValue,
+    getSpellAttackRoll,
     getSpellGroupLabel,
     getSpellGroups,
     getSpellListLevels,
@@ -60,6 +61,7 @@
     SHEET_STATIC_STAT_CLASS,
     SHEET_TAB_EMPTY_LABELS,
     sortSpellsByLevelAndName,
+    SPELL_CAST_LABELS,
     SPELL_CASTING_KIND_META,
     SPELL_CASTING_TIME_LABEL,
     SPELL_DAMAGE_ROLL_HINT_LABEL,
@@ -67,6 +69,7 @@
     SPELL_DAMAGE_STAT_LABEL,
     SPELL_FILTER_LABELS,
     SPELL_SLOTS_LABEL,
+    SPELL_SUBTITLE_SEPARATOR,
     SPELLCASTING_STAT_LABELS,
     SPELLCASTING_TILE_LABELS,
     takesPreparationSpace,
@@ -99,13 +102,6 @@
    */
   const DAMAGE_STAT_CLASS =
     'relative z-10 flex shrink-0 cursor-pointer flex-col items-center rounded border border-primary/40 bg-primary/10 px-2 py-0.5 whitespace-nowrap transition-colors hover:border-primary hover:bg-primary/20';
-
-  /**
-   * Плитка атаки заклинанием катит к20, поэтому несёт тот же тёплый акцент,
-   * что и плитки урона, а по высоте равна соседним плиткам шапки вкладки.
-   */
-  const SPELL_ATTACK_STAT_CLASS =
-    'flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 whitespace-nowrap transition-colors hover:border-primary hover:bg-primary/20';
 
   /** Разделитель частей подсказки плитки урона (формула, тип, условие). */
   const DAMAGE_TOOLTIP_SEPARATOR = ' · ';
@@ -166,7 +162,7 @@
     'copy-innate-spell': [spellUrl: string];
     'remove-innate-spell': [spellUrl: string];
     'roll-spell-damage': [roll: SpellDamageRoll];
-    'roll-spell-attack': [row: SpellcastingClassRow];
+    'cast-spell': [cast: SpellCastRequest];
     'toggle-spell-prepared': [spellUrl: string];
     'toggle-innate-spell-prepared': [spellUrl: string];
     'toggle-spell-slot': [level: number, index: number, kind: SpellSlotKind];
@@ -179,11 +175,12 @@
   // Урон и время накладывания живут в справочнике, а не в листе: подгружаем
   // их для всей вкладки — и для книги, и для заклинаний вне её. Уровень
   // персонажа нужен заговорам: их урон растёт от него, а не от круга ячейки.
-  const { getDamage, getCastingKinds } = useSpellCatalogMechanics(
-    () => [...props.spells, ...props.innateSpells, ...props.classSpells],
-    () => props.spellcasting.abilityModifier,
-    () => character.value.level,
-  );
+  const { getDamage, hasAttackRoll, getCastingKinds } =
+    useSpellCatalogMechanics(
+      () => [...props.spells, ...props.innateSpells, ...props.classSpells],
+      () => props.spellcasting.abilityModifier,
+      () => character.value.level,
+    );
 
   const addMenuItems = getSpellsAddMenuItems({
     onAddSpell: () => emit('add-spell'),
@@ -212,35 +209,33 @@
 
   /**
    * Заклинательство по классам: у мультикласса характеристика своя у каждого,
-   * поэтому Сл спасброска и бонус атаки идут отдельными плитками. Подпись
-   * класса появляется только у мультикласса — одному классу она ни к чему.
+   * поэтому плитка тоже своя. В плитке оба числа — Сл спасброска и бонус
+   * атаки; нажатие открывает настройку. Сама атака катится уже с заклинания —
+   * кнопкой «Сотворить» в его строке. Подпись класса появляется только у
+   * мультикласса — одному классу она ни к чему.
    */
   const spellcastingStats = computed(() =>
     props.spellcasting.rows.map((row) => {
-      // Без заклинательной характеристики окну броска не от чего считать
-      // подмену характеристики — такую атаку не катаем, только показываем
-      const isAttackRollable = row.ability !== null;
+      const saveDcLabel = `${SPELLCASTING_STAT_LABELS.saveDc.full} ${row.saveDc}`;
+
+      const attackLabel = `${SPELLCASTING_STAT_LABELS.attack.full} ${getFormattedBonus(row.attackBonus)}`;
 
       return {
-        row,
         classUrl: row.classUrl,
         className: props.spellcasting.rows.length > 1 ? row.className : '',
         saveDc: row.saveDc,
         attackBonus: getFormattedBonus(row.attackBonus),
-        isAttackRollable,
-        attackTileClass: isAttackRollable
-          ? SPELL_ATTACK_STAT_CLASS
-          : SHEET_STATIC_STAT_CLASS,
-        attackTooltip: isAttackRollable
-          ? `${SPELLCASTING_STAT_LABELS.attack.full}${DAMAGE_TOOLTIP_SEPARATOR}${SHEET_ROLL_HINT_LABEL}`
-          : SPELLCASTING_STAT_LABELS.attack.full,
-        attackAriaLabel: row.className
-          ? `${SPELLCASTING_TILE_LABELS.roll}: ${row.className}`
-          : SPELLCASTING_TILE_LABELS.roll,
         // Характеристику черты на листе не меняют: её назвали при взятии черты
         editable: row.editable,
+        tooltip: [
+          saveDcLabel,
+          attackLabel,
+          row.editable
+            ? SPELLCASTING_TILE_LABELS.editHint
+            : SPELLCASTING_TILE_LABELS.fixedHint,
+        ].join(SPELLCASTING_TILE_LABELS.separator),
         ariaLabel: row.editable
-          ? SPELLCASTING_TILE_LABELS.edit
+          ? `${SPELLCASTING_TILE_LABELS.edit}: ${saveDcLabel}, ${attackLabel}`
           : `${SPELLCASTING_TILE_LABELS.fixed}: ${row.className}`,
         tileClass: row.editable
           ? SHEET_HEADER_STAT_CLASS
@@ -261,21 +256,6 @@
   }) {
     if (stat.editable) {
       emit('edit-spellcasting', stat.classUrl);
-    }
-  }
-
-  /**
-   * Бросок атаки заклинанием строки заклинательства: у мультикласса бонус
-   * свой у каждого класса, поэтому окно получает строку целиком.
-   *
-   * @param stat плитка заклинательства.
-   */
-  function handleSpellAttackRoll(stat: {
-    row: SpellcastingClassRow;
-    isAttackRollable: boolean;
-  }) {
-    if (stat.isAttackRollable) {
-      emit('roll-spell-attack', stat.row);
     }
   }
 
@@ -637,6 +617,60 @@
   }
 
   /**
+   * Кнопка «Сотворить» строки: что сделает нажатие и всё, что для этого нужно.
+   * Атакующее заклинание сперва катит атаку, урон — следом, и уже окно урона
+   * тратит ячейку, как плитка урона. Без урона ячейка тратится сразу.
+   * Заговору без атаки и урона сотворение ничего не даёт — кнопки нет.
+   *
+   * @param spell заклинание вкладки.
+   * @param damageStats плитки урона строки: окно урона после атаки — первой из
+   * них, той же, что катит плитка.
+   * @returns кнопка сотворения; null — делать по нажатию нечего.
+   */
+  function getSpellCastAction(
+    spell: CharacterSpell,
+    damageStats: Array<{ roll: SpellDamageRoll }>,
+  ) {
+    const attack = hasAttackRoll(spell)
+      ? getSpellAttackRoll(character.value, props.spellcasting.rows, spell)
+      : null;
+
+    const damage = damageStats[0]?.roll ?? null;
+
+    const isCantrip = spell.level === CANTRIP_SPELL_LEVEL;
+
+    if (!attack && !damage && isCantrip) {
+      return null;
+    }
+
+    const steps: string[] = [];
+
+    if (attack) {
+      steps.push(
+        damage ? SPELL_CAST_LABELS.attackAndDamage : SPELL_CAST_LABELS.attack,
+      );
+    } else if (damage) {
+      steps.push(SPELL_CAST_LABELS.damage);
+    }
+
+    steps.push(
+      isCantrip
+        ? SPELL_CAST_LABELS.cantrip
+        : `${SPELL_CAST_LABELS.slotPrefix}${spell.level}${SPELL_CAST_LABELS.slotSuffix}`,
+    );
+
+    return {
+      request: {
+        level: spell.level,
+        attack,
+        damage,
+      } satisfies SpellCastRequest,
+      tooltip: `${SPELL_CAST_LABELS.label}: ${steps.join(SPELL_CAST_LABELS.separator)}`,
+      ariaLabel: `${SPELL_CAST_LABELS.label}: ${spell.name}`,
+    };
+  }
+
+  /**
    * Бейдж своей заклинательной характеристики строки.
    *
    * Показывается, только когда характеристика задана: у остальных заклинаний
@@ -845,6 +879,8 @@
 
           const isExpanded = isCustom && expandedUrls.value.has(spell.url);
 
+          const damageStats = getSpellDamageStats(spell);
+
           // Заклинание класса стоит в круге (заговор — в группе выданных), а
           // ведётся как врождённое: и пометка подготовки, и меню строки у них
           // общие
@@ -900,10 +936,18 @@
             // Время накладывания — под названием, рядом со школой: по нему игрок
             // ищет, чем занять бонусное действие или реакцию.
             castingKinds,
-            hasSubtitle: Boolean(spell.school) || castingKinds.length > 0,
+            // Откуда заклинание — первым словом подписи: так строка не
+            // обрастает бейджем, а источник читается вместе со школой
+            sourceLabel: isClassGranted ? CLASS_SPELL_BADGE.label : '',
+            hasSchoolSeparator: isClassGranted && Boolean(spell.school),
+            hasSubtitle:
+              isClassGranted
+              || Boolean(spell.school)
+              || castingKinds.length > 0,
             // Урон каталожного заклинания приходит из справочника; у своего его
             // нет — форма листа урон не заполняет.
-            damageStats: getSpellDamageStats(spell),
+            damageStats,
+            castAction: getSpellCastAction(spell, damageStats),
             // У каталожных заклинаний этих полей нет — список выйдет пустым.
             statRows: getSpellStatRows(spell),
             descriptionNodes: spell.description ?? [],
@@ -942,6 +986,13 @@
   /** Нажатие на плитку урона: разбор броска уходит в модалку настройки. */
   function handleDamageRoll(damageStat: DisplayDamageStat) {
     emit('roll-spell-damage', damageStat.roll);
+  }
+
+  /** Нажатие на «Сотворить»: атака, урон и трата ячейки — в листе. */
+  function handleSpellCast(spell: DisplaySpell) {
+    if (spell.castAction) {
+      emit('cast-spell', spell.castAction.request);
+    }
   }
 
   /** Нажатие на кружок ячейки: трата до него включительно либо возврат. */
@@ -993,11 +1044,12 @@
       не занимает собой третью -->
     <div class="@container flex flex-wrap items-center gap-2">
       <!-- У мультикласса заклинательство считается по каждому классу
-        отдельно: своя характеристика — свои Сл и бонус атаки. Атака стоит
-        своей плиткой рядом: Сл открывает настройку, а атака катит к20 -->
-      <template
+        отдельно: своя характеристика — свои Сл и бонус атаки. Оба числа в одной
+        плитке, нажатие открывает настройку; атаку катит заклинание -->
+      <UTooltip
         v-for="stat in spellcastingStats"
         :key="stat.classUrl"
+        :text="stat.tooltip"
       >
         <button
           type="button"
@@ -1012,31 +1064,23 @@
             {{ stat.className }}
           </span>
 
-          <!-- Подписи чисел в плитке короткие, чтобы ряд помещался на узком
-            листе; полное название показывает подсказка по наведению -->
-          <UTooltip :text="SPELLCASTING_STAT_LABELS.saveDc.full">
-            <span class="flex items-center gap-1.5">
-              <span
-                class="text-[10px] font-bold tracking-wider text-muted uppercase"
-              >
-                {{ SPELLCASTING_STAT_LABELS.saveDc.short }}
-              </span>
-
-              <span class="text-xs font-bold text-highlighted">
-                {{ stat.saveDc }}
-              </span>
+          <!-- Подписи чисел короткие, чтобы ряд помещался на узком листе;
+            полные названия показывает подсказка по наведению -->
+          <span class="flex items-center gap-1.5">
+            <span
+              class="text-[10px] font-bold tracking-wider text-muted uppercase"
+            >
+              {{ SPELLCASTING_STAT_LABELS.saveDc.short }}
             </span>
-          </UTooltip>
-        </button>
 
-        <UTooltip :text="stat.attackTooltip">
-          <button
-            type="button"
-            :class="stat.attackTileClass"
-            :aria-label="stat.attackAriaLabel"
-            :disabled="!stat.isAttackRollable"
-            @click.left.exact.prevent="handleSpellAttackRoll(stat)"
-          >
+            <span class="text-xs font-bold text-highlighted">
+              {{ stat.saveDc }}
+            </span>
+
+            <span class="text-xs text-dimmed">
+              {{ SPELL_SUBTITLE_SEPARATOR }}
+            </span>
+
             <span
               class="text-[10px] font-bold tracking-wider text-muted uppercase"
             >
@@ -1046,15 +1090,9 @@
             <span class="text-xs font-bold text-highlighted">
               {{ stat.attackBonus }}
             </span>
-
-            <UIcon
-              v-if="stat.isAttackRollable"
-              name="ttg:dice-outline-d20"
-              class="size-3.5 shrink-0 text-primary"
-            />
-          </button>
-        </UTooltip>
-      </template>
+          </span>
+        </button>
+      </UTooltip>
 
       <!-- Сколько можно подготовить: число берётся из таблицы класса, нажатие
         открывает настройку своего числа или бонуса к нему. Заговоры считаются
@@ -1356,6 +1394,25 @@
                   v-if="spell.hasSubtitle"
                   class="flex min-w-0 items-center gap-2 text-xs"
                 >
+                  <!-- Источник — первым словом подписи: заклинание от умения
+                    класса стоит в общем круге, и без пометки строка ничем не
+                    отличалась бы от книги, а живёт она иначе -->
+                  <UTooltip
+                    v-if="spell.sourceLabel"
+                    :text="CLASS_SPELL_BADGE.hint"
+                  >
+                    <span class="relative z-10 shrink-0 text-muted">
+                      {{ spell.sourceLabel }}
+                    </span>
+                  </UTooltip>
+
+                  <span
+                    v-if="spell.hasSchoolSeparator"
+                    class="shrink-0 text-dimmed"
+                  >
+                    {{ SPELL_SUBTITLE_SEPARATOR }}
+                  </span>
+
                   <span
                     v-if="spell.school"
                     class="truncate text-dimmed"
@@ -1421,20 +1478,23 @@
               </UTooltip>
             </div>
 
-            <!-- Заклинание от умения класса стоит в общем круге: без значка
-              строка ничем не отличалась бы от книги, а живёт она иначе -->
+            <!-- «Сотворить» стоит рядом с уроном: атака, затем окно урона,
+              которое и тратит ячейку круга. Подсказка говорит, что именно
+              будет по нажатию -->
             <UTooltip
-              v-if="spell.isClassGranted"
-              :text="CLASS_SPELL_BADGE.hint"
+              v-if="spell.castAction"
+              :text="spell.castAction.tooltip"
             >
-              <UBadge
+              <UButton
+                :icon="SPELL_CAST_LABELS.icon"
+                color="primary"
+                variant="soft"
                 size="sm"
-                color="neutral"
-                variant="subtle"
+                square
                 class="relative z-10 shrink-0"
-              >
-                {{ CLASS_SPELL_BADGE.label }}
-              </UBadge>
+                :aria-label="spell.castAction.ariaLabel"
+                @click.left.exact.prevent="handleSpellCast(spell)"
+              />
             </UTooltip>
 
             <UTooltip

@@ -13,7 +13,7 @@
     SheetTab,
     SheetTabSlot,
     SpellcastingBreakdown,
-    SpellcastingClassRow,
+    SpellCastRequest,
     SpellDamageRoll,
     SpellSlotKind,
     SpellSlotRow,
@@ -117,7 +117,7 @@
     'copy-innate-spell': [spellUrl: string];
     'remove-innate-spell': [spellUrl: string];
     'roll-spell-damage': [roll: SpellDamageRoll];
-    'roll-spell-attack': [row: SpellcastingClassRow];
+    'cast-spell': [cast: SpellCastRequest];
     'toggle-spell-prepared': [spellUrl: string];
     'toggle-innate-spell-prepared': [spellUrl: string];
     'toggle-spell-slot': [level: number, index: number, kind: SpellSlotKind];
@@ -240,12 +240,12 @@
   }
 
   /**
-   * Пробрасывает бросок атаки заклинанием из вкладки заклинаний наверх.
+   * Пробрасывает сотворение заклинания из вкладки заклинаний наверх.
    *
-   * @param row строка заклинательства, чей бонус атаки катится.
+   * @param cast атака, урон и круг сотворяемого заклинания.
    */
-  function handleSpellAttackRoll(row: SpellcastingClassRow) {
-    emit('roll-spell-attack', row);
+  function handleSpellCast(cast: SpellCastRequest) {
+    emit('cast-spell', cast);
   }
 
   function handleSpellPreparedToggle(spellUrl: string) {
@@ -1002,7 +1002,7 @@
             @copy-innate-spell="handleInnateSpellCopy"
             @remove-innate-spell="handleInnateSpellRemove"
             @roll-spell-damage="handleSpellDamageRoll"
-            @roll-spell-attack="handleSpellAttackRoll"
+            @cast-spell="handleSpellCast"
             @toggle-spell-prepared="handleSpellPreparedToggle"
             @toggle-innate-spell-prepared="handleInnateSpellPreparedToggle"
             @toggle-spell-slot="handleSpellSlotToggle"

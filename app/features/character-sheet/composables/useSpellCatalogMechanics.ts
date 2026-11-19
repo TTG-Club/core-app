@@ -23,6 +23,12 @@ interface SpellCatalogMechanicsAccess {
   getDamage: (spellUrl: string) => SpellDamage[];
 
   /**
+   * Заклинание делает бросок атаки: пока справочник не ответил, и у своих
+   * заклинаний — нет.
+   */
+  hasAttackRoll: (spell: CharacterSpell) => boolean;
+
+  /**
    * Время накладывания заклинания: у каталожного — из справочника (пусто, пока
    * он не ответил), у своего — по тексту его поля.
    */
@@ -115,6 +121,21 @@ export function useSpellCatalogMechanics(
   }
 
   /**
+   * Бросок атаки заклинания. У своего заклинания справочника нет — атаку он
+   * не знает.
+   *
+   * @param spell заклинание вкладки.
+   * @returns true — заклинание атакует.
+   */
+  function hasAttackRoll(spell: CharacterSpell): boolean {
+    if (isCustomSpell(spell)) {
+      return false;
+    }
+
+    return catalogMechanics.value[spell.url]?.hasAttackRoll ?? false;
+  }
+
+  /**
    * Время накладывания заклинания.
    *
    * @param spell заклинание вкладки.
@@ -128,5 +149,5 @@ export function useSpellCatalogMechanics(
     return catalogMechanics.value[spell.url]?.castingKinds ?? [];
   }
 
-  return { getDamage, getCastingKinds };
+  return { getDamage, hasAttackRoll, getCastingKinds };
 }

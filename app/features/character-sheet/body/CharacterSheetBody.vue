@@ -10,7 +10,8 @@
     SheetPdfVariant,
     SheetRollContext,
     SkillRow,
-    SpellcastingClassRow,
+    SpellAttackRoll,
+    SpellCastRequest,
     SpellDamageRoll,
   } from '../model';
 
@@ -1029,31 +1030,48 @@
    * преимущество и помеху дают эффекты атаки заклинанием (`attack.spell.*`).
    * Ячейку не тратит — её тратит бросок урона, он и есть накладывание.
    *
-   * @param row строка заклинательства: бонус атаки и характеристика класса.
+   * @param attack бонус и характеристика заклинательства заклинания.
+   * @returns true — атака брошена, а не отменена.
    */
-  function handleSpellAttackRoll(row: SpellcastingClassRow) {
-    if (!row.ability) {
-      return;
-    }
-
+  async function rollSpellAttack(attack: SpellAttackRoll): Promise<boolean> {
     const attackContext: SheetRollContext = {
       kind: 'attack',
       attackType: 'spell',
     };
 
-    rollModal.open({
+    const isRolled = await rollModal.open({
       sheetKey,
-      // У мультикласса бонус свой у каждого класса: заголовок называет чей
-      title:
-        spellcastingBreakdown.value.rows.length > 1
-          ? `${SPELL_ATTACK_ROLL_LABELS.title}: ${row.className}`
-          : SPELL_ATTACK_ROLL_LABELS.title,
-      modifier: row.attackBonus,
-      ability: row.ability,
+      title: attack.title,
+      modifier: attack.modifier,
+      ability: attack.ability,
       actionLabel: SPELL_ATTACK_ROLL_LABELS.action,
       mode: getRollMode(attackContext),
       modeSources: getRollModeSources(attackContext),
-    });
+    }).result;
+
+    return isRolled === true;
+  }
+
+  /**
+   * Сотворение заклинания кнопкой строки: атака (если заклинание атакует),
+   * затем то же окно урона, что у плитки урона, — оно и тратит ячейку круга.
+   * Отмена любого окна обрывает сотворение: ячейка остаётся. Без урона ячейка
+   * тратится сразу после атаки либо сразу по нажатию; заговор её не тратит.
+   *
+   * @param cast атака, урон и круг заклинания.
+   */
+  async function handleSpellCast(cast: SpellCastRequest) {
+    if (cast.attack && !(await rollSpellAttack(cast.attack))) {
+      return;
+    }
+
+    if (cast.damage) {
+      await handleSpellDamageRoll(cast.damage);
+
+      return;
+    }
+
+    spendSpellSlot(cast.level);
   }
 
   function handleItemDamageRoll(inventoryItem: CharacterInventoryItem) {
@@ -1683,7 +1701,7 @@
           @copy-innate-spell="handleInnateSpellCopy"
           @remove-innate-spell="removeInnateSpell"
           @roll-spell-damage="handleSpellDamageRoll"
-          @roll-spell-attack="handleSpellAttackRoll"
+          @cast-spell="handleSpellCast"
           @toggle-spell-prepared="toggleSpellPrepared"
           @toggle-innate-spell-prepared="toggleInnateSpellPrepared"
           @toggle-spell-slot="toggleSpellSlot"

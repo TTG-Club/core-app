@@ -540,7 +540,11 @@ export async function fetchSpellCatalogMechanics(
 
     return parseSpellCatalogMechanics(response);
   } catch {
-    return { damage: { base: [], cantripTiers: [] }, castingKinds: [] };
+    return {
+      damage: { base: [], cantripTiers: [] },
+      hasAttackRoll: false,
+      castingKinds: [],
+    };
   }
 }
 

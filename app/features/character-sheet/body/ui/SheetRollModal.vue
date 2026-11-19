@@ -111,7 +111,8 @@
   );
 
   const emit = defineEmits<{
-    close: [];
+    /** Закрытие модалки; `true` — бросок сделан, а не отменён. */
+    close: [rolled?: boolean];
   }>();
 
   const { handleRoll } = useDiceRollHandler();
@@ -242,7 +243,7 @@
 
   function handleRollClick() {
     handleRoll(formula.value);
-    emit('close');
+    emit('close', true);
   }
 </script>
 

@@ -3031,6 +3031,55 @@ export const CANTRIP_SPELL_LEVEL = 0;
 export const SPELL_SAVE_DC_BASE = 8;
 
 /**
+ * Наименьшая своя Сл спасброска. Ноль, а не отрицательное число: своё число —
+ * замена расчёту по правилам, а уменьшают его своим бонусом со знаком минус.
+ */
+export const SPELL_SAVE_DC_CUSTOM_MIN = 0;
+
+/** Наибольшая своя Сл спасброска. */
+export const SPELL_SAVE_DC_CUSTOM_MAX = 40;
+
+/** Наименьший свой бонус атаки заклинанием: штрафы бывают и сплошными. */
+export const SPELL_ATTACK_CUSTOM_MIN = -20;
+
+/** Наибольший свой бонус атаки заклинанием. */
+export const SPELL_ATTACK_CUSTOM_MAX = 40;
+
+/**
+ * Способы применения заклинания с броском атаки (`effect.deliveryType`
+ * справочника). Остальные способы — «на себя», касание, зрение, «нет» — броска
+ * попадания не делают.
+ */
+export const SPELL_ATTACK_ROLL_DELIVERY_TYPES: string[] = ['melee', 'ranged'];
+
+/**
+ * Все способы применения, которые знает справочник. Заданный способ решает
+ * вопрос атаки сам; незнакомое значение читается как «не задан», и тогда
+ * решает тип атаки — как в выгрузке заклинаний в VTTG.
+ */
+export const SPELL_DELIVERY_TYPES: string[] = [
+  'ranged',
+  'melee',
+  'self',
+  'touch',
+  'sight',
+  'none',
+];
+
+/**
+ * Типы атаки воздействия (`effect.attackType`), дающие бросок попадания, —
+ * для записей без способа применения.
+ */
+export const SPELL_ATTACK_TYPES: string[] = [
+  'MELEE',
+  'RANGE',
+  'MELEE_OR_RANGE',
+];
+
+/** Тег лечения в формуле воздействия: лечащее заклинание не атакует. */
+export const SPELL_HEALING_FORMULA_TAG = '@heal';
+
+/**
  * Префикс URL своего заклинания. Каталожные ссылки — обычные слаги раздела,
  * поэтому по префиксу лист отличает свои заклинания от выбранных из базы.
  */
@@ -3116,6 +3165,16 @@ export const THIRD_CASTER_SUBCLASSES: string[] = [
   'мистический рыцарь',
   'мистический ловкач',
 ];
+
+/**
+ * Заклинательная характеристика по названию подкласса (нижний регистр) для
+ * режима «Авто»: у воина и плута заклинания даёт подкласс, и по названию
+ * класса характеристику не найти — плитка показывала бы число без модификатора.
+ */
+export const SUBCLASS_SPELLCASTING_ABILITIES: Record<string, AbilityKey> = {
+  'мистический рыцарь': 'intelligence',
+  'мистический ловкач': 'intelligence',
+};
 
 /** Подпись ряда кружков ячеек в разделителе круга заклинаний. */
 export const SPELL_SLOTS_LABEL = 'Ячейки';
@@ -3303,14 +3362,16 @@ export const SPELLCASTING_STAT_LABELS: Record<
   { short: string; full: string }
 > = {
   saveDc: { short: 'Сл. спасбр.', full: 'Сложность спасброска' },
-  attack: { short: 'Атака закл.', full: 'Атака заклинанием' },
+  attack: { short: 'Атака', full: 'Атака заклинанием' },
 };
 
-/** Подписи плитки заклинательства для скринридера. */
+/** Подписи плитки заклинательства: подсказка и подпись для скринридера. */
 export const SPELLCASTING_TILE_LABELS = {
   edit: 'Настроить заклинательство',
+  editHint: 'нажми, чтобы настроить',
   fixed: 'Заклинательство черты',
-  roll: 'Бросить атаку заклинанием',
+  fixedHint: 'характеристику задала черта',
+  separator: ' · ',
 } as const;
 
 /** Окно броска атаки заклинанием: заголовок и надпись кнопки. */
@@ -3321,15 +3382,6 @@ export const SPELL_ATTACK_ROLL_LABELS = {
 
 /** Значение «Авто (по классу)» в селекте заклинательной характеристики. */
 export const SPELLCASTING_ABILITY_AUTO = 'auto';
-
-/** Варианты выбора заклинательной характеристики (авто или конкретная). */
-export const SPELLCASTING_ABILITY_OPTIONS: Array<{
-  label: string;
-  value: AbilityKey | typeof SPELLCASTING_ABILITY_AUTO;
-}> = [
-  { label: 'Авто (по классу)', value: SPELLCASTING_ABILITY_AUTO },
-  ...ABILITY_ORDER.map((key) => ({ label: ABILITY_LABELS[key], value: key })),
-];
 
 /** Базовый путь деталей вида (`/{url}` и `/{url}/lineages`). */
 export const SPECIES_DETAIL_BASE_PATH = '/api/v2/species';
@@ -6445,13 +6497,51 @@ export const SHEET_ROLL_MODAL_LABELS = {
   modeCancelled: 'Преимущество и помеха гасят друг друга — бросок обычный',
 } as const;
 
-/** Подписи окна заклинательной характеристики. */
+/** Подписи окна настройки заклинательства. */
 export const SHEET_SPELLCASTING_MODAL_LABELS = {
   ability: 'Характеристика',
-  autoPrefix: 'Определяется по классу',
+  /** Пункт «Авто» с названием характеристики класса в скобках. */
+  autoByClassPrefix: 'Авто (по классу: ',
+  autoByClassSuffix: ')',
+  /** То же, когда класс характеристику не задаёт. */
+  autoByClass: 'Авто (по классу)',
+  /** Подсказка под выбором: характеристику задаёт класс. */
+  byClassHintPrefix: 'Определяется по классу: ',
+  byClassHintSuffix: '.',
+  noClassHint: 'Класс характеристику не задаёт — выберите её вручную.',
   abilityModifier: 'Модификатор характеристики',
   proficiencyBonus: 'Бонус мастерства',
+  /** Галка «считать не по правилам»: под ней число по правилам. */
+  customBase: 'Своё число вместо расчёта',
+  customBaseValue: 'Своё число',
+  ruleValuePrefix: 'По правилам: ',
+  /** Прибавки предметов и эффектов: идут поверх настройки. */
+  effectBonus: 'Предметы и эффекты',
+  exhaustion: 'Истощение',
+  none: 'не определена',
   formulaHint:
     `Сложность спасброска = ${SPELL_SAVE_DC_BASE} + бонус мастерства + `
     + 'модификатор характеристики. Бонус атаки — то же без базового значения.',
+  bonusesHint:
+    'Свой бонус берётся от характеристики, от бонуса мастерства либо задаётся '
+    + 'числом — и ложится поверх основы. Предметы и эффекты прибавляются сверху.',
 } as const;
+
+/**
+ * Кнопка «Сотворить» в строке заклинания: подпись и подсказки по тому, что
+ * сделает нажатие.
+ */
+export const SPELL_CAST_LABELS = {
+  label: 'Сотворить',
+  icon: 'tabler:sparkles',
+  attackAndDamage: 'бросок атаки, затем урон',
+  attack: 'бросок атаки',
+  damage: 'бросок урона',
+  slotPrefix: 'тратит ячейку ',
+  slotSuffix: ' круга',
+  cantrip: 'заговор ячейку не тратит',
+  separator: ' · ',
+} as const;
+
+/** Разделитель частей подписи под названием заклинания (источник, школа). */
+export const SPELL_SUBTITLE_SEPARATOR = '·';
