@@ -2,7 +2,8 @@ import type { Character } from '~character-sheet/model';
 
 import type {
   ConditionKey,
-  HitPointsState,
+  ManualInitiativeMode,
+  ManualInitiativeRange,
   ParticipantColor,
   ParticipantSheetLink,
   ParticipantType,
@@ -23,6 +24,7 @@ import {
 
 import {
   CONDITION_CATALOG,
+  MANUAL_INITIATIVE_MODE_TABS,
   MAX_ARMOR_CLASS,
   MAX_D20,
   MAX_INITIATIVE_BONUS,
@@ -33,6 +35,14 @@ import {
   PARTICIPANT_COLOR_CLASS,
   SHEET_PLAYER_FORM_LABELS,
 } from './constants';
+
+// Математика урона и лечения и разбор ввода «±число» общие с листом
+// персонажа: синхронизация хитов листа и трекера считает их одинаково.
+export {
+  applyHitPointsDelta,
+  clampHitPoints,
+  parseHitPointsExpression,
+} from '~character-sheet/model';
 
 /**
  * Считает участников заданного типа.
@@ -52,6 +62,67 @@ export function countParticipantsByType(
  */
 export function formatInitiativeBonus(bonus: number): string {
   return bonus > 0 ? `+${bonus}` : String(bonus);
+}
+
+/**
+ * Пределы числа в поле ручного ввода инициативы: в режиме броска — грани к20,
+ * в режиме итога — те же грани со сдвигом на бонус.
+ *
+ * Сервер хранит итог как «бросок + бонус», а бросок держит в пределах к20,
+ * поэтому итог, названный игроком, вносится через бросок и должен в эти
+ * пределы попадать.
+ * @param mode Режим ручного ввода.
+ * @param bonus Бонус инициативы участника.
+ */
+export function getManualInitiativeRange(
+  mode: ManualInitiativeMode,
+  bonus: number,
+): ManualInitiativeRange {
+  const shift = mode === 'total' ? bonus : 0;
+
+  return { min: MIN_D20 + shift, max: MAX_D20 + shift };
+}
+
+/**
+ * Число для поля ручного ввода по броску к20: в режиме итога — бросок вместе
+ * с бонусом, в режиме броска — сам бросок.
+ * @param mode Режим ручного ввода.
+ * @param roll Бросок к20.
+ * @param bonus Бонус инициативы участника.
+ */
+export function getManualInitiativeValue(
+  mode: ManualInitiativeMode,
+  roll: number,
+  bonus: number,
+): number {
+  return mode === 'total' ? roll + bonus : roll;
+}
+
+/**
+ * Бросок к20 по числу из поля ручного ввода: итог переводится в бросок
+ * (итог − бонус), и результат в любом режиме прижимается к граням к20.
+ * @param mode Режим ручного ввода.
+ * @param value Число из поля.
+ * @param bonus Бонус инициативы участника.
+ */
+export function getRollFromManualInitiative(
+  mode: ManualInitiativeMode,
+  value: number,
+  bonus: number,
+): number {
+  const roll = mode === 'total' ? value - bonus : value;
+
+  return clamp(roll, MIN_D20, MAX_D20);
+}
+
+/**
+ * Признак того, что значение — режим ручного ввода инициативы.
+ * @param value Проверяемое значение.
+ */
+export function isManualInitiativeMode(
+  value: unknown,
+): value is ManualInitiativeMode {
+  return MANUAL_INITIATIVE_MODE_TABS.some((tab) => tab.value === value);
 }
 
 /**
@@ -172,41 +243,6 @@ export function getSheetPlayerRoute(link: ParticipantSheetLink): string {
   return link.shareToken
     ? `${CHARACTER_SHEET_SHARED_ROUTE}/${link.shareToken}`
     : '';
-}
-
-/**
- * Держит хиты в пределах: не ниже нуля и не выше максимума, если он известен.
- * @param value Новые хиты.
- * @param max Максимум хитов; `0` — неизвестен.
- */
-export function clampHitPoints(value: number, max: number): number {
-  return max > 0 ? clamp(value, 0, max) : Math.max(0, value);
-}
-
-/**
- * Сдвиг хитов с учётом временных: урон сначала снимает временные хиты, остаток
- * — текущие; лечение восстанавливает только текущие (временные хиты не
- * лечатся).
- * @param state Текущие и временные хиты участника.
- * @param delta Сдвиг хитов (отрицательный — урон).
- * @param max Максимум хитов; `0` — неизвестен.
- */
-export function applyHitPointsDelta(
-  state: HitPointsState,
-  delta: number,
-  max: number,
-): HitPointsState {
-  if (delta >= 0) {
-    return { ...state, current: clampHitPoints(state.current + delta, max) };
-  }
-
-  const damage = -delta;
-  const absorbed = Math.min(state.temporary, damage);
-
-  return {
-    current: clampHitPoints(state.current - (damage - absorbed), max),
-    temporary: state.temporary - absorbed,
-  };
 }
 
 /**

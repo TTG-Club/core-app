@@ -1,9 +1,11 @@
 <script setup lang="ts">
   import { useCharacterSheet } from '../../composables';
   import {
+    applyHitPointsDelta,
     HIT_POINT_STEP_BUTTONS,
     SHEET_HEALTH_QUICK_LABELS,
   } from '../../model';
+  import SheetHitPointsCalculator from './SheetHitPointsCalculator.vue';
 
   const { sheetKey } = defineProps<{
     /** Ключ открытого листа: с каким листом работает компонент. */
@@ -35,61 +37,24 @@
   });
 
   /**
-   * Применяет урон или лечение сразу. Урон сперва снимает временные хиты, затем
-   * текущие; лечение поднимает текущие до максимума. Клампинг — в `setHitPoints`.
+   * Применяет урон или лечение сразу: урон сперва снимает временные хиты,
+   * остаток — текущие; лечение поднимает текущие до максимума.
    *
    * @param delta смещение хитов (отрицательное — урон, положительное — лечение).
    */
   function applyDelta(delta: number): void {
-    const { current, temporary } = health.value;
+    const next = applyHitPointsDelta(health.value, delta, maxHitPoints.value);
 
-    if (delta < 0) {
-      const damage = -delta;
-      const fromTemp = Math.min(temporary, damage);
-
-      setHitPoints(current - (damage - fromTemp), temporary - fromTemp);
-
-      return;
-    }
-
-    setHitPoints(current + delta, temporary);
+    setHitPoints(next.current, next.temporary);
   }
 
-  const expression = ref('');
-
-  /** Ввод хитов: `20` — точное значение, `+3`/`-7` — сдвиг от текущих. */
-  const HIT_POINT_INPUT_PATTERN = /^([+-])?(\d+)$/;
-
-  const isExpressionValid = computed(() =>
-    HIT_POINT_INPUT_PATTERN.test(expression.value.trim()),
-  );
-
   /**
-   * Применяет значение из поля: без знака — устанавливает точные текущие хиты
-   * (временные не трогает), со знаком — урон/лечение через `applyDelta`.
-   * Невалидный ввод просто очищает поле.
+   * Устанавливает точные текущие хиты, временные не трогает.
+   *
+   * @param value новые текущие хиты.
    */
-  function applyExpression(): void {
-    const match = HIT_POINT_INPUT_PATTERN.exec(expression.value.trim());
-
-    if (!match) {
-      expression.value = '';
-
-      return;
-    }
-
-    const [, sign, digits] = match;
-    const amount = Number(digits);
-
-    if (sign === '-') {
-      applyDelta(-amount);
-    } else if (sign === '+') {
-      applyDelta(amount);
-    } else {
-      setHitPoints(amount, health.value.temporary);
-    }
-
-    expression.value = '';
+  function setCurrent(value: number): void {
+    setHitPoints(value, health.value.temporary);
   }
 </script>
 
@@ -140,25 +105,11 @@
           <div class="h-px flex-1 bg-default" />
         </div>
 
-        <!-- Поле точного значения / сдвига: «20» — установить, «-7» — урон. -->
-        <div class="flex gap-2">
-          <UInput
-            v-model="expression"
-            class="flex-1"
-            :placeholder="SHEET_HEALTH_QUICK_LABELS.expressionPlaceholder"
-            :ui="{ base: 'text-center' }"
-            :aria-label="SHEET_HEALTH_QUICK_LABELS.expressionAria"
-            @keydown.enter.prevent="applyExpression"
-          />
-
-          <UButton
-            label="OK"
-            color="neutral"
-            variant="subtle"
-            :disabled="!isExpressionValid"
-            @click.left.exact.prevent="applyExpression"
-          />
-        </div>
+        <!-- Калькулятор: ввёл число — нажал «Урон» или «Лечение». -->
+        <SheetHitPointsCalculator
+          @change="applyDelta"
+          @set="setCurrent"
+        />
       </div>
     </template>
 

@@ -3310,6 +3310,13 @@ export const SPELLCASTING_STAT_LABELS: Record<
 export const SPELLCASTING_TILE_LABELS = {
   edit: 'Настроить заклинательство',
   fixed: 'Заклинательство черты',
+  roll: 'Бросить атаку заклинанием',
+} as const;
+
+/** Окно броска атаки заклинанием: заголовок и надпись кнопки. */
+export const SPELL_ATTACK_ROLL_LABELS = {
+  title: 'Атака заклинанием',
+  action: 'Бросить атаку',
 } as const;
 
 /** Значение «Авто (по классу)» в селекте заклинательной характеристики. */
@@ -6268,10 +6275,23 @@ export const SHEET_SKELETON_LOADING_LABEL = 'Лист персонажа заг�
 /** Подписи окна быстрой правки хитов. */
 export const SHEET_HEALTH_QUICK_LABELS = {
   title: 'Хиты',
-  expression: 'Точное значение, + или −',
-  expressionPlaceholder: 'напр. -7, +3 или 20',
-  expressionAria: 'Новое значение хитов или сдвиг',
+  expression: 'Урон или лечение',
   done: 'Готово',
+} as const;
+
+/**
+ * Ввод калькулятора хитов: `28` — количество (или точное значение по Enter),
+ * `-28`/`+10` — урон/лечение по Enter.
+ */
+export const HIT_POINT_INPUT_PATTERN = /^([+-])?(\d+)$/;
+
+/** Подписи калькулятора урона и лечения в окнах хитов. */
+export const SHEET_HIT_POINTS_CALCULATOR_LABELS = {
+  placeholder: 'Сколько хитов',
+  aria: 'Количество урона или лечения',
+  damage: 'Урон',
+  heal: 'Лечение',
+  hint: 'Урон сначала снимает временные хиты. Enter: «-7» — урон, «+3» — лечение, «20» — точное значение.',
 } as const;
 
 /** Подписи окна владения и мастерства оружием. */

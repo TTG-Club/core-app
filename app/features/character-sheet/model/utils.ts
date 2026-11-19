@@ -93,6 +93,7 @@ import type {
   HitDiceAmount,
   HitDicePool,
   HitDiceSelectPool,
+  HitPointsExpression,
   HitPointsGainMode,
   InventoryArmor,
   InventoryBonusMode,
@@ -348,7 +349,9 @@ import {
   HEAVY_WEAPON_ABILITY_MINIMUM,
   HEAVY_WEAPON_RIDER_EFFECT_IDS,
   HIT_DICE_ROLL_COUNT,
+  HIT_POINT_INPUT_PATTERN,
   HIT_POINTS_LEVEL_GAIN_MIN,
+  HIT_POINTS_MIN,
   INNATE_SPELL_REMOVE_MENU_LABEL,
   INVENTORY_ACTIVE_MENU_LABELS,
   INVENTORY_ATTACK_ABILITY_MENU_LABEL,
@@ -6268,6 +6271,73 @@ export function getMaxHitPointsHint(character: Character): string | null {
  */
 function getMaxHitPointsBonus(character: Character): number {
   return getMaxHitPoints(character) - character.health.max;
+}
+
+/**
+ * Держит хиты в пределах: не ниже нуля и не выше максимума, если он известен.
+ *
+ * @param value новые хиты.
+ * @param max максимум хитов; `0` — неизвестен.
+ * @returns хиты в допустимых пределах.
+ */
+export function clampHitPoints(value: number, max: number): number {
+  return max > HIT_POINTS_MIN
+    ? clamp(value, HIT_POINTS_MIN, max)
+    : Math.max(HIT_POINTS_MIN, value);
+}
+
+/**
+ * Разбор ввода калькулятора хитов: `20` — точное значение текущих хитов,
+ * `-7` — урон, `+3` — лечение. Пробелы по краям не мешают.
+ *
+ * @param input текст из поля калькулятора.
+ * @returns число и сдвиг хитов или `null`, если ввод не подходит.
+ */
+export function parseHitPointsExpression(
+  input: string,
+): HitPointsExpression | null {
+  const match = HIT_POINT_INPUT_PATTERN.exec(input.trim());
+
+  if (!match) {
+    return null;
+  }
+
+  const [, sign, digits] = match;
+  const amount = Number(digits);
+
+  if (!sign) {
+    return { amount, delta: null };
+  }
+
+  return { amount, delta: sign === '-' ? -amount : amount };
+}
+
+/**
+ * Сдвиг хитов с учётом временных (PHB 2024): урон сначала снимает временные
+ * хиты, остаток — текущие (не ниже нуля); лечение восстанавливает только
+ * текущие (не выше максимума), временные хиты не лечатся. Общая математика
+ * листа персонажа и трекера инициативы.
+ *
+ * @param state текущие и временные хиты.
+ * @param delta сдвиг хитов (отрицательный — урон, положительный — лечение).
+ * @param max максимум хитов; `0` — неизвестен.
+ * @returns хиты после урона или лечения.
+ */
+export function applyHitPointsDelta<
+  State extends Pick<CharacterHealth, 'current' | 'temporary'>,
+>(state: State, delta: number, max: number): State {
+  if (delta >= 0) {
+    return { ...state, current: clampHitPoints(state.current + delta, max) };
+  }
+
+  const damage = -delta;
+  const absorbed = Math.min(state.temporary, damage);
+
+  return {
+    ...state,
+    current: clampHitPoints(state.current - (damage - absorbed), max),
+    temporary: state.temporary - absorbed,
+  };
 }
 
 /**

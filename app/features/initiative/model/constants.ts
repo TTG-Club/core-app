@@ -2,6 +2,9 @@ import type {
   ConditionExpiry,
   ConditionKey,
   ConditionOption,
+  ManualInitiativeMode,
+  ManualInitiativeModeTab,
+  ManualInitiativeRange,
   ParticipantColor,
   ParticipantType,
   SheetPlayerSource,
@@ -35,25 +38,97 @@ export const TRACKER_KEY_HEADER = 'X-Tracker-Key';
  * состояние узнавалось одинаково на столе и в трекере. Своей картинки в VTTG
  * нет у трёх состояний и у боевых эффектов сверх правил — у них, как и там,
  * иконка из `tabler`.
+ *
+ * `glossaryUrl` — адрес статьи глоссария с правилами состояния: окно
+ * состояний показывает её описание. Он есть у состояний из книги; у боевых
+ * эффектов сверх правил (ускорение, превращение и прочие) статьи нет.
  */
 export const CONDITION_CATALOG: Record<ConditionKey, ConditionOption> = {
-  blinded: { label: 'Ослеплённый', icon: 'ttg:status-blinded' },
-  bloodied: { label: 'Окровавленный', icon: 'tabler:droplet' },
-  charmed: { label: 'Очарованный', icon: 'ttg:status-charmed' },
-  deafened: { label: 'Оглохший', icon: 'ttg:status-deafened' },
-  exhaustion: { label: 'Истощённый', icon: 'ttg:status-exhaustion' },
-  frightened: { label: 'Испуганный', icon: 'ttg:status-frightened' },
-  grappled: { label: 'Схваченный', icon: 'ttg:status-grappled' },
-  incapacitated: { label: 'Недееспособный', icon: 'tabler:ban' },
-  invisible: { label: 'Невидимый', icon: 'tabler:eye-closed' },
-  paralyzed: { label: 'Парализованный', icon: 'ttg:status-paralyzed' },
-  petrified: { label: 'Окаменевший', icon: 'ttg:status-petrified' },
-  poisoned: { label: 'Отравленный', icon: 'ttg:status-poisoned' },
-  prone: { label: 'Лежащий ничком', icon: 'ttg:status-prone' },
-  restrained: { label: 'Опутанный', icon: 'ttg:status-restrained' },
-  stunned: { label: 'Ошеломлённый', icon: 'ttg:status-stunned' },
-  unconscious: { label: 'Бессознательный', icon: 'ttg:status-unconscious' },
-  concentration: { label: 'Концентрация', icon: 'tabler:brain' },
+  blinded: {
+    label: 'Ослеплённый',
+    icon: 'ttg:status-blinded',
+    glossaryUrl: 'blinded-phb',
+  },
+  bloodied: {
+    label: 'Окровавленный',
+    icon: 'tabler:droplet',
+    glossaryUrl: 'bloodied-phb',
+  },
+  charmed: {
+    label: 'Очарованный',
+    icon: 'ttg:status-charmed',
+    glossaryUrl: 'charmed-phb',
+  },
+  deafened: {
+    label: 'Оглохший',
+    icon: 'ttg:status-deafened',
+    glossaryUrl: 'deafened-phb',
+  },
+  exhaustion: {
+    label: 'Истощённый',
+    icon: 'ttg:status-exhaustion',
+    glossaryUrl: 'exhaustion-phb',
+  },
+  frightened: {
+    label: 'Испуганный',
+    icon: 'ttg:status-frightened',
+    glossaryUrl: 'frightened-phb',
+  },
+  grappled: {
+    label: 'Схваченный',
+    icon: 'ttg:status-grappled',
+    glossaryUrl: 'grappled-phb',
+  },
+  incapacitated: {
+    label: 'Недееспособный',
+    icon: 'tabler:ban',
+    glossaryUrl: 'incapacitated-phb',
+  },
+  invisible: {
+    label: 'Невидимый',
+    icon: 'tabler:eye-closed',
+    glossaryUrl: 'invisible-phb',
+  },
+  paralyzed: {
+    label: 'Парализованный',
+    icon: 'ttg:status-paralyzed',
+    glossaryUrl: 'paralyzed-phb',
+  },
+  petrified: {
+    label: 'Окаменевший',
+    icon: 'ttg:status-petrified',
+    glossaryUrl: 'petrified-phb',
+  },
+  poisoned: {
+    label: 'Отравленный',
+    icon: 'ttg:status-poisoned',
+    glossaryUrl: 'poisoned-phb',
+  },
+  prone: {
+    label: 'Лежащий ничком',
+    icon: 'ttg:status-prone',
+    glossaryUrl: 'prone-phb',
+  },
+  restrained: {
+    label: 'Опутанный',
+    icon: 'ttg:status-restrained',
+    glossaryUrl: 'restrained-phb',
+  },
+  stunned: {
+    label: 'Ошеломлённый',
+    icon: 'ttg:status-stunned',
+    glossaryUrl: 'stunned-phb',
+  },
+  unconscious: {
+    label: 'Бессознательный',
+    icon: 'ttg:status-unconscious',
+    glossaryUrl: 'unconscious-phb',
+  },
+  concentration: {
+    label: 'Концентрация',
+    icon: 'tabler:brain',
+    glossaryUrl: 'concentration-phb',
+  },
   hasted: { label: 'Ускоренный', icon: 'tabler:run' },
   slowed: { label: 'Замедленный', icon: 'tabler:hourglass-low' },
   enlarged: { label: 'Увеличенный', icon: 'tabler:arrows-maximize' },
@@ -132,7 +207,21 @@ export const CONDITION_LABELS = {
   expiry: 'Спадает',
   permanent: 'до снятия',
   remaining: 'ещё',
+  showDescription: 'Показать описание',
+  hideDescription: 'Скрыть описание',
+  descriptionError: 'Не удалось загрузить описание',
 } as const;
+
+/** Путь статьи глоссария: из неё берётся описание состояния. */
+export const GLOSSARY_API_PATH = '/api/v2/glossary';
+
+/**
+ * Оформление подсказки с описанием состояния в палитре: обычная подсказка —
+ * одна строка, а правила состояния — несколько абзацев и список.
+ */
+export const CONDITION_DESCRIPTION_TOOLTIP_UI = {
+  content: 'h-auto max-w-80 flex-col items-start gap-1 py-2',
+};
 
 /** Формы слова «раунд» для остатка длительности состояния. */
 export const CONDITION_ROUNDS_PLURAL: [string, string, string] = [
@@ -222,6 +311,34 @@ export const MIN_D20 = 1;
 
 /** Максимальное значение броска d20. */
 export const MAX_D20 = 20;
+
+/**
+ * Ключ localStorage с выбранным режимом ручного ввода инициативы: мастер
+ * обычно ведёт игру одним способом, и переключать его на каждой строке незачем.
+ */
+export const MANUAL_INITIATIVE_MODE_STORAGE_KEY =
+  'initiative:manual-entry-mode';
+
+/**
+ * Режим ручного ввода по умолчанию — итог: игроки кидают кости сами и называют
+ * готовое число.
+ */
+export const DEFAULT_MANUAL_INITIATIVE_MODE: ManualInitiativeMode = 'total';
+
+/** Вкладки переключателя ручного ввода инициативы. */
+export const MANUAL_INITIATIVE_MODE_TABS: Array<ManualInitiativeModeTab> = [
+  { label: 'Итог', value: 'total' },
+  { label: 'Кубик к20', value: 'roll' },
+];
+
+/** Подписи поля ручного ввода инициативы в каждом из режимов. */
+export const MANUAL_INITIATIVE_LABELS = {
+  total: 'Итог инициативы',
+  roll: 'Значение d20',
+  totalHint: (bonus: string, range: ManualInitiativeRange) =>
+    `Как назвал игрок, бонус ${bonus} уже внутри: от ${range.min} до ${range.max}`,
+  rollHint: (bonus: string) => `К выпавшему добавится бонус ${bonus}`,
+} as const;
 
 /** Минимальное количество существ в одной пачке добавления. */
 export const MIN_CREATURE_BATCH = 1;

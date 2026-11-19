@@ -1,3 +1,5 @@
+import type { RenderNode } from '~ui/markup';
+
 import type {
   AddParticipantRequest,
   TrackerDetailed,
@@ -9,11 +11,16 @@ import type {
 import { FetchError } from 'ofetch';
 
 import {
+  GLOSSARY_API_PATH,
   INITIATIVE_API_PATH,
   TRACKER_KEY_HEADER,
   UNKNOWN_ERROR_MESSAGE,
 } from './constants';
-import { parseTrackerDetailed, parseTrackerList } from './schemas';
+import {
+  parseConditionDescription,
+  parseTrackerDetailed,
+  parseTrackerList,
+} from './schemas';
 
 /**
  * Заголовки запроса к конкретному трекеру.
@@ -323,4 +330,16 @@ export async function resetTracker(
   });
 
   return parseTrackerDetailed(response);
+}
+
+/**
+ * Загружает описание состояния из статьи глоссария.
+ * @param glossaryUrl Адрес статьи глоссария.
+ */
+export async function fetchConditionDescription(
+  glossaryUrl: string,
+): Promise<Array<RenderNode>> {
+  const response = await $fetch<unknown>(`${GLOSSARY_API_PATH}/${glossaryUrl}`);
+
+  return parseConditionDescription(response);
 }

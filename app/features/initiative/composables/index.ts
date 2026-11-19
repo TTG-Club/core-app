@@ -1,3 +1,4 @@
+export * from './useConditionDescriptions';
 export * from './useCreatureDrawer';
 export * from './useCreatureSearch';
 export * from './useCreatureSummaries';

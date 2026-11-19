@@ -257,6 +257,13 @@ modals), so its capabilities are listed here rather than squeezed into the table
   (universal `SheetRollModal`). The ability picked in a weapon's attack roll is
   remembered on the inventory item (`attackAbility`) and drives its attack and
   damage tiles; the weapon row menu «Характеристика атаки» sets it without a roll.
+  The spellcasting attack tile of the spells tab rolls a spell attack per class
+  row (`roll-spell-attack`; advantage/disadvantage from `attack.spell.*` effects).
+- Both hit point modals share `SheetHitPointsCalculator` (amount + «Урон» /
+  «Лечение»; Enter takes `-7` / `+3` / `20`, parsed by
+  `parseHitPointsExpression`). The math is `applyHitPointsDelta` /
+  `clampHitPoints` in `~character-sheet/model` — damage eats temporary hit
+  points first; the initiative tracker uses the same functions.
 - «Калькулятор характеристик» in the sheet action menu (`SheetAbilityScoresModal`) sets
   all six scores the way `/calculators/abilities` does. The three generators
   (random roll / standard array / point buy) plus the resulting summary live in

@@ -1,11 +1,17 @@
 <script setup lang="ts">
   import type { TrackerParticipant } from '~initiative/model';
 
-  import { clamp } from 'es-toolkit';
-
   import {
+    DEFAULT_MANUAL_INITIATIVE_MODE,
+    formatInitiativeBonus,
+    getManualInitiativeRange,
+    getManualInitiativeValue,
+    getRollFromManualInitiative,
+    isManualInitiativeMode,
     isParticipantRolled,
-    MAX_D20,
+    MANUAL_INITIATIVE_LABELS,
+    MANUAL_INITIATIVE_MODE_STORAGE_KEY,
+    MANUAL_INITIATIVE_MODE_TABS,
     MIN_D20,
     rollD20,
   } from '~initiative/model';
@@ -22,10 +28,49 @@
     'set-roll': [id: string, roll: number];
   }>();
 
+  // Режим ручного ввода общий для всех строк и переживает перезагрузку:
+  // мастер обычно ведёт игру одним способом.
+  const storedMode = useLocalStorage<string>(
+    MANUAL_INITIATIVE_MODE_STORAGE_KEY,
+    DEFAULT_MANUAL_INITIATIVE_MODE,
+  );
+
+  const manualMode = computed(() =>
+    isManualInitiativeMode(storedMode.value)
+      ? storedMode.value
+      : DEFAULT_MANUAL_INITIATIVE_MODE,
+  );
+
+  const draftRange = computed(() =>
+    getManualInitiativeRange(manualMode.value, participant.initiativeBonus),
+  );
+
+  const draftLabel = computed(() => MANUAL_INITIATIVE_LABELS[manualMode.value]);
+
+  const draftHint = computed(() => {
+    const bonus = formatInitiativeBonus(participant.initiativeBonus);
+
+    return manualMode.value === 'total'
+      ? MANUAL_INITIATIVE_LABELS.totalHint(bonus, draftRange.value)
+      : MANUAL_INITIATIVE_LABELS.rollHint(bonus);
+  });
+
+  /**
+   * Стартовое значение поля: текущий бросок (или 1, если не брошено) — в
+   * режиме итога вместе с бонусом.
+   */
+  function getInitialDraft(): number {
+    return getManualInitiativeValue(
+      manualMode.value,
+      participant.initiativeRoll ?? MIN_D20,
+      participant.initiativeBonus,
+    );
+  }
+
   const isOpen = ref(false);
-  const rollDraft = ref(participant.initiativeRoll ?? MIN_D20);
+  const manualDraft = ref(getInitialDraft());
   // Флаг «пользователь коснулся поля»: без него «ОК» без правки у ещё не
-  // брошенного участника молча выставил бы бросок 1 (дефолт rollDraft).
+  // брошенного участника молча выставил бы бросок 1 (дефолт manualDraft).
   const isDraftDirty = ref(false);
 
   const isRolled = computed(() => isParticipantRolled(participant));
@@ -43,19 +88,30 @@
   // При открытии синхронизируем поле с текущим броском и сбрасываем «грязность».
   // Закрытый поповер draft не показывает, поэтому этого достаточно и для ресинка
   // после ответа сервера, и для отката после неуспешной мутации.
-  watch(isOpen, (open) => {
+  // Смена режима тоже пересчитывает поле: число в нём меняет смысл.
+  watch([isOpen, manualMode], ([open]) => {
     if (open) {
-      rollDraft.value = participant.initiativeRoll ?? MIN_D20;
+      manualDraft.value = getInitialDraft();
       isDraftDirty.value = false;
     }
   });
+
+  /**
+   * Запоминает выбранный режим ручного ввода.
+   * @param value Значение вкладки переключателя.
+   */
+  function onModeChange(value: string | number): void {
+    if (isManualInitiativeMode(value)) {
+      storedMode.value = value;
+    }
+  }
 
   function onDraftInput(value: number | null): void {
     if (typeof value !== 'number' || Number.isNaN(value)) {
       return;
     }
 
-    rollDraft.value = value;
+    manualDraft.value = value;
     isDraftDirty.value = true;
   }
 
@@ -91,10 +147,16 @@
       return;
     }
 
-    const clamped = clamp(rollDraft.value, MIN_D20, MAX_D20);
+    // Итог уходит на сервер броском (итог − бонус): сервер хранит итог как
+    // «бросок + бонус», поэтому сортировка и переброс работают как обычно.
+    const roll = getRollFromManualInitiative(
+      manualMode.value,
+      manualDraft.value,
+      participant.initiativeBonus,
+    );
 
-    if (clamped !== participant.initiativeRoll) {
-      emit('set-roll', participant.id, clamped);
+    if (roll !== participant.initiativeRoll) {
+      emit('set-roll', participant.id, roll);
     }
   }
 </script>
@@ -175,23 +237,39 @@
             <div class="h-px flex-1 bg-default" />
           </div>
 
-          <div class="flex gap-2">
-            <UInputNumber
-              :model-value="rollDraft"
-              :min="MIN_D20"
-              :max="MAX_D20"
-              class="flex-1"
-              aria-label="Значение d20"
-              @update:model-value="onDraftInput"
-            />
+          <!-- Что вписывается: итог, названный игроком, или выпавшее на к20. -->
+          <UTabs
+            :model-value="manualMode"
+            :items="MANUAL_INITIATIVE_MODE_TABS"
+            :content="false"
+            size="xs"
+            class="w-full"
+            @update:model-value="onModeChange"
+          />
 
-            <UButton
-              color="neutral"
-              variant="subtle"
-              @click.left.exact.prevent="applyManual"
-            >
-              ОК
-            </UButton>
+          <div class="flex flex-col gap-1">
+            <div class="flex gap-2">
+              <UInputNumber
+                :model-value="manualDraft"
+                :min="draftRange.min"
+                :max="draftRange.max"
+                class="flex-1"
+                :aria-label="draftLabel"
+                @update:model-value="onDraftInput"
+              />
+
+              <UButton
+                color="neutral"
+                variant="subtle"
+                @click.left.exact.prevent="applyManual"
+              >
+                ОК
+              </UButton>
+            </div>
+
+            <span class="text-xs text-dimmed">
+              {{ draftHint }}
+            </span>
           </div>
         </div>
       </template>

@@ -10,6 +10,7 @@
     SheetPdfVariant,
     SheetRollContext,
     SkillRow,
+    SpellcastingClassRow,
     SpellDamageRoll,
   } from '../model';
 
@@ -50,6 +51,7 @@
     SHEET_BODY_LABELS,
     SHEET_EDIT_REVOKED_TOAST,
     SHEET_REMOVE_CONFIRM_TITLE,
+    SPELL_ATTACK_ROLL_LABELS,
   } from '../model';
   import CharacterSheetSkeleton from './CharacterSheetSkeleton.vue';
   import {
@@ -1022,6 +1024,38 @@
     });
   }
 
+  /**
+   * Бросок атаки заклинанием: тот же к20 с модификатором, что у оружия, а
+   * преимущество и помеху дают эффекты атаки заклинанием (`attack.spell.*`).
+   * Ячейку не тратит — её тратит бросок урона, он и есть накладывание.
+   *
+   * @param row строка заклинательства: бонус атаки и характеристика класса.
+   */
+  function handleSpellAttackRoll(row: SpellcastingClassRow) {
+    if (!row.ability) {
+      return;
+    }
+
+    const attackContext: SheetRollContext = {
+      kind: 'attack',
+      attackType: 'spell',
+    };
+
+    rollModal.open({
+      sheetKey,
+      // У мультикласса бонус свой у каждого класса: заголовок называет чей
+      title:
+        spellcastingBreakdown.value.rows.length > 1
+          ? `${SPELL_ATTACK_ROLL_LABELS.title}: ${row.className}`
+          : SPELL_ATTACK_ROLL_LABELS.title,
+      modifier: row.attackBonus,
+      ability: row.ability,
+      actionLabel: SPELL_ATTACK_ROLL_LABELS.action,
+      mode: getRollMode(attackContext),
+      modeSources: getRollModeSources(attackContext),
+    });
+  }
+
   function handleItemDamageRoll(inventoryItem: CharacterInventoryItem) {
     const damage = inventoryItem.weapon
       ? getWeaponDamageSource(
@@ -1649,6 +1683,7 @@
           @copy-innate-spell="handleInnateSpellCopy"
           @remove-innate-spell="removeInnateSpell"
           @roll-spell-damage="handleSpellDamageRoll"
+          @roll-spell-attack="handleSpellAttackRoll"
           @toggle-spell-prepared="toggleSpellPrepared"
           @toggle-innate-spell-prepared="toggleInnateSpellPrepared"
           @toggle-spell-slot="toggleSpellSlot"

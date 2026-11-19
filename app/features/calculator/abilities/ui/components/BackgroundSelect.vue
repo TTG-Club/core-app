@@ -6,7 +6,16 @@
     CalculatorBackgroundOption,
   } from '../../model';
 
-  import { ABILITY_LABELS, AbilityKey } from '~/shared/types';
+  import { ABILITY_KEYS, AbilityKey } from '~/shared/types';
+
+  import {
+    BACKGROUND_THREE_ONES_COUNT,
+    CUSTOM_BACKGROUND_LABELS,
+    CUSTOM_BACKGROUND_SOURCE_ID,
+    formatAbilityBonusLabel,
+    getBackgroundSourceLabel,
+    getThreeOnesAbilityOptions,
+  } from '../../model';
 
   const { background, backgroundOptions, loading } = defineProps<{
     background: CalculatorAbilitiesBackground | undefined;
@@ -24,7 +33,24 @@
   const plusTwoStat = ref<AbilityKey | undefined>(undefined);
   const plusOneStat = ref<AbilityKey | undefined>(undefined);
 
+  /**
+   * Своя предыстория: бонусы распределяются между любыми характеристиками,
+   * без выбора записи из списка.
+   */
+  const isCustomBackground = ref(false);
+  const threeOnesStats = ref<AbilityKey[]>([]);
+
+  const hasBonusSource = computed(
+    () => isCustomBackground.value || !!background,
+  );
+
+  const hasThreeOnesStats = computed(() => threeOnesStats.value.length > 0);
+
   const availableAbilities = computed<AbilityKey[]>(() => {
+    if (isCustomBackground.value) {
+      return ABILITY_KEYS;
+    }
+
     if (
       !background?.abilityScores
       || !Array.isArray(background.abilityScores)
@@ -42,35 +68,73 @@
   });
 
   const canChooseThreeOnes = computed(
-    () => availableAbilities.value.length >= 3,
+    () => availableAbilities.value.length >= BACKGROUND_THREE_ONES_COUNT,
   );
 
   const canChooseTwoOne = computed(() => availableAbilities.value.length >= 2);
 
-  watch(
-    () => background,
-    () => {
-      plusTwoStat.value = undefined;
-      plusOneStat.value = undefined;
+  watch([() => background, isCustomBackground], () => {
+    plusTwoStat.value = undefined;
+    plusOneStat.value = undefined;
+    threeOnesStats.value = [];
 
-      if (canChooseTwoOne.value) {
-        asiChoice.value = 'two_one';
-      } else if (canChooseThreeOnes.value) {
-        asiChoice.value = 'three_ones';
-      }
-    },
-  );
+    if (canChooseTwoOne.value) {
+      asiChoice.value = 'two_one';
+    } else if (canChooseThreeOnes.value) {
+      asiChoice.value = 'three_ones';
+    }
+  });
+
+  /**
+   * Переключает свою предысторию. Она заменяет выбранную из списка,
+   * а не дополняет её, поэтому выбор из списка сбрасывается.
+   *
+   * @param isCustom - Включена ли своя предыстория.
+   */
+  function handleCustomBackgroundToggle(isCustom: boolean) {
+    isCustomBackground.value = isCustom;
+
+    if (isCustom) {
+      selectedBackgroundUrl.value = undefined;
+    }
+  }
+
+  /** Характеристики, получающие +1 в варианте «+1 / +1 / +1». */
+  const threeOnesAbilities = computed<AbilityKey[]>(() => {
+    if (isCustomBackground.value) {
+      return threeOnesStats.value.slice(0, BACKGROUND_THREE_ONES_COUNT);
+    }
+
+    return availableAbilities.value.slice(0, BACKGROUND_THREE_ONES_COUNT);
+  });
+
+  const sourceIdentity = computed(() => {
+    if (isCustomBackground.value) {
+      return {
+        id: CUSTOM_BACKGROUND_SOURCE_ID,
+        label: getBackgroundSourceLabel(CUSTOM_BACKGROUND_LABELS.SOURCE_NAME),
+      };
+    }
+
+    if (background) {
+      return {
+        id: background.url,
+        label: getBackgroundSourceLabel(background.name.rus),
+      };
+    }
+
+    return undefined;
+  });
 
   const calculatedBonuses = computed<BonusSource[]>(() => {
-    if (!background) {
+    if (!sourceIdentity.value) {
       return [];
     }
 
     const bonuses: Partial<AbilityScores> = {};
-    const bgName = background.name.rus;
 
     if (asiChoice.value === 'three_ones' && canChooseThreeOnes.value) {
-      for (const key of availableAbilities.value.slice(0, 3)) {
+      for (const key of threeOnesAbilities.value) {
         bonuses[key] = (bonuses[key] || 0) + 1;
       }
     } else if (asiChoice.value === 'two_one' && canChooseTwoOne.value) {
@@ -85,8 +149,7 @@
 
     return [
       {
-        id: background.url,
-        label: `Предыстория: ${bgName}`,
+        ...sourceIdentity.value,
         type: 'background',
         scores: bonuses,
       },
@@ -129,20 +192,24 @@
 
   const plusTwoOptions = computed(() =>
     availableForPlusTwo.value.map((key) => ({
-      label: `${ABILITY_LABELS[key]} (+2)`,
+      label: formatAbilityBonusLabel(key, 2),
       value: key,
     })),
   );
 
   const plusOneOptions = computed(() =>
     availableForPlusOne.value.map((key) => ({
-      label: `${ABILITY_LABELS[key]} (+1)`,
+      label: formatAbilityBonusLabel(key, 1),
       value: key,
     })),
   );
 
+  const threeOnesOptions = computed(() =>
+    getThreeOnesAbilityOptions(threeOnesStats.value),
+  );
+
   function getAutomaticBonusDescription(abilities: AbilityKey[]): string {
-    return abilities.map((key) => `${ABILITY_LABELS[key]} (+1)`).join(', ');
+    return abilities.map((key) => formatAbilityBonusLabel(key, 1)).join(', ');
   }
 </script>
 
@@ -158,6 +225,7 @@
           v-model="selectedBackgroundUrl"
           :items="backgroundOptions"
           :loading="loading"
+          :disabled="isCustomBackground"
           placeholder="Выберите предысторию"
           searchable
           class="w-full"
@@ -182,18 +250,26 @@
           @click.left.exact.prevent="selectedBackgroundUrl = undefined"
         />
       </UFieldGroup>
+
+      <USwitch
+        :model-value="isCustomBackground"
+        :label="CUSTOM_BACKGROUND_LABELS.SWITCH"
+        :description="CUSTOM_BACKGROUND_LABELS.SWITCH_DESCRIPTION"
+        size="sm"
+        @update:model-value="handleCustomBackgroundToggle"
+      />
     </div>
 
     <div class="border-t border-default" />
 
     <div
       class="flex flex-col gap-4"
-      :class="{ 'pointer-events-none opacity-50 grayscale': !background }"
+      :class="{ 'pointer-events-none opacity-50 grayscale': !hasBonusSource }"
     >
       <div class="text-sm font-semibold">Бонусы предыстории</div>
 
       <div
-        v-if="background"
+        v-if="hasBonusSource"
         class="flex flex-col gap-3"
       >
         <div class="flex flex-col gap-2">
@@ -250,6 +326,27 @@
           </UFieldGroup>
         </div>
 
+        <UFieldGroup
+          v-else-if="isCustomBackground"
+          class="w-full"
+        >
+          <USelect
+            v-model="threeOnesStats"
+            :items="threeOnesOptions"
+            :placeholder="CUSTOM_BACKGROUND_LABELS.THREE_ONES_PLACEHOLDER"
+            multiple
+            class="w-full"
+          />
+
+          <UButton
+            v-if="hasThreeOnesStats"
+            icon="tabler:x"
+            color="neutral"
+            variant="subtle"
+            @click.left.exact.prevent="threeOnesStats = []"
+          />
+        </UFieldGroup>
+
         <div
           v-else
           class="text-xs text-secondary"
@@ -263,7 +360,7 @@
         v-else
         class="text-sm text-secondary"
       >
-        Выберите предысторию выше, чтобы настроить бонусы.
+        {{ CUSTOM_BACKGROUND_LABELS.EMPTY_HINT }}
       </div>
     </div>
   </div>

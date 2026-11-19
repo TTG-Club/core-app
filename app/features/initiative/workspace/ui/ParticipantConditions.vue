@@ -7,6 +7,7 @@
 
   import {
     CONDITION_CATALOG,
+    CONDITION_DESCRIPTION_TOOLTIP_UI,
     CONDITION_EXPIRY_LABEL,
     CONDITION_EXPIRY_OPTIONS,
     CONDITION_KEYS,
@@ -18,6 +19,7 @@
     MIN_CONDITION_ROUNDS,
   } from '~initiative/model';
 
+  import ConditionDescription from './ConditionDescription.vue';
   import ParticipantStatTile from './ParticipantStatTile.vue';
 
   const {
@@ -52,6 +54,10 @@
   const rounds = ref<number | undefined>(DEFAULT_CONDITION_ROUNDS);
   const expiry = ref<ConditionExpiry>(DEFAULT_CONDITION_EXPIRY);
 
+  // Наложенные состояния, у которых раскрыто описание. Раскрытие касанием, а не
+  // подсказкой при наведении: на телефоне наведения нет.
+  const expandedKeys = ref<Set<ConditionKey>>(new Set());
+
   const roundsValue = computed(() => rounds.value ?? DEFAULT_CONDITION_ROUNDS);
 
   const isTimed = computed(() => roundsValue.value > 0);
@@ -59,6 +65,44 @@
   const appliedKeys = computed(
     () => new Set(conditions.map((condition) => condition.key)),
   );
+
+  // Наложенные вместе со справочной записью и готовыми подписями. Адрес
+  // раскрытого описания отдельным полем: в шаблоне он сужается до строки только
+  // у поля объекта, не у выборки по ключу.
+  const appliedRows = computed(() =>
+    conditions.map((condition) => {
+      const option = CONDITION_CATALOG[condition.key];
+      const isExpanded = expandedKeys.value.has(condition.key);
+
+      const expandAction = isExpanded
+        ? CONDITION_LABELS.hideDescription
+        : CONDITION_LABELS.showDescription;
+
+      return {
+        condition,
+        option,
+        isExpanded,
+        expandIcon: isExpanded ? 'tabler:chevron-up' : 'tabler:chevron-down',
+        expandLabel: `${expandAction}: ${option.label}`,
+        removeLabel: `${CONDITION_LABELS.remove}: ${option.label}`,
+        expandedGlossaryUrl: isExpanded ? option.glossaryUrl : undefined,
+      };
+    }),
+  );
+
+  // Палитра со справочной записью и оформлением подсказки: с описанием она
+  // шире и в несколько строк, без него — обычная однострочная.
+  const paletteRows = CONDITION_KEYS.map((key) => {
+    const option = CONDITION_CATALOG[key];
+
+    return {
+      key,
+      option,
+      tooltipUi: option.glossaryUrl
+        ? CONDITION_DESCRIPTION_TOOLTIP_UI
+        : undefined,
+    };
+  });
 
   const hasConditions = computed(() => conditions.length > 0);
 
@@ -118,6 +162,22 @@
    */
   function paletteVariant(key: ConditionKey): 'soft' | 'ghost' {
     return appliedKeys.value.has(key) ? 'soft' : 'ghost';
+  }
+
+  /**
+   * Раскрывает или сворачивает описание наложенного состояния.
+   * @param key Ключ состояния.
+   */
+  function toggleDescription(key: ConditionKey): void {
+    const next = new Set(expandedKeys.value);
+
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+
+    expandedKeys.value = next;
   }
 
   /**
@@ -200,32 +260,55 @@
             class="flex max-h-52 flex-col gap-1 overflow-y-auto"
           >
             <div
-              v-for="condition in conditions"
-              :key="condition.key"
-              class="flex items-center gap-2 rounded-md bg-elevated py-1 pr-1 pl-2"
+              v-for="row in appliedRows"
+              :key="row.condition.key"
+              class="shrink-0 rounded-md bg-elevated"
             >
-              <UIcon
-                :name="CONDITION_CATALOG[condition.key].icon"
-                class="size-5 shrink-0 text-warning"
-              />
+              <div class="flex items-center gap-2 py-1 pr-1 pl-2">
+                <UIcon
+                  :name="row.option.icon"
+                  class="size-5 shrink-0 text-warning"
+                />
 
-              <div class="min-w-0 flex-1">
-                <div class="truncate text-sm font-medium text-highlighted">
-                  {{ CONDITION_CATALOG[condition.key].label }}
+                <div class="min-w-0 flex-1">
+                  <div class="truncate text-sm font-medium text-highlighted">
+                    {{ row.option.label }}
+                  </div>
+
+                  <div class="truncate text-xs text-muted">
+                    {{ remainingText(row.condition) }}
+                  </div>
                 </div>
 
-                <div class="truncate text-xs text-muted">
-                  {{ remainingText(condition) }}
-                </div>
+                <!-- Описание раскрывается касанием: подсказки при наведении
+                     на телефоне нет. Только у состояний из правил — у боевых
+                     эффектов сверх них статьи в глоссарии нет. -->
+                <UButton
+                  v-if="row.option.glossaryUrl"
+                  :icon="row.expandIcon"
+                  color="neutral"
+                  variant="ghost"
+                  :aria-label="row.expandLabel"
+                  :aria-expanded="row.isExpanded"
+                  @click.left.exact.prevent="
+                    toggleDescription(row.condition.key)
+                  "
+                />
+
+                <UButton
+                  icon="tabler:x"
+                  color="neutral"
+                  variant="ghost"
+                  :disabled
+                  :aria-label="row.removeLabel"
+                  @click.left.exact.prevent="remove(row.condition.key)"
+                />
               </div>
 
-              <UButton
-                icon="tabler:x"
-                color="neutral"
-                variant="ghost"
-                :disabled
-                :aria-label="`${CONDITION_LABELS.remove}: ${CONDITION_CATALOG[condition.key].label}`"
-                @click.left.exact.prevent="remove(condition.key)"
+              <ConditionDescription
+                v-if="row.expandedGlossaryUrl"
+                :glossary-url="row.expandedGlossaryUrl"
+                class="px-2 pb-2"
               />
             </div>
           </div>
@@ -269,19 +352,36 @@
           </div>
 
           <div class="grid grid-cols-5 gap-1 sm:grid-cols-7">
+            <!-- На наведение подсказка показывает и правила состояния:
+                 выбрать можно, не накладывая. Грузится статья, только когда
+                 подсказку открыли, — задержка подсказки не даёт грузить всё
+                 подряд, пока мышь идёт по сетке. На телефоне описание
+                 раскрывается в списке наложенного. -->
             <UTooltip
-              v-for="key in CONDITION_KEYS"
-              :key="key"
-              :text="CONDITION_CATALOG[key].label"
+              v-for="row in paletteRows"
+              :key="row.key"
+              :text="row.option.label"
+              :ui="row.tooltipUi"
             >
+              <template
+                v-if="row.option.glossaryUrl"
+                #content
+              >
+                <span class="font-medium text-highlighted">
+                  {{ row.option.label }}
+                </span>
+
+                <ConditionDescription :glossary-url="row.option.glossaryUrl" />
+              </template>
+
               <UButton
                 class="w-full justify-center"
-                :icon="CONDITION_CATALOG[key].icon"
-                :color="paletteColor(key)"
-                :variant="paletteVariant(key)"
+                :icon="row.option.icon"
+                :color="paletteColor(row.key)"
+                :variant="paletteVariant(row.key)"
                 :disabled
-                :aria-label="CONDITION_CATALOG[key].label"
-                @click.left.exact.prevent="add(key)"
+                :aria-label="row.option.label"
+                @click.left.exact.prevent="add(row.key)"
               />
             </UTooltip>
           </div>

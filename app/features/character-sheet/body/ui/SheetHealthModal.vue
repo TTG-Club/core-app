@@ -3,6 +3,8 @@
 
   import { useCharacterSheet } from '../../composables';
   import {
+    applyHitPointsDelta,
+    clampHitPoints,
     getMaxHitPoints,
     getMaxHitPointsHint,
     HIT_DICE_COUNT_MAX,
@@ -14,6 +16,7 @@
     MAX_HIT_POINTS_LABELS,
     SHEET_HEALTH_MODAL_LABELS,
   } from '../../model';
+  import SheetHitPointsCalculator from './SheetHitPointsCalculator.vue';
 
   const { sheetKey } = defineProps<{
     /** Ключ открытого листа: с каким листом работает компонент. */
@@ -52,16 +55,26 @@
   );
 
   /**
-   * Быстрое изменение текущих хитов в редакторе: значение ограничивается
-   * диапазоном [0, макс].
+   * Быстрое изменение хитов в редакторе: урон сперва снимает временные хиты,
+   * остаток — текущие (не ниже нуля); лечение поднимает текущие до максимума.
    *
-   * @param step смещение хитов (отрицательное — урон, положительное — лечение).
+   * @param delta смещение хитов (отрицательное — урон, положительное — лечение).
    */
-  function adjustCurrent(step: number): void {
-    draftHealth.value.current = Math.min(
+  function adjustCurrent(delta: number): void {
+    draftHealth.value = applyHitPointsDelta(
+      draftHealth.value,
+      delta,
       maxHitPointsTotal.value,
-      Math.max(HIT_POINTS_MIN, draftHealth.value.current + step),
     );
+  }
+
+  /**
+   * Точное значение текущих хитов из калькулятора, временные не трогает.
+   *
+   * @param value новые текущие хиты.
+   */
+  function setCurrent(value: number): void {
+    draftHealth.value.current = clampHitPoints(value, maxHitPointsTotal.value);
   }
 
   function handleAddClassDie() {
@@ -175,6 +188,12 @@
             />
           </div>
         </div>
+
+        <!-- Калькулятор: ввёл число — нажал «Урон» или «Лечение». -->
+        <SheetHitPointsCalculator
+          @change="adjustCurrent"
+          @set="setCurrent"
+        />
 
         <USeparator />
 
