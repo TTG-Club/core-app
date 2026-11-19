@@ -126,6 +126,18 @@ async function loadDocsIndex(
 }
 
 /**
+ * Стоит ли держать в кеше прочитанное оглавление: только настоящее, а не
+ * «канала ещё нет».
+ *
+ * @param cachedIndex значение из кеша
+ */
+function isVttgDocsIndexCached(
+  cachedIndex: VttgDocsIndex | null | undefined,
+): boolean {
+  return Boolean(cachedIndex);
+}
+
+/**
  * Оглавление канала с кешем Nitro: его читает каждый заход в раздел.
  * `null` — канал ещё не выкладывался.
  */
@@ -133,6 +145,10 @@ export const getVttgDocsIndex = defineCachedFunction(loadDocsIndex, {
   name: VTTG_DOCS_INDEX_CACHE_NAME,
   getKey: (channel: VttgDocsChannel) => channel,
   maxAge: VTTG_DOCS_INDEX_CACHE_MAX_AGE_SECONDS,
+  // «Канал ещё не выкладывался» не запоминается: иначе первая выкладка VTTG
+  // появилась бы на сайте только через срок кеша (а с `swr` — ещё на один
+  // запрос позже). Пока канала нет, файл перечитывается на каждый заход.
+  validate: (cacheEntry) => isVttgDocsIndexCached(cacheEntry.value),
 });
 
 /**
