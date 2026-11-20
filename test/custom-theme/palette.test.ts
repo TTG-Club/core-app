@@ -44,6 +44,30 @@ const VIVID: CustomThemeSettings = {
   accent: '#4e99a3',
 };
 
+/**
+ * Фоны сверх готовых: готовых в панели всего три, а свой цвет можно набрать
+ * любой — проверяем и чёрный, цветные тёмные и цветные светлые.
+ */
+const EXTRA_BACKGROUNDS = [
+  { label: 'Чёрный', value: '#0b0b0b' },
+  { label: 'Лес', value: '#0c1c12' },
+  { label: 'Вино', value: '#250e12' },
+  { label: 'Какао', value: '#24180f' },
+  { label: 'Пергамент', value: '#f8edd8' },
+  { label: 'Мята', value: '#e2f8ef' },
+  { label: 'Белый', value: '#fcfcfc' },
+] as const;
+
+/**
+ * Акценты сверх готовых: красный, оранжевый и бирюзовый ближе всего к цветам
+ * состояний, их тоже надо проверять.
+ */
+const EXTRA_ACCENTS = [
+  { label: 'Оранжевый', value: '#f19357' },
+  { label: 'Бирюзовый', value: '#4e99a3' },
+  { label: 'Красный', value: '#d0565f' },
+] as const;
+
 /** Допуск на округление цвета до 8 бит на канал. */
 const ROUNDING = 1;
 
@@ -112,10 +136,12 @@ describe('createCustomThemePalette', () => {
     WARM,
     LIGHT,
     VIVID,
-    ...CUSTOM_THEME_BACKGROUND_PRESETS.map((preset) => ({
-      background: preset.value,
-      accent: DEFAULT.accent,
-    })),
+    ...[...CUSTOM_THEME_BACKGROUND_PRESETS, ...EXTRA_BACKGROUNDS].map(
+      (preset) => ({
+        background: preset.value,
+        accent: DEFAULT.accent,
+      }),
+    ),
   ])(
     'уровни текста держат пороги контраста: $background $accent',
     (settings) => {
@@ -271,7 +297,7 @@ describe('createCustomThemePalette', () => {
   it.each([DEFAULT, LIGHT])(
     'ни один цвет состояния не совпадает с акцентом по оттенку: $background',
     (settings) => {
-      for (const preset of CUSTOM_THEME_ACCENT_PRESETS) {
+      for (const preset of [...CUSTOM_THEME_ACCENT_PRESETS, ...EXTRA_ACCENTS]) {
         const palette = createCustomThemePalette({
           ...settings,
           accent: preset.value,

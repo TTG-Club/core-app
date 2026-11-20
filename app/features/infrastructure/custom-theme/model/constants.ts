@@ -42,18 +42,14 @@ export const CUSTOM_THEME_DEFAULT_SETTINGS: CustomThemeSettings = {
   accent: '#d7b06c',
 };
 
-/** Готовые фоны для быстрого выбора: сначала тёмные, потом светлые. */
+/**
+ * Готовые фоны для быстрого выбора — три непохожих, чтобы ряд кружков с полем
+ * кода влезал в панель настроек: графит и бумага тем сайта и синяя ночь.
+ */
 export const CUSTOM_THEME_BACKGROUND_PRESETS = [
   { label: 'Графит', value: '#15171b' },
-  { label: 'Чёрный', value: '#0b0b0b' },
   { label: 'Ночь', value: '#0d1626' },
-  { label: 'Лес', value: '#0c1c12' },
-  { label: 'Вино', value: '#250e12' },
-  { label: 'Какао', value: '#24180f' },
   { label: 'Бумага', value: '#f5f8fe' },
-  { label: 'Пергамент', value: '#f8edd8' },
-  { label: 'Мята', value: '#e2f8ef' },
-  { label: 'Белый', value: '#fcfcfc' },
 ] as const;
 
 /**
@@ -186,14 +182,15 @@ export const CUSTOM_THEME_ANCHOR_STEP: Record<CustomThemeBase, number> = {
   light: 500,
 };
 
-/** Готовые акценты для быстрого выбора. */
+/**
+ * Готовые акценты для быстрого выбора — пять далёких друг от друга оттенков,
+ * чтобы ряд кружков с полем кода влезал в панель настроек. Золото — акцент
+ * тем сайта.
+ */
 export const CUSTOM_THEME_ACCENT_PRESETS = [
   { label: 'Золото', value: '#d7b06c' },
   { label: 'Терракота', value: '#c96442' },
-  { label: 'Оранжевый', value: '#f19357' },
-  { label: 'Бирюзовый', value: '#4e99a3' },
+  { label: 'Зелёный', value: '#5fa86a' },
   { label: 'Синий', value: '#5691c7' },
   { label: 'Фиолетовый', value: '#9b7fd4' },
-  { label: 'Зелёный', value: '#5fa86a' },
-  { label: 'Красный', value: '#d0565f' },
 ] as const;

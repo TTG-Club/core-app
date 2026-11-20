@@ -8,20 +8,20 @@
     CUSTOM_THEME_HEX_ERROR_HINT,
     CUSTOM_THEME_HEX_FIELD_STATE,
     CUSTOM_THEME_HEX_INPUT,
-    CUSTOM_THEME_PICKER_BUTTON,
     CUSTOM_THEME_PICKER_POPOVER_CONTENT,
     CUSTOM_THEME_SWATCH_CLASS,
+    CUSTOM_THEME_SWATCH_SHAPE_CLASS,
   } from './constants';
 
   /**
-   * Выбор цвета своей темы: кружки готовых цветов, кнопка с палитрой для
-   * любого другого и поле для кода цвета. Если цвет не из готовых, подсвечена
-   * кнопка палитры.
+   * Выбор цвета своей темы в один ряд: кружки готовых цветов, поле для кода
+   * цвета и кружок текущего цвета, который открывает палитру для любого
+   * другого. Если цвет не из готовых, обведён кружок текущего цвета.
    */
   const { presets, pickerLabel, hexLabel } = defineProps<{
     /** Готовые цвета */
     presets: ReadonlyArray<{ label: string; value: string }>;
-    /** Подпись кнопки своего цвета */
+    /** Подпись кружка текущего цвета, открывающего палитру */
     pickerLabel: string;
     /** Подпись поля кода цвета */
     hexLabel: string;
@@ -30,6 +30,18 @@
   /** Цвет в формате `#rrggbb` */
   const model = defineModel<string>({ required: true });
 
+  /**
+   * Обводка кружка цвета.
+   *
+   * @param isSelected Выбран ли цвет кружка.
+   * @returns Классы обводки.
+   */
+  function getSwatchOutlineClass(isSelected: boolean): string {
+    return isSelected
+      ? CUSTOM_THEME_SWATCH_CLASS.selected
+      : CUSTOM_THEME_SWATCH_CLASS.idle;
+  }
+
   const swatches = computed(() =>
     presets.map((preset) => {
       const isSelected = preset.value === model.value;
@@ -37,17 +49,17 @@
       return {
         ...preset,
         isSelected,
-        outlineClass: isSelected
-          ? CUSTOM_THEME_SWATCH_CLASS.selected
-          : CUSTOM_THEME_SWATCH_CLASS.idle,
+        outlineClass: getSwatchOutlineClass(isSelected),
       };
     }),
   );
 
-  const pickerButtonProps = computed(() =>
-    swatches.value.some((swatch) => swatch.isSelected)
-      ? CUSTOM_THEME_PICKER_BUTTON.idle
-      : CUSTOM_THEME_PICKER_BUTTON.selected,
+  const isCustomColor = computed(
+    () => !swatches.value.some((swatch) => swatch.isSelected),
+  );
+
+  const currentSwatchOutlineClass = computed(() =>
+    getSwatchOutlineClass(isCustomColor.value),
   );
 
   // UColorPicker сразу пишет в модель; пустое значение пропускаем
@@ -115,8 +127,7 @@
       :key="swatch.value"
       variant="ghost"
       color="neutral"
-      class="size-7 rounded-full p-0"
-      :class="swatch.outlineClass"
+      :class="[CUSTOM_THEME_SWATCH_SHAPE_CLASS, swatch.outlineClass]"
       :style="{ backgroundColor: swatch.value }"
       :title="swatch.label"
       :aria-label="swatch.label"
@@ -124,12 +135,27 @@
       @click.left.exact.prevent="selectPreset(swatch.value)"
     />
 
+    <UInput
+      v-model="hexField"
+      v-bind="hexFieldState"
+      :placeholder="CUSTOM_THEME_HEX_INPUT.placeholder"
+      :maxlength="CUSTOM_THEME_HEX_INPUT.maxLength"
+      :aria-label="hexLabel"
+      :aria-invalid="isHexInvalid"
+      :title="hexFieldTitle"
+      size="sm"
+      spellcheck="false"
+      class="w-22"
+      :ui="{ base: 'font-mono uppercase' }"
+      @blur="resetHexDraft"
+    />
+
     <UPopover :content="CUSTOM_THEME_PICKER_POPOVER_CONTENT">
       <UButton
-        icon="tabler:color-picker"
-        v-bind="pickerButtonProps"
-        size="sm"
-        square
+        variant="ghost"
+        color="neutral"
+        :class="[CUSTOM_THEME_SWATCH_SHAPE_CLASS, currentSwatchOutlineClass]"
+        :style="{ backgroundColor: model }"
         :aria-label="pickerLabel"
         :title="pickerLabel"
       />
@@ -143,20 +169,5 @@
         </div>
       </template>
     </UPopover>
-
-    <UInput
-      v-model="hexField"
-      v-bind="hexFieldState"
-      :placeholder="CUSTOM_THEME_HEX_INPUT.placeholder"
-      :maxlength="CUSTOM_THEME_HEX_INPUT.maxLength"
-      :aria-label="hexLabel"
-      :aria-invalid="isHexInvalid"
-      :title="hexFieldTitle"
-      size="sm"
-      spellcheck="false"
-      class="w-24"
-      :ui="{ base: 'font-mono uppercase' }"
-      @blur="resetHexDraft"
-    />
   </div>
 </template>
