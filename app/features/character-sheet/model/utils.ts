@@ -188,6 +188,7 @@ import {
   clamp,
   isEqual,
   mapValues,
+  maxBy,
   omit,
   round,
   sumBy,
@@ -8253,11 +8254,14 @@ export function getKnownSpellNames(character: Character): string[] {
  * @returns заклинания вне книги с пометкой «от класса».
  */
 function collectGrantedSpells(character: Character): GrantedSpellEntry[] {
-  // Наибольший круг, который персонаж способен наложить: им ограничена выдача
-  // «весь список класса, не выше доступного круга». Ноль, а не «ничего»: заговор
-  // ячейки не тратит, и персонажу без заклинательства он всё равно доступен —
-  // так же считает и система VTTG (`getMaxSpellSlotLevel`)
-  const maxSpellLevel = Math.max(...getAvailableSpellLevels(character), 0);
+  // Старший круг ячеек, которые у персонажа реально есть, — общих и договора
+  // колдуна. Им ограничены заклинания «по ячейкам»: «весь список класса, не выше
+  // доступного круга» и заклинания черт «Адепт школы». Круг, который класс даёт
+  // ВЫУЧИТЬ, здесь не годится: у жреца 3 / волшебника 3 общие ячейки доходят до
+  // третьего круга, а выучить каждый класс даёт только второй. Ноль, а не
+  // «ничего»: заговор ячейки не тратит и доступен всегда — так же считает и
+  // система VTTG (`getMaxSpellSlotLevel`)
+  const maxSpellLevel = getMaxSpellSlotLevel(character);
 
   const granted: GrantedSpellEntry[] = [
     ...(character.species?.innateSpells ?? [])
@@ -8275,6 +8279,17 @@ function collectGrantedSpells(character: Character): GrantedSpellEntry[] {
     spell: { ...spell, prepared: isInnateSpellPrepared(spell) },
     fromClass,
   }));
+}
+
+/**
+ * Старший круг ячеек, которые у персонажа есть: общая таблица (у мультикласса —
+ * мультиклассовая) вместе с ячейками договора колдуна.
+ *
+ * @param character персонаж.
+ * @returns старший круг ячеек; 0 — ячеек нет.
+ */
+function getMaxSpellSlotLevel(character: Character): number {
+  return maxBy(getSpellSlotRows(character), (row) => row.level)?.level ?? 0;
 }
 
 /**
@@ -8319,7 +8334,7 @@ function uniqGrantedSpells<T extends GrantedSpellEntry>(entries: T[]): T[] {
  *
  * @param character персонаж.
  * @param entry заклинание записи с её идентификатором.
- * @param maxSpellLevel старший круг, который персонаж вправе наложить.
+ * @param maxSpellLevel старший круг ячеек персонажа (общих и договора).
  * @returns `true` — заклинание уже доступно.
  */
 function isFeatureSpellOpen(
@@ -8342,9 +8357,10 @@ function isFeatureSpellOpen(
   const isLevelReached =
     !requiredLevel || requiredLevel <= (ownerClass?.level ?? character.level);
 
-  // Список класса «не выше доступного круга» приезжает целиком: круг растёт
-  // вместе с персонажем, и снимок числом замёрз бы на том уровне, на котором
-  // заклинания легли на лист
+  // Список класса «не выше доступного круга» и заклинания черты «по ячейкам»
+  // («Адепт школы») приезжают целиком: круг растёт вместе с персонажем, и
+  // снимок числом замёрз бы на том уровне, на котором заклинания легли на лист.
+  // Умение класса меряет круг своим классом, остальные — ячейками персонажа
   const isCircleReached =
     !limitedBySlots
     || level

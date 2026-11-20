@@ -833,6 +833,14 @@ modals), so its capabilities are listed here rather than squeezed into the table
   rebuild the same way. They are spendable
   but not editable: the reference owns their name, maximum and rest, so an edit
   would come back at the next feat change.
+- A feat's listed granted spells may be marked «Открывается, когда есть ячейка
+  круга заклинания» (`limitedBySlots`, a switch of the granted-spell group in
+  the feat editor only — `FeatGrantedSpells` with `can-limit-by-slots`; the
+  «Адепт школы» feats). Such a spell reaches the sheet only once the character
+  has a slot of its circle or higher, standard or pact (`getMaxSpellSlotLevel`
+  over `getSpellSlotRows`); cantrips are always open, and the rule stacks with
+  the group's «с N уровня». The same slot circle bounds a class-list grant
+  «не выше доступного круга» of a non-class feature.
 - The «Личность» tab holds the person rather than the build: seven appearance
   tiles (alignment from the `alignments` dictionary plus age, height, weight,
   eyes, hair and skin as free text — clicking a tile opens the form with the
