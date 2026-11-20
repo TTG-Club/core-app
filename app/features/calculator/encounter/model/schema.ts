@@ -25,7 +25,7 @@ const partyRowSchema = z.object({
 
 const creatureSchema = z.object({
   id: z.string(),
-  url: z.string(),
+  url: z.string().optional(),
   name: z.string(),
   challengeRating: z.string(),
   experience: z.number().min(0),

@@ -127,12 +127,17 @@ export const CUSTOM_THEME_TEXT_TINT_SHARE = 0.6;
  */
 export const CUSTOM_THEME_LEGACY_MAX_TINT_CHROMA = 0.02;
 
-/** Цвета состояний: оттенок и насыщенность OKLCH. */
+/**
+ * Цвета состояний: оттенок и насыщенность OKLCH. `clashDirection` — в какую
+ * сторону круга оттенков уводить цвет, когда его занял акцент (1 — вперёд,
+ * −1 — назад): предупреждение — в оранжевый, успех — в бирюзовый, ошибка — в
+ * малиновый, инфо — в лиловый.
+ */
 export const CUSTOM_THEME_STATUS_COLORS = {
-  error: { hue: 25, chroma: 0.15 },
-  success: { hue: 150, chroma: 0.15 },
-  info: { hue: 250, chroma: 0.13 },
-  warning: { hue: 80, chroma: 0.14 },
+  error: { hue: 25, chroma: 0.15, clashDirection: -1 },
+  success: { hue: 150, chroma: 0.15, clashDirection: 1 },
+  info: { hue: 250, chroma: 0.13, clashDirection: 1 },
+  warning: { hue: 80, chroma: 0.14, clashDirection: -1 },
 } as const;
 
 /** С какой светлоты начинаются цвета состояний до подгонки под контраст. */
@@ -144,11 +149,28 @@ export const CUSTOM_THEME_STATUS_START_LIGHTNESS: Record<
   light: 0.55,
 };
 
-/** Если акцент ближе к жёлтому, чем на столько градусов, предупреждение уходит в оранжевый. */
-export const CUSTOM_THEME_WARNING_CLASH_DEGREES = 25;
+/**
+ * Наименьшая разница оттенков акцента и цвета состояния, в градусах. Оба
+ * подогнаны под один контраст и выходят одной светлоты, так что различаются
+ * только оттенком: ближе — зелёный успех сливается с зелёным акцентом, синее
+ * инфо с синим, и подсветка цветом состояния (например, умения подкласса
+ * рядом со ссылками-акцентом) перестаёт читаться. Цвет состояния, попавший
+ * ближе, отодвигается от акцента на это расстояние.
+ */
+export const CUSTOM_THEME_STATUS_HUE_GAP = 30;
 
-/** Оттенок предупреждения, когда жёлтый занят акцентом. */
-export const CUSTOM_THEME_WARNING_FALLBACK_HUE = 55;
+/**
+ * Наименьшая разница оттенков отведённого цвета состояния и остальных цветов
+ * состояний, в градусах. Если в свою сторону цвет наехал бы на соседа
+ * (предупреждение при оранжевом акценте — на ошибку), он уходит в другую.
+ */
+export const CUSTOM_THEME_STATUS_NEIGHBOUR_GAP = 20;
+
+/**
+ * Насыщенность OKLCH, ниже которой акцент считается серым: оттенок у него
+ * случайный, и уводить от него цвета состояний незачем.
+ */
+export const CUSTOM_THEME_ACHROMATIC_ACCENT_CHROMA = 0.03;
 
 /** Ступени шкал цветов, как у Tailwind и Nuxt UI. */
 export const CUSTOM_THEME_SCALE_STEPS = [

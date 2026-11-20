@@ -25,6 +25,7 @@
     canCreate,
     createLimitHint,
     transferCount,
+    skippedCount,
     isLoading,
     isTransferring,
     loadError,
@@ -65,6 +66,12 @@
 
   const submitLabel = computed(
     () => `${TRANSFER_LABELS.submit} (${transferCount.value})`,
+  );
+
+  const hasSkipped = computed(() => skippedCount.value > 0);
+
+  const skippedTitle = computed(
+    () => `${TRANSFER_LABELS.customSkippedTitle} (${skippedCount.value})`,
   );
 
   // При открытии — свежий список трекеров: их могли собрать или удалить в
@@ -109,6 +116,15 @@
   >
     <template #body>
       <div class="flex flex-col gap-4">
+        <UAlert
+          v-if="hasSkipped"
+          color="warning"
+          variant="subtle"
+          icon="tabler:alert-triangle"
+          :title="skippedTitle"
+          :description="TRANSFER_LABELS.customSkippedDescription"
+        />
+
         <USkeleton
           v-if="isLoading"
           class="h-24"

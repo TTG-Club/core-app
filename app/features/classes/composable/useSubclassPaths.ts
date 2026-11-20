@@ -4,6 +4,8 @@ import type { ClassLinkResponse } from '../model';
 
 import { uniq } from 'es-toolkit';
 
+import { useSubclassSourceFilter } from './useSubclassSourceFilter';
+
 /**
  * Адреса подклассов в порядке выбора подкласса: группами по типу книги, в
  * порядке первого появления группы.
@@ -26,7 +28,8 @@ function getSubclassPaths(subclasses: Array<ClassLinkResponse>): Array<string> {
 /**
  * Что листать свайпом со страницы подкласса: соседние подклассы того же
  * класса. У самого класса своего порядка нет — он листает список классов.
- * Подклассы листаются, даже если страница открыта не из списка.
+ * Подклассы листаются, даже если страница открыта не из списка; источники,
+ * выбранные в фильтре раздела классов, действуют и здесь.
  *
  * @param parentUrl Адрес класса, если открыт подкласс.
  * @returns Адреса подклассов или `undefined`, если открыт сам класс.
@@ -38,7 +41,7 @@ export async function useSubclassPaths(
     return computed(() => undefined);
   }
 
-  const { data: subclasses } = await useAsyncData(
+  const subclassesRequest = useAsyncData(
     `class-${parentUrl}-subclass-paths`,
     () =>
       $fetch<Array<ClassLinkResponse>>(
@@ -46,7 +49,14 @@ export async function useSubclassPaths(
       ),
   );
 
+  // До `await`: после него контекст Nuxt для `useRoute`/`useCookie` теряется
+  const { visibleSubclasses } = useSubclassSourceFilter(subclassesRequest.data);
+
+  await subclassesRequest;
+
   return computed(() =>
-    subclasses.value ? getSubclassPaths(subclasses.value) : undefined,
+    visibleSubclasses.value
+      ? getSubclassPaths(visibleSubclasses.value)
+      : undefined,
   );
 }

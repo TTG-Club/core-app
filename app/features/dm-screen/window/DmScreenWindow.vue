@@ -16,6 +16,7 @@
     DM_SCREEN_EDITABLE_SELECTOR,
     DM_SCREEN_ICONS,
     DM_SCREEN_LINK_SELECTOR,
+    DM_SCREEN_LOCK_TOGGLE,
     DM_SCREEN_NEW_TAB,
     DM_SCREEN_RESIZE_HANDLES,
     DM_SCREEN_TEXT,
@@ -47,8 +48,10 @@
    * Окно записи или заметки на поле ширмы. Тянется за шапку и
    * притягивается к краям холста и соседних окон (Alt — без магнита),
    * растягивается за любую сторону или угол, сворачивается в плашку кнопкой
-   * или двойным кликом по шапке и закрывается. Окно, отпущенное у бокового
-   * края холста или над местом в панели раскладок, занимает это место.
+   * или двойным кликом по шапке и закрывается. Замок в шапке закрепляет
+   * окно: его уже не сдвинуть и не растянуть, а свернуть и закрыть можно.
+   * Окно, отпущенное у бокового края холста или над местом в панели
+   * раскладок, занимает это место.
    *
    * Ссылки внутри окна со страницы ширмы не уводят: запись сайта встаёт
    * новым окном рядом с кликом, подкласс открывается в окне своего класса,
@@ -63,6 +66,7 @@
     navigate,
     close,
     minimize,
+    toggleLock,
     focus,
     update,
     visibleWindows,
@@ -105,6 +109,27 @@
       : '',
     isDimmed(screenWindow.id) ? DM_SCREEN_WINDOW_CLASS.dimmed : '',
   ]);
+
+  /** Шапка закреплённого окна не тянет его: курсор перетаскивания убран. */
+  const headerClass = computed(() =>
+    screenWindow.isLocked ? '' : DM_SCREEN_WINDOW_CLASS.movableHeader,
+  );
+
+  const lockToggle = computed(() =>
+    screenWindow.isLocked
+      ? DM_SCREEN_LOCK_TOGGLE.locked
+      : DM_SCREEN_LOCK_TOGGLE.unlocked,
+  );
+
+  /** Ручки растягивания: у закреплённого окна их нет. */
+  const resizeHandles = computed(() =>
+    screenWindow.isLocked ? [] : DM_SCREEN_RESIZE_HANDLES,
+  );
+
+  /** Закрепляет окно на месте или снимает закрепление. */
+  function toggleWindowLock(): void {
+    toggleLock(screenWindow.id);
+  }
 
   const isNote = computed(() => isScreenNotePath(screenWindow.path));
 
@@ -159,11 +184,12 @@
 
   /**
    * Окно берут за шапку. С кнопок шапки оно не тянется: иначе указатель
-   * закрепился бы за шапкой и клик до кнопки не дошёл бы.
+   * закрепился бы за шапкой и клик до кнопки не дошёл бы. Закреплённое окно
+   * не тянется вовсе.
    * @param event - нажатие на шапку
    */
   function startDrag(event: PointerEvent): void {
-    if (!isOutsideScreenControl(event.target)) {
+    if (screenWindow.isLocked || !isOutsideScreenControl(event.target)) {
       return;
     }
 
@@ -376,7 +402,8 @@
     @pointerdown.capture="focusWindow"
   >
     <header
-      class="flex shrink-0 cursor-move touch-none items-center gap-1 border-b border-default bg-elevated py-1 pr-1 pl-3 select-none"
+      class="flex shrink-0 touch-none items-center gap-1 border-b border-default bg-elevated py-1 pr-1 pl-3 select-none"
+      :class="headerClass"
       @pointerdown.left="startDrag"
       @pointermove="moveGesture"
       @pointerup="endGesture"
@@ -418,6 +445,18 @@
           color="neutral"
           variant="ghost"
           size="sm"
+        />
+      </UTooltip>
+
+      <UTooltip :text="lockToggle.label">
+        <UButton
+          :icon="lockToggle.icon"
+          :aria-label="lockToggle.label"
+          :aria-pressed="screenWindow.isLocked"
+          :color="lockToggle.color"
+          :variant="lockToggle.variant"
+          size="sm"
+          @click.left.exact.prevent="toggleWindowLock"
         />
       </UTooltip>
 
@@ -480,7 +519,7 @@
 
     <!-- Ручки поверх краёв окна: углы после сторон, поэтому выше них -->
     <div
-      v-for="resizeHandle in DM_SCREEN_RESIZE_HANDLES"
+      v-for="resizeHandle in resizeHandles"
       :key="resizeHandle.key"
       aria-hidden="true"
       class="absolute touch-none"

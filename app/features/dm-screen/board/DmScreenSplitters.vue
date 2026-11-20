@@ -26,12 +26,15 @@
    * промежуток, при наведении появляется полоска: за неё тянут, и окна по
    * обе стороны меняют размер разом, а промежуток остаётся. Пока границу
    * тянут, окна лишь показывают новый размер; в ширму он пишется, когда
-   * границу отпускают.
+   * границу отпускают. Закреплённые окна общих границ не дают: их размер
+   * так не меняется.
    */
-  const { visibleWindows, setPreviewRects, updateRects } = useDmScreen();
+  const { movableVisibleWindows, setPreviewRects, updateRects } = useDmScreen();
   const { view: screenView } = useDmScreenView();
 
-  const splitters = computed(() => findScreenSplitters(visibleWindows.value));
+  const splitters = computed(() =>
+    findScreenSplitters(movableVisibleWindows.value),
+  );
 
   const drag = shallowRef<SplitterDrag>();
 
@@ -102,7 +105,7 @@
     const moved = moveScreenSplitter(
       active.splitter,
       (pointer - active.origin) / screenView.value.zoom,
-      visibleWindows.value,
+      movableVisibleWindows.value,
     );
 
     drag.value = { ...active, ...moved };

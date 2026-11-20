@@ -31,6 +31,16 @@ export const CLASS_LIST_GROUPS: ReadonlyArray<{ key: string; label: string }> =
     { key: 'hb', label: 'Классы Homebrew' },
   ];
 
+/** Ключ фильтра раздела классов: под ним фильтр хранит выбор. */
+export const CLASS_FILTER_KEY = 'classes';
+
+/** Путь списка раздела классов. */
+export const CLASS_SECTION_PATH = '/classes';
+
+/** Начало подписи о подклассах, скрытых фильтром источников раздела. */
+export const SUBCLASSES_HIDDEN_BY_SOURCES_LABEL_PREFIX =
+  'Скрыто фильтром источников: ';
+
 /** Поле класса, по которому список делится на группы. */
 export const CLASS_LIST_GROUP_FIELD = 'source.group.label';
 

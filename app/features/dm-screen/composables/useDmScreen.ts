@@ -8,8 +8,6 @@ import type {
   ScreenWindowRequest,
 } from '../model';
 
-import { sortBy } from 'es-toolkit';
-
 import {
   appendScreenWindow,
   arrangeScreenWindows,
@@ -21,7 +19,9 @@ import {
   DM_SCREEN_STORAGE_KEY,
   DM_SCREEN_TEXT,
   DM_SCREEN_WINDOW_LIMIT,
+  getScreenArrangeIds,
   getScreenErrorMessage,
+  getScreenMovableWindows,
   getScreenTopLayer,
   isScreenNotePath,
   saveScreen,
@@ -185,6 +185,11 @@ export const useDmScreen = createSharedComposable(() => {
 
   const visibleWindows = computed(() =>
     windows.value.filter((screenWindow) => !screenWindow.isMinimized),
+  );
+
+  /** Развёрнутые окна, которые не закреплены: их можно двигать. */
+  const movableVisibleWindows = computed(() =>
+    getScreenMovableWindows(visibleWindows.value),
   );
 
   const minimizedWindows = computed(() =>
@@ -386,19 +391,29 @@ export const useDmScreen = createSharedComposable(() => {
   }
 
   /**
-   * Раскладывает все окна ровной сеткой на видимой части поля, свёрнутые
-   * тоже разворачиваются.
+   * Закрепляет окно на месте или снимает закрепление.
+   * @param id - окно
+   */
+  function toggleLock(id: string): void {
+    const target = windows.value.find((screenWindow) => screenWindow.id === id);
+
+    if (target) {
+      update(id, { isLocked: !target.isLocked });
+    }
+  }
+
+  /**
+   * Раскладывает окна ровной сеткой на видимой части поля, свёрнутые
+   * тоже разворачиваются. Закреплённые окна остаются где стоят.
    * Порядок — как окна стоят сейчас (сверху вниз, слева направо), свёрнутые
    * встают в конец: раскладка окна не перемешивает.
    * @param grid - сколько колонок и рядов в сетке; без неё ширма подбирает
    * сетку сама
    */
   function arrange(grid?: ScreenGrid): void {
-    const ordered = sortBy(windows.value, ['isMinimized', 'y', 'x']);
-
     updateRects(
       arrangeScreenWindows(
-        ordered.map((screenWindow) => screenWindow.id),
+        getScreenArrangeIds(windows.value),
         board.value,
         grid,
       ),
@@ -410,6 +425,7 @@ export const useDmScreen = createSharedComposable(() => {
     // Наружу только чтение: окна меняют действия ширмы
     windows: computed<ReadonlyArray<ScreenWindow>>(() => windows.value),
     visibleWindows,
+    movableVisibleWindows,
     minimizedWindows,
     isAccount: readonly(isAccount),
     connect,
@@ -431,6 +447,7 @@ export const useDmScreen = createSharedComposable(() => {
     navigate,
     close,
     clear,
+    toggleLock,
     minimize,
     minimizeAll,
     restore,

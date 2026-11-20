@@ -234,6 +234,28 @@ export const GENERATION_ERROR_TITLE = 'Не удалось сгенериров�
 export const GENERATION_ERROR_DESCRIPTION =
   'Бестиарий не ответил. Попробуйте ещё раз.';
 
+/** Название своего монстра, если мастер его не ввёл. */
+export const CUSTOM_CREATURE_DEFAULT_NAME = 'Свой монстр';
+
+/** Показатель опасности своего монстра в новой форме. */
+export const CUSTOM_CREATURE_DEFAULT_CHALLENGE_RATING = '1';
+
+/** Длина названия своего монстра — как у имени участника трекера. */
+export const MAX_CUSTOM_CREATURE_NAME_LENGTH = 100;
+
+/** Подписи формы своего монстра. */
+export const CUSTOM_CREATURE_LABELS = {
+  toggle: 'Свой монстр',
+  name: 'Название',
+  challengeRating: 'Показатель опасности',
+  count: 'Количество',
+  submitAria: 'Добавить своего монстра',
+  badge: 'Свой',
+  experienceUnit: 'опыта',
+  emptyList:
+    'Найдите существ в бестиарии или добавьте своего монстра с нужным показателем опасности.',
+} as const;
+
 /** Значение «новый трекер» в выборе, куда переносить существ. */
 export const TRANSFER_NEW_TRACKER = 'new';
 
@@ -257,4 +279,7 @@ export const TRANSFER_LABELS = {
   errorTitle: 'Не удалось перенести существ',
   partialTitle: 'Перенесены не все существа',
   capacityTitle: 'В трекере не хватит места',
+  customSkippedTitle: 'Свои монстры не перенесутся',
+  customSkippedDescription:
+    'Трекер добавляет существ только из бестиария, своих монстров он пока не принимает. Перенесутся остальные существа.',
 } as const;

@@ -48,3 +48,23 @@ export const CUSTOM_THEME_PICKER_POPOVER_CONTENT = {
   side: 'bottom',
   align: 'start',
 } as const;
+
+export const CUSTOM_THEME_BACKGROUND_HEX_LABEL = 'Код цвета фона';
+
+export const CUSTOM_THEME_ACCENT_HEX_LABEL = 'Код цвета акцента';
+
+/** Поле кода цвета: образец и предел длины — решётка и шесть цифр. */
+export const CUSTOM_THEME_HEX_INPUT = {
+  placeholder: '#A1B2C3',
+  maxLength: 7,
+} as const;
+
+/** Подсказка, когда код цвета набран неверно. */
+export const CUSTOM_THEME_HEX_ERROR_HINT =
+  'Нужен код вида #A1B2C3 или #ABC, решётку можно не писать';
+
+/** Вид поля кода цвета: обычное и с неверным кодом. */
+export const CUSTOM_THEME_HEX_FIELD_STATE = {
+  valid: { color: 'neutral', highlight: false },
+  invalid: { color: 'error', highlight: true },
+} as const;

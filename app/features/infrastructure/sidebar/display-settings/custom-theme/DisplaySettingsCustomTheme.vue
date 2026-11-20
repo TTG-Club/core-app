@@ -15,9 +15,11 @@
 
   import { DisplaySettingsChoice } from '../choice';
   import {
+    CUSTOM_THEME_ACCENT_HEX_LABEL,
     CUSTOM_THEME_ACCENT_PICKER_LABEL,
     CUSTOM_THEME_ACCENT_TITLE,
     CUSTOM_THEME_BACKGROUND_COLOR_TITLE,
+    CUSTOM_THEME_BACKGROUND_HEX_LABEL,
     CUSTOM_THEME_BACKGROUND_PICKER_LABEL,
     CUSTOM_THEME_BACKGROUND_TITLE,
     CUSTOM_THEME_BASE_OPTIONS,
@@ -113,6 +115,7 @@
           v-model="background"
           :presets="CUSTOM_THEME_BACKGROUND_PRESETS"
           :picker-label="CUSTOM_THEME_BACKGROUND_PICKER_LABEL"
+          :hex-label="CUSTOM_THEME_BACKGROUND_HEX_LABEL"
         />
       </div>
 
@@ -130,6 +133,7 @@
         v-model="accent"
         :presets="CUSTOM_THEME_ACCENT_PRESETS"
         :picker-label="CUSTOM_THEME_ACCENT_PICKER_LABEL"
+        :hex-label="CUSTOM_THEME_ACCENT_HEX_LABEL"
       />
 
       <DisplaySettingsLightnessSlider v-model="accentLightness" />

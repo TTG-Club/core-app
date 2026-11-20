@@ -162,6 +162,34 @@ export function getScreenTopLayer(
 }
 
 /**
+ * Окна, которые можно двигать и растягивать: закреплённые остаются на своих
+ * местах, их не трогают ни сетка, ни подбор раскладки, ни общие границы.
+ * @param windows - окна ширмы
+ */
+export function getScreenMovableWindows<
+  Movable extends Pick<ScreenWindow, 'isLocked'>,
+>(windows: ReadonlyArray<Movable>): Array<Movable> {
+  return windows.filter((screenWindow) => !screenWindow.isLocked);
+}
+
+/**
+ * Окна для раскладки сеткой в порядке чтения: как они стоят сейчас (сверху
+ * вниз, слева направо), свёрнутые — в конце. Закреплённые окна в сетку не
+ * встают.
+ * @param windows - окна ширмы
+ * @returns идентификаторы окон по порядку
+ */
+export function getScreenArrangeIds(
+  windows: ReadonlyArray<ScreenWindow>,
+): Array<string> {
+  return sortBy(getScreenMovableWindows(windows), [
+    'isMinimized',
+    'y',
+    'x',
+  ]).map((screenWindow) => screenWindow.id);
+}
+
+/**
  * Кладёт запись окном на ширму. Запись, которая на ширме уже есть, не
  * дублируется: её окно разворачивается и встаёт поверх остальных.
  * @param windows - окна ширмы
@@ -214,6 +242,7 @@ export function appendScreenWindow(
         ...size,
         layer,
         isMinimized: false,
+        isLocked: false,
       },
     ],
     windowId: id,

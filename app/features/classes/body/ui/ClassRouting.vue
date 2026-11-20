@@ -10,6 +10,7 @@
   import { MulticlassDrawer } from '~classes/multiclass-drawer';
   import { SourceTag } from '~ui/source-tag';
 
+  import { useSubclassSourceFilter } from '../../composable';
   import { CLASS_SECTION_ANCHOR } from './constants';
 
   const {
@@ -56,6 +57,18 @@
       $fetch<Array<ClassLinkResponse>>(
         `/api/v2/classes/${parent ? parent.url : url}/subclasses`,
       ),
+  );
+
+  // Источники, выбранные в фильтре раздела, сужают и подклассы
+  const { visibleSubclasses, hiddenLabel } =
+    useSubclassSourceFilter(subclasses);
+
+  /** Кнопка подклассов доступна, если они есть, — даже скрытые фильтром. */
+  const hasSubclasses = computed(() => !!subclasses.value?.length);
+
+  /** Сколько подклассов видно с учётом фильтра; ноль на бейдже не показывается. */
+  const visibleSubclassCount = computed(
+    () => visibleSubclasses.value?.length || undefined,
   );
 
   const search = ref<string>();
@@ -152,17 +165,17 @@
   }
 
   const groups = computed<Array<CommandPaletteGroup>>(() => {
-    if (!subclasses.value?.length) {
+    if (!visibleSubclasses.value?.length) {
       return [];
     }
 
     return uniqBy(
-      subclasses.value.map((subclass) => subclass.source.group),
+      visibleSubclasses.value.map((subclass) => subclass.source.group),
       (group) => group.label,
     ).map((group) => ({
       id: group.label,
       label: group.rus,
-      items: subclasses.value
+      items: visibleSubclasses.value
         ?.filter((subclass) => subclass.source.group.label === group.label)
         .map((subclass) => ({
           id: subclass.url,
@@ -205,7 +218,7 @@
     >
       <template #default="{ open }">
         <UButton
-          :disabled="!subclasses?.length"
+          :disabled="!hasSubclasses"
           :loading="isLoading"
           :variant="'soft'"
           :active="open"
@@ -215,12 +228,12 @@
           size="md"
         >
           <UBadge
-            v-if="subclasses?.length"
+            v-if="visibleSubclassCount"
             variant="subtle"
             color="primary"
             size="lg"
           >
-            {{ subclasses.length }}
+            {{ visibleSubclassCount }}
           </UBadge>
 
           <div class="flex flex-col items-start leading-tight">
@@ -246,6 +259,13 @@
         >
           <template #item-trailing="{ item }">
             <SourceTag :source="item.source" />
+          </template>
+
+          <template
+            v-if="hiddenLabel"
+            #footer
+          >
+            <p class="px-1.5 py-1 text-xs text-muted">{{ hiddenLabel }}</p>
           </template>
         </UCommandPalette>
       </template>

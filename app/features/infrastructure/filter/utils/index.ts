@@ -8,6 +8,7 @@ export * from './getFilterKey';
 export * from './getGroupItems';
 export * from './normalizeForSearch';
 export * from './range';
+export * from './savedFilterQuery';
 export * from './selection';
 export * from './singleChoice';
 export * from './sortSourceGroups';

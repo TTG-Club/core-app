@@ -8,8 +8,10 @@
   import { ClassBody } from '~classes/body';
   import { ClassLink } from '~classes/link';
   import {
+    CLASS_FILTER_KEY,
     CLASS_LIST_GROUP_FIELD,
     CLASS_LIST_GROUP_SORT,
+    CLASS_SECTION_PATH,
     getClassGroupLabel,
     getClassMarkdown,
     sortClassesByGroup,
@@ -34,7 +36,7 @@
     filterQuery,
     isPending: isFilterPending,
     defaults: filterDefaults,
-  } = await useFilter('classes', '/api/v2/classes/filters');
+  } = await useFilter(CLASS_FILTER_KEY, '/api/v2/classes/filters');
 
   const {
     data: classes,
@@ -80,7 +82,7 @@
     detailNeighbours,
     openDetail,
   } = useSectionDetail<ClassDetailResponse>({
-    sectionPath: '/classes',
+    sectionPath: CLASS_SECTION_PATH,
     apiBasePath: '/api/v2/classes',
     items: orderedClasses,
     getParentUrl: (detail) => detail.parent?.url,
