@@ -1,11 +1,15 @@
 <script setup lang="ts">
-  import type { AbilityKey } from '../../model';
+  import type {
+    AbilityKey,
+    Character,
+    CharacterArmorClass,
+    CharacterCustomBonus,
+  } from '../../model';
 
   import { ACTION_LABELS } from '~/shared/consts';
 
   import { useCharacterSheet } from '../../composables';
   import {
-    ABILITY_LABELS,
     ABILITY_OPTIONS,
     ARMOR_CLASS_BASE_MAX,
     ARMOR_CLASS_BASE_MIN,
@@ -14,10 +18,12 @@
     ARMOR_DEX_LIMIT_RULE_VALUE,
     DEFAULT_ARMOR_CLASS_ABILITY,
     getArmorClassBreakdown,
+    getArmorClassBreakdownRows,
     getArmorDexCappedLabel,
     getUnarmoredArmorClassLabel,
     toSelectedAbilityKeys,
   } from '../../model';
+  import SheetCustomBonusRows from './SheetCustomBonusRows.vue';
 
   const { sheetKey } = defineProps<{
     /** Ключ открытого листа: с каким листом работает компонент. */
@@ -42,21 +48,36 @@
 
   const draftDexLimit = ref<number | null>(character.value.armorClass.dexLimit);
 
+  // Черновик правится до «Применить»: копируются и сами записи бонусов — иначе
+  // правки уходили бы в лист мимо кнопки.
+  const draftBonuses = ref<CharacterCustomBonus[]>(
+    character.value.armorClass.bonuses.map((bonus) => ({ ...bonus })),
+  );
+
+  const draftArmorClass = computed<CharacterArmorClass>(() => ({
+    base: draftBase.value,
+    abilities: draftAbilities.value,
+    natural: draftNatural.value,
+    dexLimit: draftDexLimit.value,
+    custom: draftCustom.value,
+    bonuses: draftBonuses.value,
+  }));
+
   // Персонаж черновика: и ручной, и автоматический предпросмотр считаются той же
   // утилитой, что и лист, — расхождению правил взяться негде.
-  const draftCharacter = computed(() => ({
+  const draftCharacter = computed<Character>(() => ({
     ...character.value,
-    armorClass: {
-      base: draftBase.value,
-      abilities: draftAbilities.value,
-      natural: draftNatural.value,
-      dexLimit: draftDexLimit.value,
-      custom: draftCustom.value,
-    },
+    armorClass: draftArmorClass.value,
   }));
 
   const breakdown = computed(() =>
     getArmorClassBreakdown(draftCharacter.value),
+  );
+
+  // Строки разбора с названием источника: щит, предметы, черты, эффекты, свои
+  // бонусы и характеристики сверх доспеха.
+  const breakdownRows = computed(() =>
+    getArmorClassBreakdownRows(breakdown.value),
   );
 
   const abilitiesHint = computed(() => {
@@ -96,11 +117,7 @@
   // В ручном режиме без выбранных характеристик между настройками и итогом
   // показывать нечего: разделитель там только сдвоил бы линию.
   const hasBreakdownRows = computed(
-    () =>
-      !draftCustom.value
-      || breakdown.value.extraAbilities.length > 0
-      || breakdown.value.featBonus !== 0
-      || breakdown.value.effectBonus !== 0,
+    () => !draftCustom.value || breakdownRows.value.length > 0,
   );
 
   function handleAbilities(value: unknown): void {
@@ -116,13 +133,7 @@
   }
 
   function handleApply() {
-    setArmorClass({
-      base: draftBase.value,
-      abilities: draftAbilities.value,
-      natural: draftNatural.value,
-      dexLimit: draftDexLimit.value,
-      custom: draftCustom.value,
-    });
+    setArmorClass(draftArmorClass.value);
 
     emit('close');
   }
@@ -209,6 +220,28 @@
           />
         </div>
 
+        <USeparator class="my-1" />
+
+        <!-- Свои бонусы разделом, как в окнах характеристики и спасбросков:
+             пометка нужна, чтобы в разборе было видно, откуда прибавка -->
+        <div class="flex flex-col gap-2">
+          <span
+            class="text-[10px] font-bold tracking-wider text-muted uppercase"
+          >
+            {{ ARMOR_CLASS_LABELS.bonusesTitle }}
+          </span>
+
+          <SheetCustomBonusRows
+            v-model="draftBonuses"
+            :character="draftCharacter"
+            toggleable
+          />
+
+          <p class="text-xs text-dimmed">
+            {{ ARMOR_CLASS_LABELS.bonusesHint }}
+          </p>
+        </div>
+
         <USeparator
           v-if="hasBreakdownRows"
           class="my-1"
@@ -231,68 +264,30 @@
           >
             {{ dexCappedHint }}
           </div>
-
-          <div
-            v-if="breakdown.shieldBonus > 0"
-            class="flex items-center justify-between gap-4 text-sm"
-          >
-            <span class="text-toned">{{ ARMOR_CLASS_LABELS.shieldTitle }}</span>
-
-            <span class="text-toned">
-              {{ getFormattedBonus(breakdown.shieldBonus) }}
-            </span>
-          </div>
-
-          <div
-            v-if="breakdown.itemBonus !== 0"
-            class="flex items-center justify-between gap-4 text-sm"
-          >
-            <span class="text-toned">{{ ARMOR_CLASS_LABELS.itemTitle }}</span>
-
-            <span class="text-toned">
-              {{ getFormattedBonus(breakdown.itemBonus) }}
-            </span>
-          </div>
         </template>
 
-        <!-- Прибавка черт идёт и в ручном режиме, поэтому строка стоит вне
-             блока автоподсчёта: игрок должен видеть, откуда взялось число. -->
+        <!-- Каждая прибавка своей строкой и с названием источника: игрок видит,
+             что +2 дал «Щит», а +1 — «Плащ защиты», а не общую сумму. Черты,
+             эффекты и свои бонусы идут и в ручном режиме. -->
         <div
-          v-if="breakdown.featBonus !== 0"
+          v-for="row in breakdownRows"
+          :key="row.id"
           class="flex items-center justify-between gap-4 text-sm"
         >
-          <span class="text-toned">{{ ARMOR_CLASS_LABELS.featTitle }}</span>
+          <span class="min-w-0 text-toned">
+            {{ row.label }}
 
-          <span class="text-toned">
-            {{ getFormattedBonus(breakdown.featBonus) }}
-          </span>
-        </div>
-
-        <!-- Своей строкой, а не в «Чертах»: прибавку эффектом даёт и черта, и
-             надетый предмет — «Наручи защиты» под подписью «Черты» сбивали бы. -->
-        <div
-          v-if="breakdown.effectBonus !== 0"
-          class="flex items-center justify-between gap-4 text-sm"
-        >
-          <span class="text-toned">
-            {{ ARMOR_CLASS_LABELS.effectTitle }}
+            <span
+              v-if="row.name"
+              class="text-muted"
+            >
+              · {{ row.name }}
+            </span>
           </span>
 
-          <span class="text-toned">
-            {{ getFormattedBonus(breakdown.effectBonus) }}
+          <span class="shrink-0 text-toned">
+            {{ row.formattedValue }}
           </span>
-        </div>
-
-        <div
-          v-for="bonus in breakdown.extraAbilities"
-          :key="bonus.ability"
-          class="flex items-center justify-between gap-4 text-sm"
-        >
-          <span class="text-toned">{{ ABILITY_LABELS[bonus.ability] }}</span>
-
-          <span class="text-toned">{{
-            getFormattedBonus(bonus.modifier)
-          }}</span>
         </div>
 
         <USeparator class="my-1" />

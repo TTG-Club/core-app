@@ -25,6 +25,7 @@
   const {
     character,
     withAdd = true,
+    toggleable = false,
     sourceItems = CUSTOM_BONUS_SOURCE_OPTIONS,
     min = CUSTOM_BONUS_MIN,
     max = CUSTOM_BONUS_MAX,
@@ -37,6 +38,13 @@
      * бы его.
      */
     withAdd?: boolean;
+
+    /**
+     * Показывать у строки выключатель: бонус остаётся в списке, но в счёт не
+     * идёт. Нужен прибавкам, которые то есть, то нет, — щиту за спиной,
+     * заклинанию «Щит веры»; у остальных разделов выключать незачем.
+     */
+    toggleable?: boolean;
 
     /**
      * Доступные источники бонуса. По умолчанию — все; раздел бонуса мастерства
@@ -80,6 +88,12 @@
     ];
   }
 
+  function handleToggle(rowId: string, enabled: unknown) {
+    rows.value = rows.value.map((row) =>
+      row.id === rowId ? { ...row, disabled: enabled !== true } : row,
+    );
+  }
+
   function handleRemove(rowId: string) {
     rows.value = rows.value.filter((row) => row.id !== rowId);
   }
@@ -106,6 +120,19 @@
       :key="row.id"
       class="flex flex-wrap items-center gap-2"
     >
+      <UTooltip
+        v-if="toggleable"
+        :text="SHEET_SETTINGS_LABELS.customBonusToggle"
+      >
+        <USwitch
+          :model-value="!row.disabled"
+          :aria-label="SHEET_SETTINGS_LABELS.customBonusToggle"
+          size="sm"
+          class="shrink-0"
+          @update:model-value="handleToggle(row.id, $event)"
+        />
+      </UTooltip>
+
       <!-- Строку от черты лист ведёт сам: подпись — название черты, источник
         задан её механикой, поэтому поля показаны, но заперты -->
       <UInput

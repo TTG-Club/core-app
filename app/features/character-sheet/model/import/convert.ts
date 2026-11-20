@@ -756,6 +756,7 @@ export function convertLssCharacter(source: LssCharacter): Character {
             // Значение из LSS учитывает и броню, и щит, поэтому автоподсчёт по
             // надетому снаряжению выключен: игрок включит его галкой.
             custom: true,
+            bonuses: [],
           }
         : structuredClone(DEFAULT_CHARACTER.armorClass),
     speed: {

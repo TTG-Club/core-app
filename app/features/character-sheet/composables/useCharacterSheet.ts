@@ -868,8 +868,8 @@ export function useCharacterSheet(sheetKey: string) {
   }
 
   /**
-   * Установка класса доспеха с ограничением базового значения и своего предела
-   * бонуса Ловкости.
+   * Установка класса доспеха с ограничением базового значения, своего предела
+   * бонуса Ловкости и своих прибавок.
    *
    * @param armorClass новый класс доспеха персонажа.
    */
@@ -896,6 +896,7 @@ export function useCharacterSheet(sheetKey: string) {
                 ARMOR_DEX_LIMIT_MIN,
                 ARMOR_DEX_LIMIT_MAX,
               ),
+        bonuses: toStoredCustomBonuses(armorClass.bonuses),
       },
     };
   }

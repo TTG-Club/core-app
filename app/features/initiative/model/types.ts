@@ -100,6 +100,9 @@ export interface AddPlayerRequest {
   currentHitPoints?: number;
   maxHitPoints?: number;
 
+  /** Временные хиты игрока с листа персонажа; не задано или `0` — их нет. */
+  temporaryHitPoints?: number;
+
   /** КД игрока: задаёт мастер или лист персонажа. */
   armorClass?: number;
 
@@ -288,6 +291,9 @@ export interface SheetPlayerOption {
 
   /** Текущие хиты листа. */
   currentHitPoints: number;
+
+  /** Временные хиты листа; `0` — их нет. */
+  temporaryHitPoints: number;
 
   /** Аватар персонажа; null — не загружен. */
   avatarUrl: string | null;

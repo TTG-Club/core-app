@@ -11,10 +11,8 @@
    */
   import type {
     AbilityKey,
-    CharacterCustomBonus,
     CharacterSpellcastingSettings,
-    CharacterSpellcastingValueSettings,
-    SpellcastingValueBreakdown,
+    SpellcastingValueDraft,
   } from '../../model';
 
   import { ACTION_LABELS } from '~/shared/consts';
@@ -28,6 +26,7 @@
     getCharacterClasses,
     getCharacterProficiencyBonus,
     getClassSpellcastingAbility,
+    getSpellcastingRuleHint,
     getSpellcastingValues,
     SHEET_SPELLCASTING_MODAL_LABELS,
     SPELL_ATTACK_CUSTOM_MAX,
@@ -35,9 +34,11 @@
     SPELL_SAVE_DC_CUSTOM_MAX,
     SPELL_SAVE_DC_CUSTOM_MIN,
     SPELLCASTING_ABILITY_AUTO,
+    SPELLCASTING_LABEL_SEPARATOR,
     SPELLCASTING_MODAL_TITLE,
     SPELLCASTING_STAT_LABELS,
-    SPELLCASTING_TILE_LABELS,
+    toSpellcastingValueDraft,
+    toSpellcastingValueSettings,
   } from '../../model';
   import SheetCustomBonusRows from './SheetCustomBonusRows.vue';
 
@@ -47,26 +48,17 @@
   /** Ключ числа заклинательства. */
   type SpellcastingValueKey = keyof CharacterSpellcastingSettings;
 
-  /** Черновик одного числа: своя основа и свои бонусы. */
-  interface ValueDraft {
-    /** Основа задана числом, а не выведена по правилам. */
-    isCustomBase: boolean;
-
-    /** Своё число основы; работает только при поднятой галке. */
-    base: number;
-
-    /** Свои бонусы сверх основы. */
-    bonuses: CharacterCustomBonus[];
-  }
-
   /** Раздел настройки одного числа: у Сл и у атаки устройство одно. */
   interface ValueSection {
     key: SpellcastingValueKey;
     title: string;
-    draft: ValueDraft;
+    draft: SpellcastingValueDraft;
 
     /** Подпись расчёта по правилам под галкой («По правилам: 13»). */
     ruleHint: string;
+
+    /** Подпись поля своего числа для скринридера. */
+    ariaLabel: string;
 
     /** Пределы своего числа. */
     min: number;
@@ -112,28 +104,6 @@
   );
 
   /**
-   * Черновик одного числа по записи класса. Своё число подставляется из
-   * расчёта по правилам: его чаще правят на пару единиц, чем набирают с нуля.
-   * Бонусы копируются — иначе правки уходили бы в лист мимо «Применить».
-   *
-   * @param settings настройка числа из записи класса.
-   * @param ruleValue число по правилам.
-   * @returns черновик числа.
-   */
-  function toValueDraft(
-    settings: CharacterSpellcastingValueSettings | undefined,
-    ruleValue: number,
-  ): ValueDraft {
-    const base = settings?.base ?? null;
-
-    return {
-      isCustomBase: base !== null,
-      base: base ?? ruleValue,
-      bonuses: (settings?.bonuses ?? []).map((bonus) => ({ ...bonus })),
-    };
-  }
-
-  /**
    * Начальный черновик окна. Вынесено в функцию — читать `.value` computed'а
    * прямо в корне setup нельзя (`vue/no-ref-object-reactivity-loss`).
    *
@@ -141,8 +111,8 @@
    */
   function createInitialDraft(): {
     ability: AbilityChoice;
-    saveDc: ValueDraft;
-    attack: ValueDraft;
+    saveDc: SpellcastingValueDraft;
+    attack: SpellcastingValueDraft;
   } {
     const storedAbility = targetClass.value?.spellcastingAbility ?? null;
 
@@ -151,13 +121,18 @@
     const ruleValues = getSpellcastingValues(
       character.value,
       storedAbility ?? autoAbility.value,
-      undefined,
     );
 
     return {
       ability: storedAbility ?? SPELLCASTING_ABILITY_AUTO,
-      saveDc: toValueDraft(settings?.saveDc, ruleValues.saveDc.ruleValue),
-      attack: toValueDraft(settings?.attack, ruleValues.attack.ruleValue),
+      saveDc: toSpellcastingValueDraft(
+        settings?.saveDc,
+        ruleValues.saveDc.ruleValue,
+      ),
+      attack: toSpellcastingValueDraft(
+        settings?.attack,
+        ruleValues.attack.ruleValue,
+      ),
     };
   }
 
@@ -190,25 +165,9 @@
       : SHEET_SPELLCASTING_MODAL_LABELS.noClassHint,
   );
 
-  /**
-   * Настройка одного числа из черновика: в том же виде, в каком она ляжет в
-   * лист.
-   *
-   * @param valueDraft черновик числа.
-   * @returns настройка числа.
-   */
-  function toValueSettings(
-    valueDraft: ValueDraft,
-  ): CharacterSpellcastingValueSettings {
-    return {
-      base: valueDraft.isCustomBase ? valueDraft.base : null,
-      bonuses: valueDraft.bonuses,
-    };
-  }
-
   const draftSettings = computed<CharacterSpellcastingSettings>(() => ({
-    saveDc: toValueSettings(draft.saveDc),
-    attack: toValueSettings(draft.attack),
+    saveDc: toSpellcastingValueSettings(draft.saveDc),
+    attack: toSpellcastingValueSettings(draft.attack),
   }));
 
   // Те же числа, что покажет плитка вкладки: одна функция на всё — с
@@ -221,30 +180,13 @@
     ),
   );
 
-  /**
-   * Подпись расчёта по правилам под галкой своей основы.
-   *
-   * @param breakdown разбор числа.
-   * @param isSigned число — бонус к броску, и знак у него виден всегда.
-   * @returns подпись вида «По правилам: 13».
-   */
-  function getRuleHint(
-    breakdown: SpellcastingValueBreakdown,
-    isSigned: boolean,
-  ): string {
-    const ruleValue = isSigned
-      ? getFormattedBonus(breakdown.ruleValue)
-      : String(breakdown.ruleValue);
-
-    return `${SHEET_SPELLCASTING_MODAL_LABELS.ruleValuePrefix}${ruleValue}`;
-  }
-
   const sections = computed<ValueSection[]>(() => [
     {
       key: 'saveDc',
       title: SPELLCASTING_STAT_LABELS.saveDc.full,
       draft: draft.saveDc,
-      ruleHint: getRuleHint(values.value.saveDc, false),
+      ruleHint: getSpellcastingRuleHint(values.value.saveDc, false),
+      ariaLabel: `${SHEET_SPELLCASTING_MODAL_LABELS.customBaseValue}: ${SPELLCASTING_STAT_LABELS.saveDc.full}`,
       min: SPELL_SAVE_DC_CUSTOM_MIN,
       max: SPELL_SAVE_DC_CUSTOM_MAX,
     },
@@ -252,7 +194,8 @@
       key: 'attack',
       title: SPELLCASTING_STAT_LABELS.attack.full,
       draft: draft.attack,
-      ruleHint: getRuleHint(values.value.attack, true),
+      ruleHint: getSpellcastingRuleHint(values.value.attack, true),
+      ariaLabel: `${SHEET_SPELLCASTING_MODAL_LABELS.customBaseValue}: ${SPELLCASTING_STAT_LABELS.attack.full}`,
       min: SPELL_ATTACK_CUSTOM_MIN,
       max: SPELL_ATTACK_CUSTOM_MAX,
       formatOptions: CUSTOM_BONUS_FORMAT_OPTIONS,
@@ -264,7 +207,7 @@
       return SHEET_SPELLCASTING_MODAL_LABELS.none;
     }
 
-    return `${ABILITY_LABELS[effectiveAbility.value]} · ${getFormattedBonus(
+    return `${ABILITY_LABELS[effectiveAbility.value]}${SPELLCASTING_LABEL_SEPARATOR}${getFormattedBonus(
       getAbilityModifier(character.value, effectiveAbility.value),
     )}`;
   });
@@ -287,7 +230,7 @@
     return [
       `${SPELLCASTING_STAT_LABELS.saveDc.short} ${getFormattedBonus(saveDc.effectBonus)}`,
       `${SPELLCASTING_STAT_LABELS.attack.short} ${getFormattedBonus(attack.effectBonus)}`,
-    ].join(SPELLCASTING_TILE_LABELS.separator);
+    ].join(SPELLCASTING_LABEL_SEPARATOR);
   });
 
   /** Штраф истощения к атаке; пусто — штрафа нет. */
@@ -397,7 +340,7 @@
               :max="section.max"
               :format-options="section.formatOptions"
               class="w-36 shrink-0"
-              :aria-label="`${SHEET_SPELLCASTING_MODAL_LABELS.customBaseValue}: ${section.title}`"
+              :aria-label="section.ariaLabel"
             />
           </div>
 

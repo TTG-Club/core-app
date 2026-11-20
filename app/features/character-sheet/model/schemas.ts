@@ -3898,17 +3898,19 @@ function parseSpellCastingKinds(input: unknown): SpellCastingKind[] {
 
 /**
  * Схема «сырого» ответа заклинания в части броска атаки: способ применения,
- * тип атаки, автопопадание, спасбросок и формулы воздействия.
+ * тип атаки, автопопадание, спасбросок и формулы воздействия. Пустое или битое
+ * поле читается как «не задано» — разбор сразу отдаёт поля в виде, который
+ * ждёт `isSpellAttackEffect`.
  */
 const spellRawAttackSchema = z
   .object({
     effect: z
       .object({
-        deliveryType: z.string().nullish().catch(null),
-        attackType: z.string().nullish().catch(null),
-        autoHit: z.boolean().nullish().catch(null),
-        savingThrows: z.array(z.string()).nullish().catch(null),
-        damageFormulas: z.array(z.string()).nullish().catch(null),
+        deliveryType: z.string().nullable().catch(null),
+        attackType: z.string().nullable().catch(null),
+        autoHit: z.boolean().catch(false),
+        savingThrows: z.array(z.string()).catch([]),
+        damageFormulas: z.array(z.string()).catch([]),
       })
       .nullable()
       .catch(null),
@@ -3926,17 +3928,7 @@ const spellRawAttackSchema = z
 function parseSpellHasAttackRoll(input: unknown): boolean {
   const { effect } = spellRawAttackSchema.parse(input);
 
-  if (!effect) {
-    return false;
-  }
-
-  return isSpellAttackEffect({
-    deliveryType: effect.deliveryType ?? null,
-    attackType: effect.attackType ?? null,
-    autoHit: effect.autoHit ?? false,
-    savingThrows: effect.savingThrows ?? [],
-    damageFormulas: effect.damageFormulas ?? [],
-  });
+  return effect ? isSpellAttackEffect(effect) : false;
 }
 
 /**

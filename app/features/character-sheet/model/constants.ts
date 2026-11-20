@@ -1154,6 +1154,9 @@ export const ARMOR_CLASS_LABELS: Record<
   | 'itemTitle'
   | 'featTitle'
   | 'effectTitle'
+  | 'customBonusTitle'
+  | 'bonusesTitle'
+  | 'bonusesHint'
   | 'totalTitle'
   | 'equipmentHint',
   string
@@ -1191,10 +1194,28 @@ export const ARMOR_CLASS_LABELS: Record<
   itemTitle: 'Магические предметы',
   featTitle: 'Черты',
   effectTitle: 'Эффекты',
+  customBonusTitle: 'Свой бонус',
+  bonusesTitle: 'Свои бонусы к КД',
+  bonusesHint:
+    'Подпишите, откуда бонус: «Щит», «Доспехи мага». Выключатель убирает бонус из КД, не удаляя его.',
   totalTitle: 'Итоговый КД',
   equipmentHint:
     'Надевайте доспехи и щит на вкладке «Снаряжение» — в зачёт идёт доспех с наибольшим КД, щит складывается сверху.',
 };
+
+/**
+ * Префиксы ключей строк разбора КД: вид прибавки. Источник одного вида может
+ * совпасть идентификатором с источником другого (эффект предмета и сам
+ * предмет), поэтому ключ строки складывается из вида и идентификатора.
+ */
+export const ARMOR_CLASS_ROW_PREFIXES = {
+  shield: 'shield',
+  item: 'item',
+  feat: 'feat',
+  effect: 'effect',
+  custom: 'custom',
+  ability: 'ability',
+} as const;
 
 /**
  * Характеристика бонуса атаки оружием по правилам: большинство оружия бьёт от
@@ -1297,6 +1318,7 @@ export const SHEET_SETTINGS_LABELS = {
   customBonusesTitle: 'Свои бонусы',
   customBonusAdd: 'Добавить бонус',
   customBonusRemove: 'Удалить бонус',
+  customBonusToggle: 'Учитывать бонус',
   customBonusLabelPlaceholder: 'Откуда бонус',
   customBonusSourcePlaceholder: 'Источник',
   // Запись от черты лист ведёт сам: правку вернула бы ближайшая сверка черт,
@@ -3371,7 +3393,6 @@ export const SPELLCASTING_TILE_LABELS = {
   editHint: 'нажми, чтобы настроить',
   fixed: 'Заклинательство черты',
   fixedHint: 'характеристику задала черта',
-  separator: ' · ',
 } as const;
 
 /** Окно броска атаки заклинанием: заголовок и надпись кнопки. */
@@ -6540,8 +6561,13 @@ export const SPELL_CAST_LABELS = {
   slotPrefix: 'тратит ячейку ',
   slotSuffix: ' круга',
   cantrip: 'заговор ячейку не тратит',
-  separator: ' · ',
 } as const;
+
+/**
+ * Разделитель частей составной подписи заклинательства: подсказки плитки
+ * («Сл 13 · Атака +5»), кнопки «Сотворить» и строк окна настройки.
+ */
+export const SPELLCASTING_LABEL_SEPARATOR = ' · ';
 
 /** Разделитель частей подписи под названием заклинания (источник, школа). */
 export const SPELL_SUBTITLE_SEPARATOR = '·';

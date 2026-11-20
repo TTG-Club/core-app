@@ -89,6 +89,15 @@ export const BUG_REPORT_MY_API_URL = `${BUG_REPORT_API_URL}/my`;
 /** URL API сводки изменений по баг-репортам текущего пользователя */
 export const BUG_REPORT_MY_UPDATES_API_URL = `${BUG_REPORT_API_URL}/my/updates`;
 
+/**
+ * Возвращает URL для отзыва своего баг-репорта.
+ *
+ * @param bugId Уникальный идентификатор репорта.
+ */
+export function getMyBugReportApiUrl(bugId: string): string {
+  return `${BUG_REPORT_MY_API_URL}/${bugId}`;
+}
+
 /** URL API получения списка баг-репортов (админка) */
 export const ADMIN_BUGS_API_URL = '/api/admin/bugs';
 
@@ -580,6 +589,48 @@ export const MY_BUGS_CHANGE_COMMENT_LABEL = 'Добавили комментар
  * прошлого просмотра появляется только после первого визита в раздел.
  */
 export const MY_BUGS_CHANGE_GENERIC_LABEL = 'Есть обновление';
+
+/**
+ * Статус, в котором автор может отозвать репорт: его ещё никто не взял в
+ * работу. Тем же правилом сервис отвечает 409 на попытку отозвать остальные.
+ */
+export const MY_BUGS_WITHDRAWABLE_STATUS: BugReportStatus = 'NEW';
+
+/** Подпись кнопки отзыва репорта */
+export const MY_BUGS_WITHDRAW_LABEL = 'Отозвать';
+
+/** Иконка кнопки отзыва репорта */
+export const MY_BUGS_WITHDRAW_ICON = 'tabler:arrow-back-up';
+
+/** Заголовок диалога подтверждения отзыва — свой для бага и пожелания */
+export const MY_BUGS_WITHDRAW_DIALOG_TITLES: Record<BugReportType, string> = {
+  BUG: 'Отозвать баг-репорт?',
+  WISH: 'Отозвать пожелание?',
+};
+
+/** Пояснение в диалоге подтверждения отзыва */
+export const MY_BUGS_WITHDRAW_DIALOG_DESCRIPTION =
+  'Запись удалится насовсем, и команда её не увидит. Вернуть её не получится — только отправить заново.';
+
+/** Подпись отказа в диалоге: «Отмена» рядом с «Отозвать» читалась бы двусмысленно */
+export const MY_BUGS_WITHDRAW_CANCEL_LABEL = 'Оставить';
+
+/** Уведомление об успешном отзыве */
+export const MY_BUGS_WITHDRAW_SUCCESS_TITLE = 'Запись отозвана';
+
+/** Заголовок уведомления о неудачном отзыве */
+export const MY_BUGS_WITHDRAW_ERROR_TITLE = 'Не удалось отозвать';
+
+/** Пояснение, когда запись успели взять в работу (сервис ответил 409) */
+export const MY_BUGS_WITHDRAW_CONFLICT_TEXT =
+  'Запись уже взяли в работу, поэтому отозвать её нельзя.';
+
+/** Пояснение, когда записи уже нет (сервис ответил 404) */
+export const MY_BUGS_WITHDRAW_NOT_FOUND_TEXT =
+  'Запись не найдена — возможно, её уже отозвали.';
+
+/** Пояснение для прочих сбоев, в том числе пока сервис не умеет отзывать */
+export const MY_BUGS_WITHDRAW_FAILURE_TEXT = 'Попробуйте ещё раз чуть позже.';
 
 /** Ключ localStorage со снимками просмотренного состояния репортов */
 export const MY_BUGS_SEEN_REPORTS_STORAGE_KEY = 'bug-report:my-reports-seen';

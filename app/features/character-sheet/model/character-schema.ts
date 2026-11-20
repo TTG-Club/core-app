@@ -129,6 +129,9 @@ const customBonusSchema = z.object({
   classUrl: z.string().catch(NEW_CUSTOM_BONUS.classUrl),
   value: z.coerce.number().int().catch(0),
   label: z.string().catch(''),
+  // Выключатель появился позже записи: у старых бонусов поля нет, и они
+  // работают, как работали.
+  disabled: z.boolean().optional().catch(undefined),
 });
 
 /**
@@ -700,10 +703,13 @@ const armorClassSchema = z
     dexLimit: z.coerce.number().int().nullable().catch(null),
     // По умолчанию — автоподсчёт по надетой броне (легаси-листы без поля).
     custom: z.boolean().catch(false),
+    // Свои прибавки к КД появились позже прочих полей: у старых листов их нет.
+    bonuses: z.array(customBonusSchema).catch([]),
   })
   .catch(() => ({
     ...DEFAULT_CHARACTER.armorClass,
     abilities: [...DEFAULT_CHARACTER.armorClass.abilities],
+    bonuses: [],
   }))
   .transform(({ ability, abilities, ...armorClass }) => ({
     ...armorClass,

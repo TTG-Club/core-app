@@ -1,10 +1,13 @@
 import type {
   AdminBugFilterOption,
   BugReportResponse,
+  BugReportStatus,
   BugReportStatusUpdatePayload,
   BugReportType,
   ParsedSelection,
 } from './types';
+
+import { StatusCodes } from 'http-status-codes';
 
 import { getNodeText, parse, toMarkupSource, toStoredMarkup } from '~ui/markup';
 
@@ -14,6 +17,10 @@ import {
   BUG_REPORT_TYPE_QUERY_VALUES,
   BUG_REPORT_TYPES,
   DEFAULT_BUG_REPORT_TYPE,
+  MY_BUGS_WITHDRAW_CONFLICT_TEXT,
+  MY_BUGS_WITHDRAW_FAILURE_TEXT,
+  MY_BUGS_WITHDRAW_NOT_FOUND_TEXT,
+  MY_BUGS_WITHDRAWABLE_STATUS,
 } from './constants';
 
 /**
@@ -202,4 +209,46 @@ export function toBugReportTypeQuery(type: BugReportType): string | undefined {
   return type === DEFAULT_BUG_REPORT_TYPE
     ? undefined
     : BUG_REPORT_TYPE_QUERY_VALUES[type];
+}
+
+/**
+ * Можно ли автору отозвать репорт: только пока его никто не взял в работу.
+ *
+ * @param status Текущий статус репорта.
+ */
+export function canWithdrawBugReport(status: BugReportStatus): boolean {
+  return status === MY_BUGS_WITHDRAWABLE_STATUS;
+}
+
+/**
+ * Пояснение к неудачному отзыву репорта по ответу сервиса: 409 — репорт уже
+ * взяли в работу, 404 — его уже нет. Всё остальное, включая ответ сервиса, ещё
+ * не умеющего отзывать, — общий сбой.
+ *
+ * @param status HTTP-статус ответа, если он есть.
+ */
+export function getBugReportWithdrawErrorText(
+  status: number | undefined,
+): string {
+  if (status === StatusCodes.CONFLICT) {
+    return MY_BUGS_WITHDRAW_CONFLICT_TEXT;
+  }
+
+  if (status === StatusCodes.NOT_FOUND) {
+    return MY_BUGS_WITHDRAW_NOT_FOUND_TEXT;
+  }
+
+  return MY_BUGS_WITHDRAW_FAILURE_TEXT;
+}
+
+/**
+ * Устарела ли картина на экране после отказа в отзыве: 409 — у репорта уже
+ * другой статус, 404 — его уже нет. В обоих случаях список стоит перечитать.
+ *
+ * @param status HTTP-статус ответа, если он есть.
+ */
+export function isBugReportWithdrawOutdated(
+  status: number | undefined,
+): boolean {
+  return status === StatusCodes.CONFLICT || status === StatusCodes.NOT_FOUND;
 }

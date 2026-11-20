@@ -8,14 +8,21 @@ import type {
   PageMyBugReportResponse,
 } from '../../model';
 
+import { getFetchStatus } from '~initiative/model';
+
 import { useMyBugStatusCounts } from '../../composables';
 import {
   BUG_REPORT_MY_API_URL,
   BUG_REPORT_MY_COUNT_API_URL,
   BUG_REPORT_TYPE_QUERY_KEY,
+  getBugReportWithdrawErrorText,
+  getMyBugReportApiUrl,
+  isBugReportWithdrawOutdated,
   MY_BUGS_LIST_DATA_KEY,
   MY_BUGS_PAGE_SIZE,
   MY_BUGS_SORT,
+  MY_BUGS_WITHDRAW_ERROR_TITLE,
+  MY_BUGS_WITHDRAW_SUCCESS_TITLE,
   MY_WISHES_STATUS_COUNTS_DATA_KEY,
   parseBugReportTypeQuery,
   toBugReportTypeQuery,
@@ -52,6 +59,12 @@ export interface UseMyBugReportsReturn {
 
   /** Перезагрузить список и сводку */
   reload: () => Promise<void>;
+
+  /**
+   * Отозвать свой репорт. Возвращает `true`, если сервис его удалил; об
+   * исходе в любом случае сообщает уведомлением.
+   */
+  withdrawBugReport: (bugReport: MyBugReportResponse) => Promise<boolean>;
 }
 
 /**
@@ -62,6 +75,7 @@ export interface UseMyBugReportsReturn {
  */
 export function useMyBugReports(): UseMyBugReportsReturn {
   const requestFetch = useRequestFetch();
+  const toast = useToast();
   const route = useRoute();
   const router = useRouter();
 
@@ -173,6 +187,58 @@ export function useMyBugReports(): UseMyBugReportsReturn {
     await Promise.all([refresh(), refreshStatusCounts()]);
   }
 
+  /**
+   * Перечитывает список после того, как из него ушла запись. Если она была
+   * последней на странице (не первой), шаг назад: смена страницы сама
+   * перезапросит список через `watch` у useAsyncData, остаётся сводка.
+   */
+  async function reloadAfterRemoval(): Promise<void> {
+    if (bugReports.value.length <= 1 && currentPage.value > 1) {
+      currentPage.value -= 1;
+      await refreshStatusCounts();
+
+      return;
+    }
+
+    await reload();
+  }
+
+  /**
+   * Отзывает репорт автором. После успеха и после отказа список и сводка
+   * перечитываются: при 409 у репорта уже другой статус, при 404 его нет —
+   * в обоих случаях на экране устаревшая картина.
+   *
+   * @param bugReport Отзываемый репорт.
+   */
+  async function withdrawBugReport(
+    bugReport: MyBugReportResponse,
+  ): Promise<boolean> {
+    try {
+      await requestFetch(getMyBugReportApiUrl(bugReport.id), {
+        method: 'DELETE',
+      });
+    } catch (withdrawError: unknown) {
+      const errorStatus = getFetchStatus(withdrawError);
+
+      toast.add({
+        title: MY_BUGS_WITHDRAW_ERROR_TITLE,
+        description: getBugReportWithdrawErrorText(errorStatus),
+        color: 'error',
+      });
+
+      if (isBugReportWithdrawOutdated(errorStatus)) {
+        void reload();
+      }
+
+      return false;
+    }
+
+    toast.add({ title: MY_BUGS_WITHDRAW_SUCCESS_TITLE, color: 'success' });
+    void reloadAfterRemoval();
+
+    return true;
+  }
+
   return {
     bugReports,
     statusCounts,
@@ -184,5 +250,6 @@ export function useMyBugReports(): UseMyBugReportsReturn {
     isLoading,
     hasError,
     reload,
+    withdrawBugReport,
   };
 }

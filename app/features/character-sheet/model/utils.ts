@@ -13,6 +13,7 @@ import type {
   AbilityRow,
   ArmorClassAbilityBonus,
   ArmorClassBreakdown,
+  ArmorClassBreakdownRow,
   ArmorDexterityMod,
   AttunementBreakdown,
   BonusBreakdownPart,
@@ -154,15 +155,18 @@ import type {
   SpeedUnit,
   SpellAttackEffectFields,
   SpellAttackRoll,
+  SpellCastAction,
   SpellcastingBreakdown,
   SpellcastingClassRow,
   SpellCastingKind,
   SpellcastingValueBreakdown,
+  SpellcastingValueDraft,
   SpellcastingValues,
   SpellCatalogItem,
   SpellCatalogPreset,
   SpellDamage,
   SpellDamageFormulas,
+  SpellDamageRoll,
   SpellSlotCircle,
   SpellSlotKind,
   SpellSlotRow,
@@ -253,6 +257,7 @@ import {
   ARMOR_CLASS_BASE_MAX,
   ARMOR_CLASS_BASE_MIN,
   ARMOR_CLASS_LABELS,
+  ARMOR_CLASS_ROW_PREFIXES,
   ARMOR_MATCH_KEYWORDS,
   ARMOR_MEDIUM_DEX_CAP,
   ARMOR_PROFICIENCY_GROUPS,
@@ -462,6 +467,7 @@ import {
   SHEET_SHARE_ACTIVE_HINT,
   SHEET_SPEED_LABELS,
   SHEET_SPELL_ABILITY_LABELS,
+  SHEET_SPELLCASTING_MODAL_LABELS,
   SHEET_UNARMORED_LABEL,
   SIZE_LABEL_WORDS,
   SKILL_DUPLICATE_WARNING,
@@ -483,6 +489,7 @@ import {
   SPELL_ATTACK_CUSTOM_MIN,
   SPELL_ATTACK_ROLL_DELIVERY_TYPES,
   SPELL_ATTACK_TYPES,
+  SPELL_CAST_LABELS,
   SPELL_CASTING_BEYOND_TURN_KIND,
   SPELL_CASTING_KIND_ORDER,
   SPELL_CASTING_TEXT_PATTERNS,
@@ -504,6 +511,7 @@ import {
   SPELL_SAVE_DC_CUSTOM_MIN,
   SPELL_SLOT_FREE_LABEL,
   SPELL_SLOT_USED_LABEL,
+  SPELLCASTING_LABEL_SEPARATOR,
   SPELLCASTING_STAT_LABELS,
   STARTING_EQUIPMENT_CUSTOM_ID_SEGMENT,
   STARTING_EQUIPMENT_LABELS,
@@ -1003,6 +1011,29 @@ export function getInventoryBonusTotal(
 }
 
 /**
+ * Сведение вкладов в строки разбора: несколько записей одного источника
+ * (предмет с двумя бонусами к одной цели) складываются в одну строку, а
+ * источники с нулевым итогом пропадают — строка с нулём сбивала бы со счёта.
+ *
+ * @param contributions вклады записей в порядке подсчёта.
+ * @returns вклады источников; пустой список — ненулевых вкладов нет.
+ */
+function mergeBonusSources(
+  contributions: InventoryBonusSource[],
+): InventoryBonusSource[] {
+  const sources = new Map<string, InventoryBonusSource>();
+
+  for (const contribution of contributions) {
+    sources.set(contribution.id, {
+      ...contribution,
+      value: (sources.get(contribution.id)?.value ?? 0) + contribution.value,
+    });
+  }
+
+  return [...sources.values()].filter((source) => source.value !== 0);
+}
+
+/**
  * Источники, меняющие значение цели, — строками разбора: без них итог не
  * сходится ни с характеристикой, ни с владением. Источником бывает предмет,
  * умение и свой эффект листа; вклад считается по шагам той же свёртки, поэтому
@@ -1019,7 +1050,7 @@ export function getInventoryBonusSources(
   targets: InventoryBonusTarget[],
   base: number,
 ): InventoryBonusSource[] {
-  const sources = new Map<string, InventoryBonusSource>();
+  const contributions: InventoryBonusSource[] = [];
 
   let value = base;
 
@@ -1028,18 +1059,17 @@ export function getInventoryBonusSources(
     targets,
   )) {
     const next = applyInventoryBonus(value, bonus);
-    const stored = sources.get(source.id);
 
-    sources.set(source.id, {
+    contributions.push({
       id: source.id,
       name: source.name,
-      value: (stored?.value ?? 0) + next - value,
+      value: next - value,
     });
 
     value = next;
   }
 
-  return [...sources.values()].filter((source) => source.value !== 0);
+  return mergeBonusSources(contributions);
 }
 
 /**
@@ -1522,16 +1552,20 @@ export function toStoredCustomBonuses(
  * бонусов, а `null` (счёт по правилам) остаётся собой.
  *
  * @param base своё значение основы из черновика формы.
+ * @param min наименьшее значение; по умолчанию — общий предел листа.
+ * @param max наибольшее значение; по умолчанию — общий предел листа.
  * @returns своё значение основы для записи в лист.
  */
-export function toStoredCustomBase(base: number | null): number | null {
+export function toStoredCustomBase(
+  base: number | null,
+  min: number = CUSTOM_BONUS_MIN,
+  max: number = CUSTOM_BONUS_MAX,
+): number | null {
   if (base === null) {
     return null;
   }
 
-  return Number.isFinite(base)
-    ? clamp(Math.trunc(base), CUSTOM_BONUS_MIN, CUSTOM_BONUS_MAX)
-    : 0;
+  return Number.isFinite(base) ? clamp(Math.trunc(base), min, max) : 0;
 }
 
 /**
@@ -1693,6 +1727,12 @@ export function getCustomBonusValue(
   character: Character,
   bonus: CharacterCustomBonus,
 ): number {
+  // Выключенный игроком бонус хранится ради быстрого возврата (щит за спиной),
+  // но ничего не прибавляет.
+  if (bonus.disabled) {
+    return 0;
+  }
+
   if (bonus.kind === 'ability') {
     return getAbilityModifier(character, bonus.ability);
   }
@@ -4686,7 +4726,8 @@ function evaluateEffectFormula(
 }
 
 /**
- * Прибавки к классу доспеха от активных эффектов — одной строкой разбора.
+ * Прибавки к классу доспеха от активных эффектов — по строке на источник:
+ * игрок видит, что +1 дала «Оборона», а +2 — «Наручи защиты».
  *
  * Идут сюда живые бонусы (условие или формула) от кого угодно и числовые от
  * умений и своих эффектов листа. Числовые прибавки предметов сюда не идут:
@@ -4694,16 +4735,43 @@ function evaluateEffectFormula(
  * плащ и кольцо защиты дают плоский `itemBonus`.
  *
  * @param character персонаж.
- * @returns суммарная прибавка; 0 — подходящих эффектов нет.
+ * @returns вклады источников; пустой список — подходящих эффектов нет.
  */
-function getArmorClassEffectBonus(character: Character): number {
-  return getActiveInventoryBonusEntries(character, [{ kind: 'armor-class' }])
-    .filter(
-      (entry) =>
-        getInventoryBonusMode(entry.bonus) === 'add'
-        && (entry.live || entry.source.kind !== 'item'),
-    )
-    .reduce((total, entry) => total + entry.bonus.value, 0);
+function getArmorClassEffectSources(
+  character: Character,
+): InventoryBonusSource[] {
+  return mergeBonusSources(
+    getActiveInventoryBonusEntries(character, [{ kind: 'armor-class' }])
+      .filter(
+        ({ source, bonus, live }) =>
+          getInventoryBonusMode(bonus) === 'add'
+          && (live || source.kind !== 'item'),
+      )
+      .map(({ source, bonus }) => ({
+        id: source.id,
+        name: source.name,
+        value: bonus.value,
+      })),
+  );
+}
+
+/**
+ * Свои прибавки игрока к классу доспеха строками разбора. Выключенные в разбор
+ * не идут: они ничего не прибавляют, а строка с нулём сбивала бы со счёта.
+ *
+ * @param character персонаж.
+ * @returns вклады своих прибавок; пустой список — включённых прибавок нет.
+ */
+function getArmorClassCustomSources(
+  character: Character,
+): InventoryBonusSource[] {
+  return character.armorClass.bonuses
+    .filter((bonus) => !bonus.disabled)
+    .map((bonus) => ({
+      id: bonus.id,
+      name: getCustomBonusLabel(character, bonus),
+      value: getCustomBonusValue(character, bonus),
+    }));
 }
 
 /** Режимы изменения, которыми эффект задаёт КД тела целиком. */
@@ -4816,12 +4884,18 @@ export function getArmorClassBreakdown(
   // надетый предмет, и в строке «Черты» прибавка от наручей вводила бы в
   // заблуждение. Живая часть (формулы и условия) считается каждый раз заново —
   // чтобы уйти при снятии доспеха и сойтись с текущим модификатором.
-  const effectBonus = getArmorClassEffectBonus(character);
+  const effectBonuses = getArmorClassEffectSources(character);
+  const effectBonus = sumBy(effectBonuses, (source) => source.value);
+
+  // Свои прибавки игрока («Щит», «Доспехи мага») идут в обоих режимах, как и
+  // черты: это поправка поверх расчёта, а не его основа.
+  const customBonuses = getArmorClassCustomSources(character);
+  const customBonus = sumBy(customBonuses, (source) => source.value);
 
   if (custom) {
     const value = abilityBonuses.reduce(
       (total, bonus) => total + bonus.modifier,
-      base + featBonus + effectBonus,
+      base + featBonus + effectBonus + customBonus,
     );
 
     return {
@@ -4834,9 +4908,14 @@ export function getArmorClassBreakdown(
       dexCapped: false,
       dexLimited: false,
       shieldBonus: 0,
+      shieldName: null,
       itemBonus: 0,
+      itemBonuses: [],
       featBonus,
       effectBonus,
+      effectBonuses,
+      customBonus,
+      customBonuses,
       extraAbilities: abilityBonuses,
     };
   }
@@ -4914,25 +4993,30 @@ export function getArmorClassBreakdown(
 
   // Щит: в зачёт идёт лучший из надетых (несколько щитов не складываются).
   let shieldBonus = 0;
+  let shieldName: string | null = null;
 
   for (const item of equippedArmor) {
     const shieldValue = item.armor.baseArmorClass + getArmorMagicBonus(item);
 
     if (item.armor.shield && shieldValue > shieldBonus) {
       shieldBonus = shieldValue;
+      shieldName = item.name;
     }
   }
 
   // Плащ и кольцо защиты бронёй не являются и по правилам складываются друг с
   // другом, поэтому их бонусы суммируются, а не соревнуются за лучший. Надбавка
   // самой брони сюда не идёт — она уже учтена в её значении.
-  const itemBonus = character.inventory.reduce(
-    (total, item) =>
-      item.armor === null && isActiveBonusItem(item)
-        ? total + getInventoryItemArmorClassBonus(item)
-        : total,
-    0,
-  );
+  const itemBonuses = character.inventory
+    .filter((item) => item.armor === null && isActiveBonusItem(item))
+    .map((item) => ({
+      id: item.id,
+      name: item.name,
+      value: getInventoryItemArmorClassBonus(item),
+    }))
+    .filter((source) => source.value !== 0);
+
+  const itemBonus = sumBy(itemBonuses, (source) => source.value);
 
   return {
     value: getArmorClassWithItemLimits(
@@ -4942,6 +5026,7 @@ export function getArmorClassBreakdown(
         + itemBonus
         + featBonus
         + effectBonus
+        + customBonus
         + extraBonus,
     ),
     custom: false,
@@ -4954,11 +5039,124 @@ export function getArmorClassBreakdown(
     // пределе урезал Ловкость именно он.
     dexLimited: dexCapped && dexLimit !== null,
     shieldBonus,
+    shieldName,
     itemBonus,
+    itemBonuses,
     featBonus,
     effectBonus,
+    effectBonuses,
+    customBonus,
+    customBonuses,
     extraAbilities,
   };
+}
+
+/**
+ * Строка разбора класса доспеха.
+ *
+ * @param id ключ строки: уникален в пределах разбора.
+ * @param label подпись вида прибавки.
+ * @param name название источника; пустая строка — подписи вида достаточно.
+ * @param value величина прибавки.
+ * @returns строка разбора.
+ */
+function toArmorClassBreakdownRow(
+  id: string,
+  label: string,
+  name: string,
+  value: number,
+): ArmorClassBreakdownRow {
+  return { id, label, name, formattedValue: getFormattedBonus(value) };
+}
+
+/**
+ * Строки разбора вида прибавки: по строке на источник.
+ *
+ * @param prefix префикс ключа строки — вид прибавки.
+ * @param label подпись вида прибавки.
+ * @param sources вклады источников.
+ * @returns строки разбора.
+ */
+function toArmorClassSourceRows(
+  prefix: string,
+  label: string,
+  sources: InventoryBonusSource[],
+): ArmorClassBreakdownRow[] {
+  return sources.map((source) =>
+    toArmorClassBreakdownRow(
+      `${prefix}:${source.id}`,
+      label,
+      source.name,
+      source.value,
+    ),
+  );
+}
+
+/**
+ * Строки разбора класса доспеха между доспехом и итогом: щит, каждый
+ * предмет, черты, каждый эффект, каждая своя прибавка игрока и характеристики
+ * сверх доспеха — с названием источника, чтобы было видно, откуда взялось
+ * число. Строки с нулём не показываются.
+ *
+ * @param breakdown разбор класса доспеха.
+ * @returns строки разбора в порядке подсчёта.
+ */
+export function getArmorClassBreakdownRows(
+  breakdown: ArmorClassBreakdown,
+): ArmorClassBreakdownRow[] {
+  const shieldRows =
+    breakdown.shieldBonus > 0
+      ? [
+          toArmorClassBreakdownRow(
+            ARMOR_CLASS_ROW_PREFIXES.shield,
+            ARMOR_CLASS_LABELS.shieldTitle,
+            breakdown.shieldName ?? '',
+            breakdown.shieldBonus,
+          ),
+        ]
+      : [];
+
+  const featRows =
+    breakdown.featBonus === 0
+      ? []
+      : [
+          toArmorClassBreakdownRow(
+            ARMOR_CLASS_ROW_PREFIXES.feat,
+            ARMOR_CLASS_LABELS.featTitle,
+            '',
+            breakdown.featBonus,
+          ),
+        ];
+
+  const abilityRows = breakdown.extraAbilities.map((bonus) =>
+    toArmorClassBreakdownRow(
+      `${ARMOR_CLASS_ROW_PREFIXES.ability}:${bonus.ability}`,
+      ABILITY_LABELS[bonus.ability],
+      '',
+      bonus.modifier,
+    ),
+  );
+
+  return [
+    ...shieldRows,
+    ...toArmorClassSourceRows(
+      ARMOR_CLASS_ROW_PREFIXES.item,
+      ARMOR_CLASS_LABELS.itemTitle,
+      breakdown.itemBonuses,
+    ),
+    ...featRows,
+    ...toArmorClassSourceRows(
+      ARMOR_CLASS_ROW_PREFIXES.effect,
+      ARMOR_CLASS_LABELS.effectTitle,
+      breakdown.effectBonuses,
+    ),
+    ...toArmorClassSourceRows(
+      ARMOR_CLASS_ROW_PREFIXES.custom,
+      ARMOR_CLASS_LABELS.customBonusTitle,
+      breakdown.customBonuses,
+    ),
+    ...abilityRows,
+  ];
 }
 
 /**
@@ -9749,7 +9947,7 @@ function getSpellcastingValueBreakdown(
 export function getSpellcastingValues(
   character: Character,
   ability: AbilityKey | null,
-  settings: CharacterSpellcastingSettings | undefined,
+  settings?: CharacterSpellcastingSettings,
 ): SpellcastingValues {
   const proficiencyBonus = getCharacterProficiencyBonus(character);
 
@@ -9803,13 +10001,15 @@ function toStoredSpellcastingValueSettings(
   min: number,
   max: number,
 ): CharacterSpellcastingValueSettings {
-  const { base } = settings;
+  // Очищенное поле своего числа — это «по правилам», а не ноль: так же его
+  // показывает предпросмотр окна (`getSpellcastingValueBreakdown`).
+  const base =
+    settings.base !== null && Number.isFinite(settings.base)
+      ? settings.base
+      : null;
 
   return {
-    base:
-      base === null || !Number.isFinite(base)
-        ? null
-        : clamp(Math.round(base), min, max),
+    base: toStoredCustomBase(base, min, max),
     bonuses: toStoredCustomBonuses(settings.bonuses),
   };
 }
@@ -9842,6 +10042,63 @@ export function toStoredSpellcastingSettings(
     || isChangedSpellcastingValueSettings(stored.attack)
     ? stored
     : undefined;
+}
+
+/**
+ * Черновик окна для одного числа заклинательства по записи класса. Своё число
+ * подставляется из расчёта по правилам: его чаще правят на пару единиц, чем
+ * набирают с нуля. Бонусы копируются — иначе правки уходили бы в лист мимо
+ * «Применить».
+ *
+ * @param settings настройка числа из записи класса.
+ * @param ruleValue число по правилам.
+ * @returns черновик числа.
+ */
+export function toSpellcastingValueDraft(
+  settings: CharacterSpellcastingValueSettings | undefined,
+  ruleValue: number,
+): SpellcastingValueDraft {
+  const base = settings?.base ?? null;
+
+  return {
+    isCustomBase: base !== null,
+    base: base ?? ruleValue,
+    bonuses: (settings?.bonuses ?? []).map((bonus) => ({ ...bonus })),
+  };
+}
+
+/**
+ * Настройка одного числа из черновика окна: в том же виде, в каком она ляжет
+ * в лист (до чистки `toStoredSpellcastingSettings`).
+ *
+ * @param draft черновик числа.
+ * @returns настройка числа.
+ */
+export function toSpellcastingValueSettings(
+  draft: SpellcastingValueDraft,
+): CharacterSpellcastingValueSettings {
+  return {
+    base: draft.isCustomBase ? draft.base : null,
+    bonuses: draft.bonuses,
+  };
+}
+
+/**
+ * Подпись расчёта по правилам под галкой своей основы.
+ *
+ * @param breakdown разбор числа.
+ * @param isSigned число — бонус к броску, и знак у него виден всегда.
+ * @returns подпись вида «По правилам: 13».
+ */
+export function getSpellcastingRuleHint(
+  breakdown: SpellcastingValueBreakdown,
+  isSigned: boolean,
+): string {
+  const ruleValue = isSigned
+    ? getFormattedBonus(breakdown.ruleValue)
+    : String(breakdown.ruleValue);
+
+  return `${SHEET_SPELLCASTING_MODAL_LABELS.ruleValuePrefix}${ruleValue}`;
 }
 
 /**
@@ -9914,7 +10171,7 @@ export function getSpellAttackRoll(
       ability: ownAbility,
       modifier:
         ownRow?.attackBonus
-        ?? getSpellcastingValues(character, ownAbility, undefined).attack.value,
+        ?? getSpellcastingValues(character, ownAbility).attack.value,
     };
   }
 
@@ -9923,6 +10180,51 @@ export function getSpellAttackRoll(
   return primaryRow?.ability
     ? { title, ability: primaryRow.ability, modifier: primaryRow.attackBonus }
     : null;
+}
+
+/**
+ * Кнопка «Сотворить» строки заклинания: что сделает нажатие и всё, что для
+ * этого нужно. Атакующее заклинание сперва катит атаку, урон — следом, и уже
+ * окно урона тратит ячейку, как плитка урона. Без урона ячейка тратится сразу.
+ * Заговору без атаки и урона сотворение ничего не даёт — кнопки нет.
+ *
+ * @param spell заклинание вкладки.
+ * @param attack бросок атаки; null — заклинание не атакует.
+ * @param damage бросок урона (первая плитка урона строки); null — урона нет.
+ * @returns кнопка сотворения; null — делать по нажатию нечего.
+ */
+export function getSpellCastAction(
+  spell: CharacterSpell,
+  attack: SpellAttackRoll | null,
+  damage: SpellDamageRoll | null,
+): SpellCastAction | null {
+  const isCantrip = spell.level === CANTRIP_SPELL_LEVEL;
+
+  if (!attack && !damage && isCantrip) {
+    return null;
+  }
+
+  const steps: string[] = [];
+
+  if (attack) {
+    steps.push(
+      damage ? SPELL_CAST_LABELS.attackAndDamage : SPELL_CAST_LABELS.attack,
+    );
+  } else if (damage) {
+    steps.push(SPELL_CAST_LABELS.damage);
+  }
+
+  steps.push(
+    isCantrip
+      ? SPELL_CAST_LABELS.cantrip
+      : `${SPELL_CAST_LABELS.slotPrefix}${spell.level}${SPELL_CAST_LABELS.slotSuffix}`,
+  );
+
+  return {
+    request: { level: spell.level, attack, damage },
+    tooltip: `${SPELL_CAST_LABELS.label}: ${steps.join(SPELLCASTING_LABEL_SEPARATOR)}`,
+    ariaLabel: `${SPELL_CAST_LABELS.label}: ${spell.name}`,
+  };
 }
 
 /**
@@ -10003,7 +10305,7 @@ function getFeatureSpellcastingRows(
     taken.add(ability);
 
     // Черта настройки не знает: её числа всегда по правилам
-    const values = getSpellcastingValues(character, ability, undefined);
+    const values = getSpellcastingValues(character, ability);
 
     rows.push({
       classUrl: feature.id,
@@ -10059,7 +10361,7 @@ export function getSpellcastingBreakdown(
 
   // Строк нет — заклинательной характеристики у персонажа тоже: её
   // модификатор в подсчёте нулевой.
-  const fallbackValues = getSpellcastingValues(character, null, undefined);
+  const fallbackValues = getSpellcastingValues(character, null);
 
   return {
     ability: primaryRow?.ability ?? null,

@@ -3,6 +3,8 @@ import type {
   CharacterClass,
   CharacterSpell,
   SpellAttackEffectFields,
+  SpellAttackRoll,
+  SpellDamageRoll,
 } from '~character-sheet/model';
 
 import { describe, expect, it } from 'vitest';
@@ -10,11 +12,17 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_CHARACTER,
   getSpellAttackRoll,
+  getSpellCastAction,
   getSpellcastingBreakdown,
+  getSpellcastingRuleHint,
   getSpellcastingValues,
   isSpellAttackEffect,
   NEW_CUSTOM_BONUS,
   parseCharacter,
+  parseSpellCatalogMechanics,
+  SPELL_CAST_LABELS,
+  toSpellcastingValueDraft,
+  toSpellcastingValueSettings,
   toStoredSpellcastingSettings,
 } from '~character-sheet/model';
 
@@ -100,7 +108,7 @@ describe('числа заклинательства', () => {
       health: { ...character.health, exhaustion: 1 },
     };
 
-    const values = getSpellcastingValues(tired, 'intelligence', undefined);
+    const values = getSpellcastingValues(tired, 'intelligence');
 
     expect(values.saveDc.value).toBe(15);
     expect(values.attack.value).toBe(5);
@@ -250,5 +258,105 @@ describe('бросок атаки заклинания', () => {
     );
 
     expect(roll).toMatchObject({ ability: 'charisma', modifier: 4 });
+  });
+});
+
+describe('черновик окна заклинательства', () => {
+  it('без настройки своё число берётся из правил, галка снята', () => {
+    expect(toSpellcastingValueDraft(undefined, 13)).toEqual({
+      isCustomBase: false,
+      base: 13,
+      bonuses: [],
+    });
+  });
+
+  it('черновик копирует бонусы и возвращается в ту же настройку', () => {
+    const bonus = { ...NEW_CUSTOM_BONUS, id: 'bonus', value: 2 };
+    const draft = toSpellcastingValueDraft({ base: 15, bonuses: [bonus] }, 13);
+
+    expect(draft.bonuses[0]).not.toBe(bonus);
+
+    expect(toSpellcastingValueSettings(draft)).toEqual({
+      base: 15,
+      bonuses: [bonus],
+    });
+
+    expect(
+      toSpellcastingValueSettings({ ...draft, isCustomBase: false }).base,
+    ).toBeNull();
+  });
+
+  it('подпись правил у атаки со знаком, у Сл — без', () => {
+    const values = getSpellcastingValues(createWizard(), 'intelligence');
+
+    expect(getSpellcastingRuleHint(values.saveDc, false)).toMatch(/15$/);
+    expect(getSpellcastingRuleHint(values.attack, true)).toMatch(/\+7$/);
+  });
+
+  it('очищенное поле своего числа записывается как «по правилам»', () => {
+    expect(
+      toStoredSpellcastingSettings({
+        saveDc: { base: Number.NaN, bonuses: [] },
+        attack: { base: null, bonuses: [] },
+      }),
+    ).toBeUndefined();
+  });
+});
+
+describe('кнопка «Сотворить»', () => {
+  const ATTACK: SpellAttackRoll = {
+    title: 'Атака',
+    modifier: 7,
+    ability: 'intelligence',
+  };
+
+  const DAMAGE: SpellDamageRoll = {
+    title: 'Урон',
+    damage: {
+      diceNotation: '1к10',
+      flatBonus: 0,
+      effectBonus: 0,
+      riders: [],
+      ability: null,
+      abilityModifierCount: 0,
+      typeLabel: '',
+    },
+    level: 0,
+  };
+
+  it('у заговора без атаки и урона кнопки нет', () => {
+    expect(getSpellCastAction(FIRE_BOLT, null, null)).toBeNull();
+  });
+
+  it('заклинание круга без атаки и урона тратит ячейку', () => {
+    const action = getSpellCastAction({ ...FIRE_BOLT, level: 2 }, null, null);
+
+    expect(action?.request).toEqual({ level: 2, attack: null, damage: null });
+    expect(action?.tooltip).toContain(SPELL_CAST_LABELS.slotPrefix);
+  });
+
+  it('атака и урон идут одним сотворением', () => {
+    const action = getSpellCastAction(FIRE_BOLT, ATTACK, DAMAGE);
+
+    expect(action?.request).toEqual({
+      level: 0,
+      attack: ATTACK,
+      damage: DAMAGE,
+    });
+
+    expect(action?.tooltip).toContain(SPELL_CAST_LABELS.attackAndDamage);
+    expect(action?.tooltip).toContain(SPELL_CAST_LABELS.cantrip);
+  });
+});
+
+describe('атака заклинания из ответа справочника', () => {
+  it('пустые поля воздействия читаются как «не задано»', () => {
+    expect(
+      parseSpellCatalogMechanics({
+        effect: { deliveryType: null, attackType: 'RANGE', autoHit: null },
+      }).hasAttackRoll,
+    ).toBe(true);
+
+    expect(parseSpellCatalogMechanics({}).hasAttackRoll).toBe(false);
   });
 });

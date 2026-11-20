@@ -3,6 +3,7 @@
     CharacterSpell,
     DamageRollSource,
     PreparedSpellKind,
+    SpellCastAction,
     SpellcastingBreakdown,
     SpellCastingKind,
     SpellCastRequest,
@@ -34,6 +35,7 @@
     getPreparedSpellsHint,
     getPreparedSpellsValue,
     getSpellAttackRoll,
+    getSpellCastAction,
     getSpellGroupLabel,
     getSpellGroups,
     getSpellListLevels,
@@ -70,6 +72,7 @@
     SPELL_FILTER_LABELS,
     SPELL_SLOTS_LABEL,
     SPELL_SUBTITLE_SEPARATOR,
+    SPELLCASTING_LABEL_SEPARATOR,
     SPELLCASTING_STAT_LABELS,
     SPELLCASTING_TILE_LABELS,
     takesPreparationSpace,
@@ -233,7 +236,7 @@
           row.editable
             ? SPELLCASTING_TILE_LABELS.editHint
             : SPELLCASTING_TILE_LABELS.fixedHint,
-        ].join(SPELLCASTING_TILE_LABELS.separator),
+        ].join(SPELLCASTING_LABEL_SEPARATOR),
         ariaLabel: row.editable
           ? `${SPELLCASTING_TILE_LABELS.edit}: ${saveDcLabel}, ${attackLabel}`
           : `${SPELLCASTING_TILE_LABELS.fixed}: ${row.className}`,
@@ -617,57 +620,23 @@
   }
 
   /**
-   * Кнопка «Сотворить» строки: что сделает нажатие и всё, что для этого нужно.
-   * Атакующее заклинание сперва катит атаку, урон — следом, и уже окно урона
-   * тратит ячейку, как плитка урона. Без урона ячейка тратится сразу.
-   * Заговору без атаки и урона сотворение ничего не даёт — кнопки нет.
+   * Кнопка «Сотворить» строки: атака — у того заклинательства, от которого
+   * считается заклинание, урон — первая плитка урона строки, та же, что катит
+   * плитка.
    *
    * @param spell заклинание вкладки.
-   * @param damageStats плитки урона строки: окно урона после атаки — первой из
-   * них, той же, что катит плитка.
+   * @param damageStats плитки урона строки.
    * @returns кнопка сотворения; null — делать по нажатию нечего.
    */
-  function getSpellCastAction(
+  function getSpellCastButton(
     spell: CharacterSpell,
     damageStats: Array<{ roll: SpellDamageRoll }>,
-  ) {
+  ): SpellCastAction | null {
     const attack = hasAttackRoll(spell)
       ? getSpellAttackRoll(character.value, props.spellcasting.rows, spell)
       : null;
 
-    const damage = damageStats[0]?.roll ?? null;
-
-    const isCantrip = spell.level === CANTRIP_SPELL_LEVEL;
-
-    if (!attack && !damage && isCantrip) {
-      return null;
-    }
-
-    const steps: string[] = [];
-
-    if (attack) {
-      steps.push(
-        damage ? SPELL_CAST_LABELS.attackAndDamage : SPELL_CAST_LABELS.attack,
-      );
-    } else if (damage) {
-      steps.push(SPELL_CAST_LABELS.damage);
-    }
-
-    steps.push(
-      isCantrip
-        ? SPELL_CAST_LABELS.cantrip
-        : `${SPELL_CAST_LABELS.slotPrefix}${spell.level}${SPELL_CAST_LABELS.slotSuffix}`,
-    );
-
-    return {
-      request: {
-        level: spell.level,
-        attack,
-        damage,
-      } satisfies SpellCastRequest,
-      tooltip: `${SPELL_CAST_LABELS.label}: ${steps.join(SPELL_CAST_LABELS.separator)}`,
-      ariaLabel: `${SPELL_CAST_LABELS.label}: ${spell.name}`,
-    };
+    return getSpellCastAction(spell, attack, damageStats[0]?.roll ?? null);
   }
 
   /**
@@ -947,7 +916,7 @@
             // Урон каталожного заклинания приходит из справочника; у своего его
             // нет — форма листа урон не заполняет.
             damageStats,
-            castAction: getSpellCastAction(spell, damageStats),
+            castAction: getSpellCastButton(spell, damageStats),
             // У каталожных заклинаний этих полей нет — список выйдет пустым.
             statRows: getSpellStatRows(spell),
             descriptionNodes: spell.description ?? [],

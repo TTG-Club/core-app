@@ -1,6 +1,7 @@
 import type {
   CatalogSpellDetail,
   Character,
+  CharacterHealth,
   CharacterInventoryItem,
   CharacterSheetDetail,
   CharacterSheetListPage,
@@ -620,21 +621,24 @@ export async function saveSharedCharacterSheet(
 }
 
 /**
- * Текущие хиты чужого листа, сохранённого по ссылке: их отмечает мастер боя в
- * трекере инициативы. Пишется только `health.current` — максимум лист считает
- * сам, остальной документ остаётся владельца. Отозванная ссылка или удалённый
- * лист — 404.
+ * Текущие и временные хиты чужого листа, сохранённого по ссылке: их отмечает
+ * мастер боя в трекере инициативы. Пишутся только `health.current` и
+ * `health.temporary` — максимум лист считает сам, остальной документ остаётся
+ * владельца. Отозванная ссылка или удалённый лист — 404.
+ *
+ * Сервер, ещё не знающий поля `temporary`, его молча пропускает и пишет только
+ * текущие хиты.
  *
  * @param savedId идентификатор сохранённой записи.
- * @param current текущие хиты персонажа.
+ * @param hitPoints текущие и временные хиты персонажа; временные `0` — снять.
  */
 export async function updateSavedCharacterSheetHitPoints(
   savedId: string,
-  current: number,
+  hitPoints: Pick<CharacterHealth, 'current' | 'temporary'>,
 ): Promise<void> {
   await $fetch(`${CHARACTER_SHEET_SAVED_API_PATH}/${savedId}/health`, {
     method: 'PATCH',
-    body: { current },
+    body: { current: hitPoints.current, temporary: hitPoints.temporary },
     retry: 0,
   });
 }

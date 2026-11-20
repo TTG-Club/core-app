@@ -1,7 +1,8 @@
-import type { Character } from '~character-sheet/model';
+import type { Character, CharacterHealth } from '~character-sheet/model';
 
 import type {
   ConditionKey,
+  HitPointsState,
   ManualInitiativeMode,
   ManualInitiativeRange,
   ParticipantColor,
@@ -16,10 +17,12 @@ import { clamp } from 'es-toolkit';
 import {
   CHARACTER_SHEET_ROUTE,
   CHARACTER_SHEET_SHARED_ROUTE,
+  clampHitPoints,
   getArmorClassValue,
   getClassesDisplayLabel,
   getDisplayLevel,
   getInitiativeBonus,
+  HIT_POINTS_MIN,
 } from '~character-sheet/model';
 
 import {
@@ -208,6 +211,7 @@ export function buildSheetPlayerOption(
     ),
     maxHitPoints,
     currentHitPoints: clamp(character.health.current, 0, maxHitPoints),
+    temporaryHitPoints: Math.max(0, character.health.temporary),
     avatarUrl: character.avatarUrl,
   };
 }
@@ -256,4 +260,23 @@ export function mergeTemporaryHitPoints(
   incoming: number,
 ): number {
   return Math.max(current, incoming, 0);
+}
+
+/**
+ * Здоровье листа персонажа с хитами из боя: текущие зажимаются максимумом
+ * листа по правилу самого листа (`clampHitPoints`: максимум `0` — неизвестен,
+ * сверху не режет), временные — не ниже нуля. Максимум считает лист, трекер
+ * может прислать устаревшее. Остальные поля здоровья остаются листа.
+ * @param health Здоровье из свежего документа листа.
+ * @param hitPoints Текущие и временные хиты из трекера.
+ */
+export function applyTrackerHitPointsToHealth(
+  health: CharacterHealth,
+  hitPoints: HitPointsState,
+): CharacterHealth {
+  return {
+    ...health,
+    current: clampHitPoints(hitPoints.current, health.max),
+    temporary: Math.max(HIT_POINTS_MIN, hitPoints.temporary),
+  };
 }

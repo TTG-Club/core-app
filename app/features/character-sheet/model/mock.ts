@@ -31,6 +31,7 @@ export const DEFAULT_CHARACTER: Character = {
     natural: false,
     dexLimit: null,
     custom: false,
+    bonuses: [],
   },
   speed: {
     values: {
