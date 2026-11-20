@@ -3,12 +3,14 @@
 
   import { useIntersectionObserver, useTimeoutFn } from '@vueuse/core';
 
+  import { ConfirmDialog } from '~initiative/ui-kit';
   import { MarkupRender } from '~ui/markup';
 
   import {
     BUG_REPORT_PLATFORM_LABELS,
     BUG_REPORT_TYPE_ICONS,
     BUG_REPORT_TYPE_LABELS,
+    canWithdrawBugReport,
     getBugReportDescriptionText,
     getBugReportStatusColor,
     getBugReportStatusLabel,
@@ -28,6 +30,11 @@
     MY_BUGS_SELECTION_TITLE,
     MY_BUGS_STATUS_UPDATED_AT_LABEL,
     MY_BUGS_URL_TITLE,
+    MY_BUGS_WITHDRAW_CANCEL_LABEL,
+    MY_BUGS_WITHDRAW_DIALOG_DESCRIPTION,
+    MY_BUGS_WITHDRAW_DIALOG_TITLES,
+    MY_BUGS_WITHDRAW_ICON,
+    MY_BUGS_WITHDRAW_LABEL,
     parseSelectedText,
     toBugReportDescriptionBlocks,
   } from '../../model';
@@ -46,6 +53,9 @@
 
     /** Что изменилось в репорте с прошлого просмотра */
     changes: MyBugReportChanges;
+
+    /** Отзыв репорта: `true`, если сервис его удалил */
+    withdrawAction: (bugReport: MyBugReportResponse) => Promise<boolean>;
   }>();
 
   const emit = defineEmits<{
@@ -59,6 +69,17 @@
 
   const isOpen = ref(false);
   const isScreenshotModalOpen = ref(false);
+  const isWithdrawOpen = ref(false);
+  const isWithdrawing = ref(false);
+
+  /** Отозвать можно только репорт, который ещё не взяли в работу */
+  const canWithdraw = computed(() =>
+    canWithdrawBugReport(props.bugReport.status),
+  );
+
+  const withdrawDialogTitle = computed(
+    () => MY_BUGS_WITHDRAW_DIALOG_TITLES[props.bugReport.type],
+  );
 
   const statusColor = computed(() =>
     getBugReportStatusColor(props.bugReport.status),
@@ -157,6 +178,29 @@
     isOpen.value ? 'rotate-180 transition-transform' : 'transition-transform',
   );
 
+  /** Открывает подтверждение отзыва. */
+  function openWithdraw(): void {
+    isWithdrawOpen.value = true;
+  }
+
+  /**
+   * Отзывает репорт. Диалог закрывается только при успехе: при отказе
+   * уведомление объясняет причину, а список перечитается сам.
+   */
+  async function confirmWithdraw(): Promise<void> {
+    isWithdrawing.value = true;
+
+    try {
+      const isWithdrawn = await props.withdrawAction(props.bugReport);
+
+      if (isWithdrawn) {
+        isWithdrawOpen.value = false;
+      }
+    } finally {
+      isWithdrawing.value = false;
+    }
+  }
+
   /** Открывает скриншот в полном размере. */
   function openScreenshotModal(): void {
     isScreenshotModalOpen.value = true;
@@ -244,6 +288,16 @@
             </span>
           </template>
         </span>
+
+        <UButton
+          v-if="canWithdraw"
+          :label="MY_BUGS_WITHDRAW_LABEL"
+          :icon="MY_BUGS_WITHDRAW_ICON"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          @click.left.exact.prevent="openWithdraw"
+        />
       </div>
 
       <!-- Описание проблемы. whitespace-pre-wrap сохраняет переносы строк старых
@@ -396,6 +450,18 @@
       :url="bugReport.screenshotUrl"
       :title="MY_BUGS_SCREENSHOT_MODAL_TITLE"
       :alt="MY_BUGS_SCREENSHOT_ALT"
+    />
+
+    <ConfirmDialog
+      v-model:open="isWithdrawOpen"
+      :title="withdrawDialogTitle"
+      :description="MY_BUGS_WITHDRAW_DIALOG_DESCRIPTION"
+      :confirm-label="MY_BUGS_WITHDRAW_LABEL"
+      :cancel-label="MY_BUGS_WITHDRAW_CANCEL_LABEL"
+      confirm-color="error"
+      :confirm-icon="MY_BUGS_WITHDRAW_ICON"
+      :loading="isWithdrawing"
+      @confirm="confirmWithdraw"
     />
   </div>
 </template>

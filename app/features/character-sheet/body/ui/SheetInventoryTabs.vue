@@ -13,6 +13,7 @@
     SheetTab,
     SheetTabSlot,
     SpellcastingBreakdown,
+    SpellCastRequest,
     SpellDamageRoll,
     SpellSlotKind,
     SpellSlotRow,
@@ -116,6 +117,7 @@
     'copy-innate-spell': [spellUrl: string];
     'remove-innate-spell': [spellUrl: string];
     'roll-spell-damage': [roll: SpellDamageRoll];
+    'cast-spell': [cast: SpellCastRequest];
     'toggle-spell-prepared': [spellUrl: string];
     'toggle-innate-spell-prepared': [spellUrl: string];
     'toggle-spell-slot': [level: number, index: number, kind: SpellSlotKind];
@@ -235,6 +237,15 @@
 
   function handleSpellDamageRoll(roll: SpellDamageRoll) {
     emit('roll-spell-damage', roll);
+  }
+
+  /**
+   * Пробрасывает сотворение заклинания из вкладки заклинаний наверх.
+   *
+   * @param cast атака, урон и круг сотворяемого заклинания.
+   */
+  function handleSpellCast(cast: SpellCastRequest) {
+    emit('cast-spell', cast);
   }
 
   function handleSpellPreparedToggle(spellUrl: string) {
@@ -991,6 +1002,7 @@
             @copy-innate-spell="handleInnateSpellCopy"
             @remove-innate-spell="handleInnateSpellRemove"
             @roll-spell-damage="handleSpellDamageRoll"
+            @cast-spell="handleSpellCast"
             @toggle-spell-prepared="handleSpellPreparedToggle"
             @toggle-innate-spell-prepared="handleInnateSpellPreparedToggle"
             @toggle-spell-slot="handleSpellSlotToggle"

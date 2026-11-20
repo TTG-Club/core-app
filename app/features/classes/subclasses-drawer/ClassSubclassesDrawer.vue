@@ -4,6 +4,8 @@
   import { ClassLink } from '~classes/link';
   import { UiDrawer } from '~ui/drawer';
 
+  import { useSubclassSourceFilter } from '../composable';
+
   const { url } = defineProps<{
     url: string;
   }>();
@@ -20,6 +22,10 @@
     },
   );
 
+  // Источники, выбранные в фильтре раздела, сужают и подклассы
+  const { visibleSubclasses, hiddenLabel } =
+    useSubclassSourceFilter(subclasses);
+
   const isLoading = computed(() => status.value === 'pending');
   const isError = computed(() => status.value === 'error');
 </script>
@@ -34,13 +40,20 @@
   >
     <div class="@container grid gap-3">
       <ClassLink
-        v-for="link in subclasses"
+        v-for="link in visibleSubclasses"
         :key="link.url"
         :character-class="link"
         hide-image-on-mobile
       >
         {{ link.url }}
       </ClassLink>
+
+      <p
+        v-if="hiddenLabel"
+        class="text-xs text-muted"
+      >
+        {{ hiddenLabel }}
+      </p>
     </div>
   </UiDrawer>
 </template>

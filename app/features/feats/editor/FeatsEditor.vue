@@ -216,7 +216,10 @@
               </h2>
             </template>
 
-            <FeatGrantedSpells v-model="editorRows.grantedSpells" />
+            <FeatGrantedSpells
+              v-model="editorRows.grantedSpells"
+              can-limit-by-slots
+            />
           </UCard>
 
           <UCard variant="subtle">

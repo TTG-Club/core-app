@@ -1,4 +1,6 @@
 import type {
+  ChallengeRatingItem,
+  CustomCreatureDraft,
   EncounterBudget,
   EncounterBudgetSegment,
   EncounterCreature,
@@ -9,6 +11,8 @@ import type {
 } from './types';
 
 import {
+  CUSTOM_CREATURE_DEFAULT_NAME,
+  CUSTOM_CREATURE_LABELS,
   EMPTY_BUDGET,
   EXPERIENCE_BUDGET_BY_LEVEL,
   EXPERIENCE_BY_CHALLENGE_RATING,
@@ -57,6 +61,90 @@ export function getExperienceByChallengeRating(
   challengeRating: string,
 ): number {
   return EXPERIENCE_BY_CHALLENGE_RATING[challengeRating.trim()] ?? 0;
+}
+
+/**
+ * Пункты выбора показателя опасности — все уровни таблицы опыта по порядку
+ * (0, 1/8, 1/4, 1/2, 1 … 30) с опытом в подписи.
+ */
+export function getChallengeRatingItems(): Array<ChallengeRatingItem> {
+  return Object.entries(EXPERIENCE_BY_CHALLENGE_RATING)
+    .sort(([, left], [, right]) => left - right)
+    .map(([challengeRating, experience]) => ({
+      value: challengeRating,
+      label: `${challengeRating} · ${formatExperience(experience)} ${CUSTOM_CREATURE_LABELS.experienceUnit}`,
+    }));
+}
+
+/**
+ * Свой ли это монстр мастера, а не существо из бестиария.
+ * @param creature Существо столкновения.
+ */
+export function isCustomCreature(creature: EncounterCreature): boolean {
+  return creature.url === undefined;
+}
+
+/**
+ * Название своего монстра: введённое без пробелов по краям или название по
+ * умолчанию.
+ * @param name Введённое название.
+ */
+export function getCustomCreatureName(name: string): string {
+  return name.trim() || CUSTOM_CREATURE_DEFAULT_NAME;
+}
+
+/**
+ * Находит строку своего монстра с тем же названием и показателем опасности,
+ * чтобы прибавить к ней количество вместо новой строки.
+ * @param creatures Существа столкновения.
+ * @param draft Что ввёл мастер.
+ */
+export function findCustomCreature(
+  creatures: ReadonlyArray<EncounterCreature>,
+  draft: CustomCreatureDraft,
+): EncounterCreature | undefined {
+  const name = getCustomCreatureName(draft.name);
+
+  return creatures.find(
+    (creature) =>
+      isCustomCreature(creature)
+      && creature.name === name
+      && creature.challengeRating === draft.challengeRating,
+  );
+}
+
+/**
+ * Строит строку своего монстра: опыт берётся по показателю опасности из той
+ * же таблицы, что и у существ бестиария.
+ * @param id Идентификатор строки.
+ * @param draft Что ввёл мастер.
+ */
+export function createCustomCreature(
+  id: string,
+  draft: CustomCreatureDraft,
+): EncounterCreature {
+  return {
+    id,
+    name: getCustomCreatureName(draft.name),
+    challengeRating: draft.challengeRating,
+    experience: getExperienceByChallengeRating(draft.challengeRating),
+    inLair: false,
+    count: draft.count,
+  };
+}
+
+/**
+ * Сколько своих монстров в столкновении — их в трекер не перенести.
+ * @param creatures Существа столкновения.
+ */
+export function countCustomCreatures(
+  creatures: ReadonlyArray<EncounterCreature>,
+): number {
+  return creatures.reduce(
+    (total, creature) =>
+      isCustomCreature(creature) ? total + creature.count : total,
+    0,
+  );
 }
 
 /**
@@ -171,7 +259,8 @@ export function getBudgetSegments(
 /**
  * Пачки существ для трекера инициативы: одно существо — один запрос
  * добавления, даже если в калькуляторе оно стоит несколькими строками (в
- * логове и вне его). Порядок — как в калькуляторе.
+ * логове и вне его). Порядок — как в калькуляторе. Свои монстры пропускаются:
+ * трекер добавляет существ только из бестиария.
  * @param creatures Существа калькулятора.
  */
 export function getTransferBatches(
@@ -180,6 +269,10 @@ export function getTransferBatches(
   const counts = new Map<string, number>();
 
   creatures.forEach(({ url, count }) => {
+    if (url === undefined) {
+      return;
+    }
+
     counts.set(url, (counts.get(url) ?? 0) + count);
   });
 

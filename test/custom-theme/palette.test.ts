@@ -1,17 +1,22 @@
 import type { CustomThemeSettings } from '~infrastructure/custom-theme/model';
 
+import Color from 'colorjs.io';
+import { constrain as normalizeHue } from 'colorjs.io/src/angles.js';
 import { describe, expect, it } from 'vitest';
 
 import {
   changeCustomThemeAccentLightness,
   changeCustomThemeBackgroundLightness,
   createCustomThemePalette,
+  CUSTOM_THEME_ACCENT_PRESETS,
   CUSTOM_THEME_ACCENT_TARGET,
+  CUSTOM_THEME_ANCHOR_STEP,
   CUSTOM_THEME_BACKGROUND_PRESETS,
   CUSTOM_THEME_CLASS,
   CUSTOM_THEME_DEFAULT_SETTINGS,
   CUSTOM_THEME_SCALE_STEPS,
   CUSTOM_THEME_SOLID_TEXT_TARGET,
+  CUSTOM_THEME_STATUS_HUE_GAP,
   CUSTOM_THEME_TEXT_TARGETS,
   getApcaContrast,
   getCustomThemeAccentLightness,
@@ -39,11 +44,70 @@ const VIVID: CustomThemeSettings = {
   accent: '#4e99a3',
 };
 
+/**
+ * Фоны сверх готовых: готовых в панели всего три, а свой цвет можно набрать
+ * любой — проверяем и чёрный, цветные тёмные и цветные светлые.
+ */
+const EXTRA_BACKGROUNDS = [
+  { label: 'Чёрный', value: '#0b0b0b' },
+  { label: 'Лес', value: '#0c1c12' },
+  { label: 'Вино', value: '#250e12' },
+  { label: 'Какао', value: '#24180f' },
+  { label: 'Пергамент', value: '#f8edd8' },
+  { label: 'Мята', value: '#e2f8ef' },
+  { label: 'Белый', value: '#fcfcfc' },
+] as const;
+
+/**
+ * Акценты сверх готовых: красный, оранжевый и бирюзовый ближе всего к цветам
+ * состояний, их тоже надо проверять.
+ */
+const EXTRA_ACCENTS = [
+  { label: 'Оранжевый', value: '#f19357' },
+  { label: 'Бирюзовый', value: '#4e99a3' },
+  { label: 'Красный', value: '#d0565f' },
+] as const;
+
 /** Допуск на округление цвета до 8 бит на канал. */
 const ROUNDING = 1;
 
 /** Допуск яркости фона после округления цвета, в делениях ползунка. */
 const BRIGHTNESS_ROUNDING = 5;
+
+/**
+ * Допуск оттенка, в градусах: подрезка под охват sRGB сдвигает оттенок —
+ * сильнее всего у тёмного жёлтого на светлой основе (до 6°).
+ */
+const HUE_TOLERANCE = 6;
+
+/** Полный круг оттенков, в градусах. */
+const FULL_TURN = 360;
+
+/** Шкалы цветов состояний: ошибка, успех, инфо, предупреждение. */
+const STATUS_SCALES = ['red', 'green', 'blue', 'yellow'] as const;
+
+/**
+ * Оттенок цвета в OKLCH.
+ *
+ * @param value Цвет в формате CSS.
+ * @returns Оттенок в градусах.
+ */
+function getHue(value: string | undefined): number {
+  return new Color(value ?? '').to('oklch').coords[2] ?? 0;
+}
+
+/**
+ * Разница двух оттенков по кругу.
+ *
+ * @param first Первый оттенок.
+ * @param second Второй оттенок.
+ * @returns Расстояние от 0 до 180 градусов.
+ */
+function getHueDistance(first: number, second: number): number {
+  const difference = normalizeHue(first - second);
+
+  return Math.min(difference, FULL_TURN - difference);
+}
 
 describe('createCustomThemePalette', () => {
   it.each([DEFAULT, WARM, LIGHT, VIVID])(
@@ -72,10 +136,12 @@ describe('createCustomThemePalette', () => {
     WARM,
     LIGHT,
     VIVID,
-    ...CUSTOM_THEME_BACKGROUND_PRESETS.map((preset) => ({
-      background: preset.value,
-      accent: DEFAULT.accent,
-    })),
+    ...[...CUSTOM_THEME_BACKGROUND_PRESETS, ...EXTRA_BACKGROUNDS].map(
+      (preset) => ({
+        background: preset.value,
+        accent: DEFAULT.accent,
+      }),
+    ),
   ])(
     'уровни текста держат пороги контраста: $background $accent',
     (settings) => {
@@ -225,6 +291,57 @@ describe('createCustomThemePalette', () => {
 
     expect(yellow.variables['color-yellow-400']).not.toBe(
       teal.variables['color-yellow-400'],
+    );
+  });
+
+  it.each([DEFAULT, LIGHT])(
+    'ни один цвет состояния не совпадает с акцентом по оттенку: $background',
+    (settings) => {
+      for (const preset of [...CUSTOM_THEME_ACCENT_PRESETS, ...EXTRA_ACCENTS]) {
+        const palette = createCustomThemePalette({
+          ...settings,
+          accent: preset.value,
+        });
+
+        const step = CUSTOM_THEME_ANCHOR_STEP[palette.base];
+        const accentHue = getHue(palette.variables[`color-primary-${step}`]);
+
+        for (const scale of STATUS_SCALES) {
+          const statusHue = getHue(palette.variables[`color-${scale}-${step}`]);
+
+          expect(
+            getHueDistance(accentHue, statusHue),
+            `${preset.label}: ${scale}`,
+          ).toBeGreaterThanOrEqual(CUSTOM_THEME_STATUS_HUE_GAP - HUE_TOLERANCE);
+        }
+      }
+    },
+  );
+
+  it('зелёный акцент уводит успех в бирюзовый, а не к предупреждению', () => {
+    const green = createCustomThemePalette({ ...DEFAULT, accent: '#5fa86a' });
+
+    const accentHue = getHue(green.variables['color-primary-400']);
+    const successHue = getHue(green.variables['color-green-400']);
+
+    expect(successHue).toBeGreaterThan(accentHue);
+  });
+
+  it('оранжевый акцент уводит предупреждение к жёлтому, а не на ошибку', () => {
+    const orange = createCustomThemePalette({ ...DEFAULT, accent: '#d9822b' });
+
+    const accentHue = getHue(orange.variables['color-primary-400']);
+    const warningHue = getHue(orange.variables['color-yellow-400']);
+
+    expect(warningHue).toBeGreaterThan(accentHue);
+  });
+
+  it('серый акцент не сдвигает цвета состояний', () => {
+    const gray = createCustomThemePalette({ ...DEFAULT, accent: '#8a8a8a' });
+    const teal = createCustomThemePalette({ ...DEFAULT, accent: '#4e99a3' });
+
+    expect(gray.variables['color-red-400']).toBe(
+      teal.variables['color-red-400'],
     );
   });
 

@@ -97,11 +97,30 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
   }
 
   /**
+   * Отправляет в лист персонажа хиты участника, привязанного к листу, — текущие
+   * вместе с временными, как их только что сохранил трекер. Максимум считает
+   * лист, и трекер его не трогает. Пока текущие хиты не заданы (лист без
+   * максимума), писать в лист нечего.
+   * @param participantId Идентификатор участника.
+   */
+  function syncSheetHitPoints(participantId: string): void {
+    const participant = findParticipant(participantId);
+
+    if (!participant?.sheetLink || participant.currentHitPoints === undefined) {
+      return;
+    }
+
+    syncHitPoints(participant.sheetLink, {
+      current: participant.currentHitPoints,
+      temporary: participant.temporaryHitPoints ?? 0,
+    });
+  }
+
+  /**
    * Записывает текущие хиты участника: в трекер — всегда, а игроку, собранному
-   * из листа персонажа, — ещё и в сам лист (только текущие: максимум считает
-   * лист, и трекер его не трогает). Свой лист правится напрямую, чужой — по
-   * сохранённой ссылке, поэтому мастер ведёт хиты и своих персонажей, и тех,
-   * чьи листы ему прислали.
+   * из листа персонажа, — ещё и в сам лист (вместе с временными хитами). Свой
+   * лист правится напрямую, чужой — по сохранённой ссылке, поэтому мастер ведёт
+   * хиты и своих персонажей, и тех, чьи листы ему прислали.
    * Урон, ушедший во временные хиты, приходит вместе с их новым остатком —
    * одним запросом, чтобы трекер не застрял между двумя правками.
    * @param participantId Идентификатор участника.
@@ -114,7 +133,6 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
     temporaryHitPoints?: number,
   ): Promise<void> {
     const currentHitPoints = Math.max(0, value);
-    const link = findParticipant(participantId)?.sheetLink;
 
     const patch: UpdateParticipantRequest =
       temporaryHitPoints === undefined
@@ -131,9 +149,7 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
       return;
     }
 
-    if (link) {
-      syncHitPoints(link, currentHitPoints);
-    }
+    syncSheetHitPoints(participantId);
 
     await syncDeadByHitPoints(participantId, currentHitPoints);
   }
@@ -141,17 +157,26 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
   /**
    * Задаёт временные хиты участника; `0` — снимает. Правило «новые заменяют
    * прежние, только если больше» применяет попап хитов, а снимает их мастер
-   * отдельной кнопкой.
+   * отдельной кнопкой. Игроку из листа персонажа временные хиты уходят и в
+   * лист — так же, как текущие.
    * @param participantId Идентификатор участника.
    * @param value Новые временные хиты.
    */
-  function setTemporaryHitPoints(
+  async function setTemporaryHitPoints(
     participantId: string,
     value: number,
   ): Promise<boolean> {
-    return editParticipant(participantId, {
+    const isUpdated = await editParticipant(participantId, {
       temporaryHitPoints: Math.max(0, value),
     });
+
+    // Отказ трекера — в лист ничего: иначе там появились бы временные хиты,
+    // которых в бою нет.
+    if (isUpdated) {
+      syncSheetHitPoints(participantId);
+    }
+
+    return isUpdated;
   }
 
   /**
@@ -423,13 +448,13 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
   }
 
   /**
-   * Добавляет игрока из листа персонажа: имя, бонус, КД, хиты и привязка к листу
-   * уходят одним запросом — id нового участника для этого не нужен. Лист без
-   * максимума хитов (персонаж только собирается) хиты не задаёт: плитка
-   * останется прочерком, как у игрока, заведённого вручную.
+   * Добавляет игрока из листа персонажа: имя, бонус, КД, хиты (с временными) и
+   * привязка к листу уходят одним запросом — id нового участника для этого не
+   * нужен. Лист без максимума хитов (персонаж только собирается) текущие хиты
+   * не задаёт: плитка останется прочерком, как у игрока, заведённого вручную.
    * @param option Выбранный лист персонажа.
    */
-  function addSheetPlayer(option: SheetPlayerOption): Promise<boolean> {
+  async function addSheetPlayer(option: SheetPlayerOption): Promise<boolean> {
     const hitPoints =
       option.maxHitPoints > 0
         ? {
@@ -438,7 +463,16 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
           }
         : {};
 
-    return runMutation(
+    const temporaryHitPoints =
+      option.temporaryHitPoints > 0
+        ? { temporaryHitPoints: option.temporaryHitPoints }
+        : {};
+
+    const knownParticipantIds = new Set(
+      participants.value.map((participant) => participant.id),
+    );
+
+    const isAdded = await runMutation(
       () =>
         addParticipants(
           trackerId.value,
@@ -449,11 +483,57 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
             armorClass: option.armorClass,
             sheetLink: toParticipantSheetLink(option),
             ...hitPoints,
+            ...temporaryHitPoints,
           },
           accessKey.value,
         ),
       ADD_SHEET_PLAYER_ERROR_TITLE,
     );
+
+    if (!isAdded) {
+      return false;
+    }
+
+    await restoreSheetTemporaryHitPoints(option, knownParticipantIds);
+
+    return true;
+  }
+
+  /**
+   * Дописывает временные хиты листа новому участнику, если сервер не принял их
+   * при добавлении (поле добавления он может ещё не знать — тогда молча его
+   * пропускает). Когда сервер их сохранил, лишнего запроса нет. Ошибку
+   * дозаписи показывает тост `editParticipant`, а участник при этом уже в бою —
+   * добавление ею не отменяется.
+   * @param option Лист персонажа, только что поставленный в бой.
+   * @param knownParticipantIds Участники, что были в бою до добавления.
+   */
+  async function restoreSheetTemporaryHitPoints(
+    option: SheetPlayerOption,
+    knownParticipantIds: ReadonlySet<string>,
+  ): Promise<void> {
+    if (option.temporaryHitPoints <= 0) {
+      return;
+    }
+
+    // Новый участник — тот, кого не было до добавления: лист мог уже стоять в
+    // бою, и прежнюю его копию трогать нельзя.
+    const participant = participants.value.find(
+      (candidate) =>
+        !knownParticipantIds.has(candidate.id)
+        && candidate.sheetLink?.sheetId === option.sheetId,
+    );
+
+    if (
+      !participant
+      || participant.temporaryHitPoints === option.temporaryHitPoints
+    ) {
+      return;
+    }
+
+    await editParticipant(participant.id, {
+      temporaryHitPoints: option.temporaryHitPoints,
+    });
   }
 
   /**

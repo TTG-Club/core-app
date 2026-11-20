@@ -9,3 +9,4 @@ export * from './markdown';
 export * from './mechanics';
 export * from './schema';
 export * from './spell-slots';
+export * from './subclass-sources';

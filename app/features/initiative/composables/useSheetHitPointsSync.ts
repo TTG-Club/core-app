@@ -1,6 +1,4 @@
-import type { ParticipantSheetLink } from '~initiative/model';
-
-import { clamp } from 'es-toolkit';
+import type { HitPointsState, ParticipantSheetLink } from '~initiative/model';
 
 import {
   fetchCharacterSheet,
@@ -9,6 +7,7 @@ import {
   updateSavedCharacterSheetHitPoints,
 } from '~character-sheet/model';
 import {
+  applyTrackerHitPointsToHealth,
   SHEET_HIT_POINTS_SYNC_DELAY,
   SHEET_HIT_POINTS_SYNC_ERROR_TITLE,
 } from '~initiative/model';
@@ -16,20 +15,19 @@ import {
 /** Хиты одного листа, ждущие записи. */
 interface PendingHitPoints {
   link: ParticipantSheetLink;
-  hitPoints: number;
+  hitPoints: HitPointsState;
 }
 
 /**
  * Запись хитов из боя в лист персонажа: урон и лечение, отмеченные мастером в
- * трекере, игрок видит на своём листе. Пишутся только текущие хиты — максимум
- * лист считает сам.
+ * трекере, игрок видит на своём листе. Пишутся текущие и временные хиты —
+ * максимум лист считает сам.
  *
  * Свой лист сохраняется целиком (`PUT`), поэтому документ перед записью
  * перечитывается: лист живёт своей жизнью, и снимок, снятый при добавлении в
  * бой, затёр бы всё, что игрок в нём поменял. Чужой лист правится узкой ручкой
  * сохранённой ссылки (`PATCH /saved/{id}/health`) — на большее у мастера прав
- * нет, и остального документа правка не касается. Временные хиты трекер не
- * знает и не трогает.
+ * нет, и остального документа правка не касается.
  *
  * Запросы дебаунсятся и идут по очереди: быстрые шаги урона меняют хиты
  * очередями, а в бою один лист правится многократно — на сервер уходит
@@ -45,11 +43,14 @@ export function useSheetHitPointsSync() {
 
   /**
    * Записывает хиты в свой лист: сохранение целиком, поэтому документ берётся
-   * свежим, а число зажимается его максимумом.
+   * свежим, а текущие хиты зажимаются его максимумом.
    * @param sheetId Идентификатор листа персонажа.
-   * @param hitPoints Текущие хиты из трекера.
+   * @param hitPoints Текущие и временные хиты из трекера.
    */
-  async function saveOwn(sheetId: string, hitPoints: number): Promise<void> {
+  async function saveOwn(
+    sheetId: string,
+    hitPoints: HitPointsState,
+  ): Promise<void> {
     const { data, version } = await fetchCharacterSheet(sheetId);
 
     // Версия — от только что прочитанного документа: игрок успел поправить
@@ -60,10 +61,7 @@ export function useSheetHitPointsSync() {
       sheetId,
       {
         ...data,
-        health: {
-          ...data.health,
-          current: clamp(hitPoints, 0, data.health.max),
-        },
+        health: applyTrackerHitPointsToHealth(data.health, hitPoints),
       },
       version,
     );
@@ -144,9 +142,12 @@ export function useSheetHitPointsSync() {
   /**
    * Ставит хиты листа в очередь записи (последнее значение вытесняет прежнее).
    * @param link Привязка участника к листу персонажа.
-   * @param hitPoints Текущие хиты из трекера.
+   * @param hitPoints Текущие и временные хиты из трекера.
    */
-  function syncHitPoints(link: ParticipantSheetLink, hitPoints: number): void {
+  function syncHitPoints(
+    link: ParticipantSheetLink,
+    hitPoints: HitPointsState,
+  ): void {
     pending.set(link.sheetId, { link, hitPoints });
 
     void flushSoon();

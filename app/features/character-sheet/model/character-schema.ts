@@ -113,6 +113,45 @@ const grantedStartingEquipmentSchema = z
   .nullable()
   .catch(null);
 
+// Запись своего бонуса общая для навыков и настроек листа: вид, обе стороны
+// источника (характеристика и число) и пометка игрока.
+const customBonusSchema = z.object({
+  id: z.string(),
+  // Вид «бонус мастерства» появился вместе с механикой черт («Бдительный»), а
+  // виды «уровень персонажа» и «уровень класса» — позже него: листы до них
+  // таких записей не имеют, а незнакомый вид падает в число.
+  kind: z
+    .enum(['ability', 'classLevel', 'flat', 'level', 'proficiency'])
+    .catch(NEW_CUSTOM_BONUS.kind),
+  ability: abilityKeySchema.catch(NEW_CUSTOM_BONUS.ability),
+  // Листы до вида «уровень класса» класса-источника не хранят: пустая строка
+  // тут значит «класс не выбран», и такой бонус ничего не прибавляет.
+  classUrl: z.string().catch(NEW_CUSTOM_BONUS.classUrl),
+  value: z.coerce.number().int().catch(0),
+  label: z.string().catch(''),
+  // Выключатель появился позже записи: у старых бонусов поля нет, и они
+  // работают, как работали.
+  disabled: z.boolean().optional().catch(undefined),
+});
+
+/**
+ * Настройка одного числа заклинательства. Битая запись читается как «по
+ * правилам»: своего числа нет, бонусов тоже.
+ */
+const spellcastingValueSettingsSchema = z
+  .object({
+    base: z.coerce.number().int().nullable().catch(null),
+    bonuses: z.array(customBonusSchema).catch([]),
+  })
+  .catch(() => ({ base: null, bonuses: [] }));
+
+// Настройка заклинательства класса появилась позже прочих полей: у листов без
+// неё оба числа считаются по правилам.
+const spellcastingSettingsSchema = z.object({
+  saveDc: spellcastingValueSettingsSchema,
+  attack: spellcastingValueSettingsSchema,
+});
+
 /** Прогрессия числа из колонки таблицы класса: подготовленные и заговоры. */
 const classScalingSchema = z
   .array(
@@ -138,6 +177,7 @@ const classEntrySchema = z.object({
   // Листы до мультикласса хранили заклинательную характеристику одну на весь
   // лист (`spellcasting.ability`) — нормализация переносит её в основной класс.
   spellcastingAbility: abilityKeySchema.nullable().catch(null),
+  spellcastingSettings: spellcastingSettingsSchema.optional().catch(undefined),
   // Листы, сохранённые до появления поля, приходят без прогрессии
   // подготовленных заклинаний: она запишется при следующем выборе класса
   // или повышении уровня. То же и с прогрессией заговоров.
@@ -522,24 +562,6 @@ const spellcastingSchema = z
     preparedCantrips: { ...DEFAULT_CHARACTER.spellcasting.preparedCantrips },
   }));
 
-// Запись своего бонуса общая для навыков и настроек листа: вид, обе стороны
-// источника (характеристика и число) и пометка игрока.
-const customBonusSchema = z.object({
-  id: z.string(),
-  // Вид «бонус мастерства» появился вместе с механикой черт («Бдительный»), а
-  // виды «уровень персонажа» и «уровень класса» — позже него: листы до них
-  // таких записей не имеют, а незнакомый вид падает в число.
-  kind: z
-    .enum(['ability', 'classLevel', 'flat', 'level', 'proficiency'])
-    .catch(NEW_CUSTOM_BONUS.kind),
-  ability: abilityKeySchema.catch(NEW_CUSTOM_BONUS.ability),
-  // Листы до вида «уровень класса» класса-источника не хранят: пустая строка
-  // тут значит «класс не выбран», и такой бонус ничего не прибавляет.
-  classUrl: z.string().catch(NEW_CUSTOM_BONUS.classUrl),
-  value: z.coerce.number().int().catch(0),
-  label: z.string().catch(''),
-});
-
 /**
  * Свои бонусы настроек: сперва это было одно число, поэтому у листов без
  * списка ненулевое легаси-значение переезжает в него одной записью-числом, а
@@ -681,10 +703,13 @@ const armorClassSchema = z
     dexLimit: z.coerce.number().int().nullable().catch(null),
     // По умолчанию — автоподсчёт по надетой броне (легаси-листы без поля).
     custom: z.boolean().catch(false),
+    // Свои прибавки к КД появились позже прочих полей: у старых листов их нет.
+    bonuses: z.array(customBonusSchema).catch([]),
   })
   .catch(() => ({
     ...DEFAULT_CHARACTER.armorClass,
     abilities: [...DEFAULT_CHARACTER.armorClass.abilities],
+    bonuses: [],
   }))
   .transform(({ ability, abilities, ...armorClass }) => ({
     ...armorClass,

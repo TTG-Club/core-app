@@ -17,7 +17,11 @@ import {
   MAX_CREATURES,
 } from '~initiative/model';
 
-import { getTransferBatches, TRANSFER_LABELS } from '../model';
+import {
+  countCustomCreatures,
+  getTransferBatches,
+  TRANSFER_LABELS,
+} from '../model';
 
 /** Трекер, куда пойдут существа, и ключ доступа анонимного владельца. */
 interface ResolvedTracker {
@@ -62,6 +66,10 @@ export function useEncounterTransfer(
   const transferCount = computed(() =>
     batches.value.reduce((sum, { count }) => sum + count, 0),
   );
+
+  // Своих монстров бэкенд трекера не принимает (нужен `creatureUrl`
+  // бестиария) — их пропускаем и говорим об этом в окне переноса.
+  const skippedCount = computed(() => countCustomCreatures(creatures.value));
 
   // Аноним не заводит второй трекер, пока жив первый; у авторизованного —
   // общий лимит трекеров.
@@ -259,6 +267,7 @@ export function useEncounterTransfer(
     canCreate,
     createLimitHint,
     transferCount,
+    skippedCount,
     isLoading,
     isTransferring,
     loadError,

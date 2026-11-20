@@ -1,5 +1,4 @@
 import type { Level } from '~/shared/types';
-import type { RenderNode } from '~ui/markup';
 
 import type {
   ClassFeature,
@@ -15,19 +14,9 @@ import type { ClassLinkResponse } from './link';
 
 import { z } from 'zod';
 
+import { renderNodeSchema } from '~ui/markup';
+
 import { CasterType } from './detail';
-
-function checkRenderNode(value: unknown): value is RenderNode {
-  return (
-    typeof value === 'string'
-    || Array.isArray(value)
-    || isRenderNodeObject(value)
-  );
-}
-
-function isRenderNodeObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
 
 const levelSchema = z.custom<Level>((value) => {
   return (
@@ -37,11 +26,6 @@ const levelSchema = z.custom<Level>((value) => {
     && value <= 20
   );
 }, 'Expected level from 1 to 20');
-
-const renderNodeSchema = z.custom<RenderNode>(
-  checkRenderNode,
-  'Expected render node',
-);
 
 const nameResponseSchema = z.object({
   rus: z.string(),

@@ -1,5 +1,3 @@
-import type { RenderNode } from '~ui/markup';
-
 import type {
   CommunityNewsDetailedResponse,
   CommunityNewsRequest,
@@ -8,22 +6,7 @@ import type {
 
 import { z } from 'zod';
 
-/**
- * Узел разметки: строка (в т.ч. сырая JSON-строка), массив или объект —
- * бэкенд присылает все три вида, разбирает их `toArticleMarkup`.
- */
-function checkRenderNode(value: unknown): value is RenderNode {
-  return (
-    typeof value === 'string'
-    || Array.isArray(value)
-    || (typeof value === 'object' && value !== null)
-  );
-}
-
-const renderNodeSchema = z.custom<RenderNode>(
-  checkRenderNode,
-  'Ожидается разметка',
-);
+import { renderNodeSchema } from '~ui/markup';
 
 const statusSchema = z.enum(['DRAFT', 'SCHEDULED', 'ACTIVE', 'INACTIVE']);
 

@@ -9,13 +9,12 @@ import {
   CUSTOM_THEME_LEGACY_MAX_TINT_CHROMA,
   CUSTOM_THEME_SURFACES,
 } from './constants';
-
-const hexColorSchema = z.string().regex(/^#[0-9a-f]{6}$/i);
+import { customThemeHexColorSchema } from './hex';
 
 /** Настройки своей темы из куки: значение приходит извне и проверяется. */
 const customThemeSettingsSchema = z.object({
-  background: hexColorSchema,
-  accent: hexColorSchema,
+  background: customThemeHexColorSchema,
+  accent: customThemeHexColorSchema,
 });
 
 /**
@@ -24,7 +23,7 @@ const customThemeSettingsSchema = z.object({
  */
 const legacyCustomThemeSettingsSchema = z.object({
   base: z.enum(['dark', 'light']).default('dark'),
-  accent: hexColorSchema,
+  accent: customThemeHexColorSchema,
   backgroundLightness: z.number().min(0).max(100).optional(),
   backgroundHue: z.number().min(0).max(360),
   backgroundTint: z.number().min(0).max(100),

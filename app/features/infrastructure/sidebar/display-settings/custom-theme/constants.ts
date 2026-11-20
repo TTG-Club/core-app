@@ -26,8 +26,11 @@ export const CUSTOM_THEME_ACCENT_PICKER_LABEL = 'Выбрать свой цве�
 /** Ползунок яркости фона, в процентах. */
 export const CUSTOM_THEME_PERCENT_RANGE = { min: 0, max: 100 } as const;
 
+/** Форма кружка цвета — и готового, и текущего, открывающего палитру. */
+export const CUSTOM_THEME_SWATCH_SHAPE_CLASS = 'size-7 rounded-full p-0';
+
 /**
- * Обводка кружка готового цвета: выбранный и остальные. Кольцом, а не
+ * Обводка кружка цвета: выбранный и остальные. Кольцом, а не
  * `outline`: у кнопки свой `outline` для фокуса, и он перебивает обводку.
  * Тонкое кольцо нужно всем кружкам — иначе цвет, совпавший с фоном панели,
  * пропадает.
@@ -37,14 +40,28 @@ export const CUSTOM_THEME_SWATCH_CLASS = {
   idle: 'ring-1 ring-accented',
 } as const;
 
-/** Кнопка выбора своего цвета: подсвечена, когда цвет не из готовых. */
-export const CUSTOM_THEME_PICKER_BUTTON = {
-  selected: { variant: 'soft', color: 'primary' },
-  idle: { variant: 'ghost', color: 'neutral' },
-} as const;
-
-/** Где открывается палитра своего цвета — под кнопкой, от её левого края. */
+/** Где открывается палитра своего цвета — под кружком, от его левого края. */
 export const CUSTOM_THEME_PICKER_POPOVER_CONTENT = {
   side: 'bottom',
   align: 'start',
+} as const;
+
+export const CUSTOM_THEME_BACKGROUND_HEX_LABEL = 'Код цвета фона';
+
+export const CUSTOM_THEME_ACCENT_HEX_LABEL = 'Код цвета акцента';
+
+/** Поле кода цвета: образец и предел длины — решётка и шесть цифр. */
+export const CUSTOM_THEME_HEX_INPUT = {
+  placeholder: '#A1B2C3',
+  maxLength: 7,
+} as const;
+
+/** Подсказка, когда код цвета набран неверно. */
+export const CUSTOM_THEME_HEX_ERROR_HINT =
+  'Нужен код вида #A1B2C3 или #ABC, решётку можно не писать';
+
+/** Вид поля кода цвета: обычное и с неверным кодом. */
+export const CUSTOM_THEME_HEX_FIELD_STATE = {
+  valid: { color: 'neutral', highlight: false },
+  invalid: { color: 'error', highlight: true },
 } as const;

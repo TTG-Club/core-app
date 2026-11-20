@@ -35,6 +35,7 @@
     isLoading,
     hasError,
     reload,
+    withdrawBugReport,
   } = useMyBugReports();
 
   const { lastStatusUpdatedAt, markSeenUpTo } = useMyBugReportUpdates();
@@ -216,6 +217,7 @@
         :key="bugReport.id"
         :bug-report="bugReport"
         :changes="resolveChanges(bugReport)"
+        :withdraw-action="withdrawBugReport"
         @read="handleRead"
       />
 

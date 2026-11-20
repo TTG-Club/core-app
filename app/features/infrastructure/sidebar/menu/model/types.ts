@@ -1,5 +1,14 @@
 import type { Role } from '~/shared/types';
 
+/**
+ * Доступ, который сайт спрашивает у сервера: раздел открыт не всем, и
+ * настраивается это в админке, а не ролью в коде.
+ */
+export type MenuItemAccess = 'vttg-docs';
+
+/** Адреса разделов с доступом от сервера; нет адреса — раздел закрыт. */
+export type MenuAccessPaths = Partial<Record<MenuItemAccess, string>>;
+
 /** Элемент меню навигации */
 export interface MenuItem {
   label: string;
@@ -20,6 +29,11 @@ export interface MenuItem {
   legacySite?: boolean;
   /** Пункт выделен золотой рамкой и цветом */
   highlighted?: boolean;
+  /**
+   * Пункт виден, только если сервер открыл посетителю раздел; адрес тогда
+   * берётся из ответа сервера, а `href` — запасной.
+   */
+  access?: MenuItemAccess;
 }
 
 /** Секция меню навигации */

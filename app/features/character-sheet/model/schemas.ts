@@ -116,6 +116,7 @@ import {
   getOrderedSpellCastingKinds,
   isAbilityImprovementFeatChoice,
   isAbilityImprovementFeature,
+  isSpellAttackEffect,
   parseAbilityKeys,
   parseApiAbilityKey,
   parseFeatMarker,
@@ -3896,8 +3897,44 @@ function parseSpellCastingKinds(input: unknown): SpellCastingKind[] {
 }
 
 /**
- * Валидация «сырого» ответа `GET /api/v2/spells/{url}/raw`: урон и время
- * накладывания — всё, что лист берёт у заклинания из справочника.
+ * Схема «сырого» ответа заклинания в части броска атаки: способ применения,
+ * тип атаки, автопопадание, спасбросок и формулы воздействия. Пустое или битое
+ * поле читается как «не задано» — разбор сразу отдаёт поля в виде, который
+ * ждёт `isSpellAttackEffect`.
+ */
+const spellRawAttackSchema = z
+  .object({
+    effect: z
+      .object({
+        deliveryType: z.string().nullable().catch(null),
+        attackType: z.string().nullable().catch(null),
+        autoHit: z.boolean().catch(false),
+        savingThrows: z.array(z.string()).catch([]),
+        damageFormulas: z.array(z.string()).catch([]),
+      })
+      .nullable()
+      .catch(null),
+  })
+  .catch({ effect: null });
+
+/**
+ * Делает ли заклинание из «сырого» ответа бросок атаки. Нет блока
+ * воздействия — нет и атаки: решать её по названию или описанию лист не
+ * берётся.
+ *
+ * @param input сырой ответ заклинания.
+ * @returns true — заклинание атакует.
+ */
+function parseSpellHasAttackRoll(input: unknown): boolean {
+  const { effect } = spellRawAttackSchema.parse(input);
+
+  return effect ? isSpellAttackEffect(effect) : false;
+}
+
+/**
+ * Валидация «сырого» ответа `GET /api/v2/spells/{url}/raw`: урон, бросок
+ * атаки и время накладывания — всё, что лист берёт у заклинания из
+ * справочника.
  *
  * @param input сырой ответ заклинания.
  * @returns урон и время накладывания заклинания.
@@ -3907,6 +3944,7 @@ export function parseSpellCatalogMechanics(
 ): SpellCatalogMechanics {
   return {
     damage: parseSpellDamageFormulas(input),
+    hasAttackRoll: parseSpellHasAttackRoll(input),
     castingKinds: parseSpellCastingKinds(input),
   };
 }

@@ -360,6 +360,13 @@ export interface FeatGrantedSpellGroupRow {
 
   /** Заклинания группы не занимают подготовку. */
   alwaysPrepared: boolean;
+
+  /**
+   * Перечисленные заклинания группы открываются, только когда у персонажа есть
+   * ячейка их круга или выше («Адепт школы»). У списка класса не бывает: там
+   * то же правило задаётся кругом (`mode: 'SLOTS'`).
+   */
+  limitedBySlots: boolean;
 }
 
 /**
@@ -818,6 +825,7 @@ export function createGrantedSpellGroupRow(): FeatGrantedSpellGroupRow {
     level: undefined,
     spellcastingAbility: undefined,
     alwaysPrepared: false,
+    limitedBySlots: false,
   };
 }
 
@@ -1506,7 +1514,10 @@ function toGrantedSpellBlock(grant: FeatSpellGrant): FeatGrantedSpellBlock {
     // уровне. Сложи их в одну — и настройка одного стёрла бы настройку другого
     const ability = spell.spellcastingAbility ?? '';
     const prepared = spell.alwaysPrepared ?? grant.alwaysPrepared;
-    const key = `${level}:${ability}:${prepared}`;
+    // Отметка «по ячейкам» — тоже: иначе заклинание с ней и без неё на одном
+    // уровне слились бы, и отметка досталась бы обоим либо пропала у обоих
+    const limitedBySlots = spell.limitedBySlots ?? false;
+    const key = `${level}:${ability}:${prepared}:${limitedBySlots}`;
 
     let group = listed.get(key);
 
@@ -1515,6 +1526,7 @@ function toGrantedSpellBlock(grant: FeatSpellGrant): FeatGrantedSpellBlock {
       group.requiredLevel = level > 1 ? level : undefined;
       group.spellcastingAbility = spell.spellcastingAbility;
       group.alwaysPrepared = prepared;
+      group.limitedBySlots = limitedBySlots;
       listed.set(key, group);
       block.groups.push(group);
     }
@@ -1589,6 +1601,9 @@ function fromGrantedSpellBlock(
         url: spell.url,
         name: spell.name,
         requiredLevel: group.requiredLevel,
+        // Пишется только взведённая: снятая отметка и её отсутствие значат одно
+        // и то же, а старые записи остаются байт в байт прежними
+        limitedBySlots: group.limitedBySlots ? true : undefined,
         spellcastingAbility: group.spellcastingAbility,
         alwaysPrepared: group.alwaysPrepared,
       });

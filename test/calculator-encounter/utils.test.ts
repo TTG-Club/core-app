@@ -4,13 +4,19 @@ import { describe, expect, it } from 'vitest';
 
 import {
   calculateEncounter,
+  countCustomCreatures,
+  createCustomCreature,
+  CUSTOM_CREATURE_DEFAULT_NAME,
   DEFAULT_ENCOUNTER_STATE,
+  findCustomCreature,
   getBudgetSegments,
+  getChallengeRatingItems,
   getCharacterBudget,
   getEncounterDifficulty,
   getExperienceByChallengeRating,
   getPartyBudget,
   getTransferBatches,
+  isCustomCreature,
   parseEncounterState,
 } from '~calculator/encounter/model';
 
@@ -198,5 +204,94 @@ describe('getTransferBatches', () => {
 
   it('без существ пачек нет', () => {
     expect(getTransferBatches([])).toEqual([]);
+  });
+
+  it('своих монстров пропускает', () => {
+    expect(
+      getTransferBatches([
+        makeCreature({ id: 'a', url: 'goblin', count: 2 }),
+        makeCreature({ id: 'b', url: undefined, name: 'Тварь', count: 3 }),
+      ]),
+    ).toEqual([{ creatureUrl: 'goblin', count: 2 }]);
+  });
+});
+
+describe('getChallengeRatingItems', () => {
+  it('идёт по порядку от 0 до 30, дроби — после нуля', () => {
+    const values = getChallengeRatingItems().map(({ value }) => value);
+
+    expect(values.slice(0, 6)).toEqual(['0', '1/8', '1/4', '1/2', '1', '2']);
+    expect(values.at(-1)).toBe('30');
+    expect(values).toHaveLength(34);
+  });
+
+  it('подписывает опыт', () => {
+    expect(getChallengeRatingItems()[2]?.label).toBe('1/4 · 50 опыта');
+  });
+});
+
+describe('свои монстры', () => {
+  const draft = { name: '  Болотная тварь ', challengeRating: '3', count: 2 };
+
+  it('createCustomCreature берёт опыт по показателю опасности', () => {
+    expect(createCustomCreature('own', draft)).toEqual({
+      id: 'own',
+      name: 'Болотная тварь',
+      challengeRating: '3',
+      experience: 700,
+      inLair: false,
+      count: 2,
+    });
+  });
+
+  it('пустое название — название по умолчанию', () => {
+    expect(createCustomCreature('own', { ...draft, name: ' ' }).name).toBe(
+      CUSTOM_CREATURE_DEFAULT_NAME,
+    );
+  });
+
+  it('считается в сложности как существо бестиария', () => {
+    const result = calculateEncounter(
+      [{ id: 'party', level: 1, count: 4 }],
+      [makeCreature({}), createCustomCreature('own', draft)],
+    );
+
+    expect(result.totalExperience).toBe(50 + 700 * 2);
+  });
+
+  it('findCustomCreature ищет по названию и показателю опасности', () => {
+    const own = createCustomCreature('own', draft);
+    const goblin = makeCreature({});
+
+    expect(findCustomCreature([goblin, own], draft)).toBe(own);
+
+    expect(
+      findCustomCreature([own], { ...draft, challengeRating: '4' }),
+    ).toBeUndefined();
+
+    expect(
+      findCustomCreature([goblin], {
+        ...draft,
+        name: 'Гоблин',
+        challengeRating: '1/4',
+      }),
+    ).toBeUndefined();
+  });
+
+  it('isCustomCreature и countCustomCreatures', () => {
+    const own = createCustomCreature('own', draft);
+
+    expect(isCustomCreature(own)).toBe(true);
+    expect(isCustomCreature(makeCreature({}))).toBe(false);
+    expect(countCustomCreatures([own, makeCreature({ count: 5 })])).toBe(2);
+  });
+
+  it('переживает чтение из хранилища', () => {
+    const state = {
+      party: [{ id: 'a', level: 5, count: 2 }],
+      creatures: [createCustomCreature('own', draft), makeCreature({})],
+    };
+
+    expect(parseEncounterState(state)).toEqual(state);
   });
 });

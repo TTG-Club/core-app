@@ -81,6 +81,7 @@ describe('parseSpellCatalogMechanics', () => {
   it('неожиданный ответ даёт пустые урон и время', () => {
     expect(parseSpellCatalogMechanics(null)).toEqual({
       damage: { base: [], cantripTiers: [] },
+      hasAttackRoll: false,
       castingKinds: [],
     });
   });

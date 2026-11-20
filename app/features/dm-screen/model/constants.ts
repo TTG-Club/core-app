@@ -443,6 +443,27 @@ export const DM_SCREEN_BOARD_CLASS = {
 export const DM_SCREEN_WINDOW_CLASS = {
   highlighted: 'ring-2 ring-primary',
   dimmed: 'blur-sm performance:opacity-40 performance:blur-none',
+  /** Шапка окна, за которую его тянут; у закреплённого окна курсор обычный. */
+  movableHeader: 'cursor-move',
+} as const;
+
+/**
+ * Кнопка замка в шапке окна: у закреплённого окна она нажата и подсвечена,
+ * подпись говорит, что случится по нажатию.
+ */
+export const DM_SCREEN_LOCK_TOGGLE = {
+  locked: {
+    icon: 'tabler:lock',
+    label: 'Открепить окно',
+    color: 'primary',
+    variant: 'soft',
+  },
+  unlocked: {
+    icon: 'tabler:lock-open',
+    label: 'Закрепить окно',
+    color: 'neutral',
+    variant: 'ghost',
+  },
 } as const;
 
 /** Кнопки шапки окна, обычные и ссылкой: с них окно не тянется. */

@@ -211,6 +211,13 @@ const counterSchema = z.object({
 // «доступно с момента взятия».
 const grantedSpellRefSchema = entityRefSchema.extend({
   requiredLevel: z.number().optional(),
+  // «Открывается по ячейкам» появилось позже: у ссылок до него поля нет —
+  // такие заклинания открывались без условия, значит и должны. null от бэка —
+  // то же «выключено»
+  limitedBySlots: z
+    .boolean()
+    .nullish()
+    .transform((value) => value ?? undefined),
   // Характеристика и подготовка — у группы, в которой стоит заклинание: один
   // набор заклинаний записи может считаться от одной характеристики, другой — от
   // другой. Пусто — берётся у записи целиком
@@ -434,6 +441,7 @@ function toFeatMechanicsState(
         url: spell.url,
         name: spell.name,
         requiredLevel: spell.requiredLevel,
+        limitedBySlots: spell.limitedBySlots,
         spellcastingAbility: spell.spellcastingAbility,
         alwaysPrepared: spell.alwaysPrepared,
       })),

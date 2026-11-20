@@ -88,3 +88,22 @@ export const STANDARD_ARRAY_LABELS = {
   APPLY_TEMPLATE: 'Использовать шаблон класса',
   DESCRIPTION_PREFIX: 'Распределите значения:',
 };
+
+/** Сколько характеристик получает +1 в варианте «+1 / +1 / +1» предыстории */
+export const BACKGROUND_THREE_ONES_COUNT = 3;
+
+/** Идентификатор источника бонусов своей предыстории (без выбора из списка) */
+export const CUSTOM_BACKGROUND_SOURCE_ID = 'custom-background';
+
+/** Начало подписи источника бонусов предыстории: «Предыстория: …» */
+export const BACKGROUND_SOURCE_LABEL_PREFIX = 'Предыстория';
+
+const CUSTOM_BACKGROUND_SWITCH_LABEL = 'Без предыстории из списка';
+
+export const CUSTOM_BACKGROUND_LABELS = {
+  SWITCH: CUSTOM_BACKGROUND_SWITCH_LABEL,
+  SWITCH_DESCRIPTION: 'Бонусы +2 / +1 или +1 / +1 / +1 к любым характеристикам',
+  SOURCE_NAME: 'своя',
+  THREE_ONES_PLACEHOLDER: 'Выберите три характеристики (+1)',
+  EMPTY_HINT: `Выберите предысторию выше или включите «${CUSTOM_BACKGROUND_SWITCH_LABEL}», чтобы настроить бонусы.`,
+};

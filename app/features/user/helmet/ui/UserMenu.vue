@@ -41,6 +41,8 @@
   } from '~profile/activation/model';
   import { KbdShortcut } from '~ui/kbd-shortcut';
   import { UpdatesDot } from '~ui/updates-dot';
+  import { useVttgDocsAccess } from '~vttg-docs/composables';
+  import { VTTG_DOCS_ICON, VTTG_DOCS_TITLE } from '~vttg-docs/model';
   import {
     VTTG_MODULES_ICON,
     VTTG_MODULES_ROUTE,
@@ -60,6 +62,9 @@
 
   const { isAdmin, canEditEntities, canAccessModerationPanel } = useUserRoles();
   const { isTablet } = useBreakpoints();
+
+  const { docsPath: vttgDocsPath, hasAccess: hasVttgDocsAccess } =
+    useVttgDocsAccess();
 
   const isMenuOpened = ref(false);
 
@@ -316,6 +321,20 @@
               @click.left.exact="closeMenu"
             >
               {{ VTTG_MODULES_TITLE }}
+            </UButton>
+
+            <!-- Документация VTTG: видна тем, кому раздел открыт в админке -->
+            <UButton
+              v-if="hasVttgDocsAccess"
+              :icon="VTTG_DOCS_ICON"
+              color="neutral"
+              variant="ghost"
+              class="w-full"
+              size="lg"
+              :to="vttgDocsPath"
+              @click.left.exact="closeMenu"
+            >
+              {{ VTTG_DOCS_TITLE }}
             </UButton>
 
             <UButton

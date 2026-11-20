@@ -3,6 +3,7 @@ import type { LocationQuery } from 'vue-router';
 import type { Filter, FilterGroup, FilterGroups, FilterItems } from '../types';
 
 import { getGroupItems } from './getGroupItems';
+import { parseQueryList } from './savedFilterQuery';
 import { getSelectedItemIds } from './selection';
 
 /**
@@ -77,10 +78,12 @@ export function applyQueryToFilters(
     return groups.map((group) => {
       const items = getGroupItems(group);
 
-      const queryVal = isSource ? query.source : query[group.key];
+      const selectedIds = parseQueryList(
+        isSource ? query.source : query[group.key],
+      );
 
-      if (queryVal && typeof queryVal === 'string') {
-        const selectedSet = new Set(queryVal.split(','));
+      if (selectedIds) {
+        const selectedSet = new Set(selectedIds);
 
         return {
           ...group,

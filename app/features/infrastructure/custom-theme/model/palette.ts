@@ -6,10 +6,12 @@ import type {
 } from './types';
 
 import Color from 'colorjs.io';
+import { constrain as normalizeHue } from 'colorjs.io/src/angles.js';
 
 import {
   CUSTOM_THEME_ACCENT_LIGHTNESS_LIMIT,
   CUSTOM_THEME_ACCENT_TARGET,
+  CUSTOM_THEME_ACHROMATIC_ACCENT_CHROMA,
   CUSTOM_THEME_ANCHOR_STEP,
   CUSTOM_THEME_BASE_THRESHOLD,
   CUSTOM_THEME_CLASS,
@@ -18,13 +20,16 @@ import {
   CUSTOM_THEME_SCALE_STEPS,
   CUSTOM_THEME_SOLID_TEXT_TARGET,
   CUSTOM_THEME_STATUS_COLORS,
+  CUSTOM_THEME_STATUS_HUE_GAP,
+  CUSTOM_THEME_STATUS_NEIGHBOUR_GAP,
   CUSTOM_THEME_STATUS_START_LIGHTNESS,
   CUSTOM_THEME_SURFACES,
   CUSTOM_THEME_TEXT_TARGETS,
   CUSTOM_THEME_TEXT_TINT_SHARE,
-  CUSTOM_THEME_WARNING_CLASH_DEGREES,
-  CUSTOM_THEME_WARNING_FALLBACK_HUE,
 } from './constants';
+
+/** Цвет состояния: ошибка, успех, инфо, предупреждение. */
+type StatusName = keyof typeof CUSTOM_THEME_STATUS_COLORS;
 
 interface OklchColor {
   lightness: number;
@@ -52,6 +57,9 @@ const WHITE_LIGHTNESS = 1;
 
 /** Отрезок светлоты короче этого считается точкой — положения на нём нет. */
 const MIN_RANGE_WIDTH = 0.001;
+
+/** Полный круг оттенков, в градусах. */
+const FULL_TURN = 360;
 
 /** Белый — надпись на сплошных кнопках светлой основы. */
 const WHITE = '#ffffff';
@@ -334,9 +342,49 @@ function mixHalf(first: string, second: string): string {
  * @returns Расстояние от 0 до 180.
  */
 function hueDistance(first: number, second: number): number {
-  const difference = Math.abs(first - second) % 360;
+  const difference = normalizeHue(first - second);
 
-  return Math.min(difference, 360 - difference);
+  return Math.min(difference, FULL_TURN - difference);
+}
+
+/**
+ * Отводит оттенок цвета состояния от акцента, если они ближе
+ * `CUSTOM_THEME_STATUS_HUE_GAP`: цвет встаёт на этом расстоянии от акцента в
+ * свою сторону, а если там слишком близко другой цвет состояния — в обратную.
+ * Дальний от акцента оттенок и серый акцент (оттенка у него нет) ничего не
+ * сдвигают.
+ *
+ * @param status Цвет состояния, который проверяется.
+ * @param accent Цвет акцента — берутся оттенок и насыщенность.
+ * @returns Оттенок от 0 до 360, отличимый от акцента.
+ */
+function separateStatusHueFromAccent(
+  status: StatusName,
+  accent: OklchColor,
+): number {
+  const { hue, clashDirection } = CUSTOM_THEME_STATUS_COLORS[status];
+  const accentHue = accent.hue;
+
+  if (
+    accent.chroma < CUSTOM_THEME_ACHROMATIC_ACCENT_CHROMA
+    || hueDistance(hue, accentHue) >= CUSTOM_THEME_STATUS_HUE_GAP
+  ) {
+    return hue;
+  }
+
+  const neighbourHues = Object.entries(CUSTOM_THEME_STATUS_COLORS)
+    .filter(([name]) => name !== status)
+    .map(([, neighbour]) => neighbour.hue);
+
+  const shift = clashDirection * CUSTOM_THEME_STATUS_HUE_GAP;
+  const preferred = normalizeHue(accentHue + shift);
+
+  const isPreferredFree = neighbourHues.every(
+    (neighbourHue) =>
+      hueDistance(preferred, neighbourHue) >= CUSTOM_THEME_STATUS_NEIGHBOUR_GAP,
+  );
+
+  return isPreferredFree ? preferred : normalizeHue(accentHue - shift);
 }
 
 type SurfaceName =
@@ -609,38 +657,36 @@ function buildNeutralScale(
 
 /**
  * Цвета состояний (ошибка, успех, инфо, предупреждение), подогнанные под ту
- * же яркость, что и акцент. Если акцент жёлтый, предупреждение становится
- * оранжевым, чтобы их не путали.
+ * же яркость, что и акцент. Цвет, совпавший с акцентом по оттенку, отводится
+ * от него: при жёлтом акценте предупреждение становится оранжевым, при
+ * зелёном успех — бирюзовым, иначе их не отличить от ссылок и кнопок акцента.
  *
  * @param base Основа темы.
  * @param page Цвет фона страницы.
- * @param accentHue Оттенок акцента.
+ * @param accent Цвет акцента, выбранный пользователем.
  * @returns Цвета состояний.
  */
 function buildStatusColors(
   base: CustomThemeBase,
   page: string,
-  accentHue: number,
-): Record<keyof typeof CUSTOM_THEME_STATUS_COLORS, string> {
-  const fit = (hue: number, chroma: number) =>
+  accent: OklchColor,
+): Record<StatusName, string> {
+  const fit = (status: StatusName) =>
     fitColorToTheme(
       base,
-      { lightness: CUSTOM_THEME_STATUS_START_LIGHTNESS[base], chroma, hue },
+      {
+        lightness: CUSTOM_THEME_STATUS_START_LIGHTNESS[base],
+        chroma: CUSTOM_THEME_STATUS_COLORS[status].chroma,
+        hue: separateStatusHueFromAccent(status, accent),
+      },
       page,
     );
 
-  const { error, success, info, warning } = CUSTOM_THEME_STATUS_COLORS;
-
-  const warningHue =
-    hueDistance(accentHue, warning.hue) < CUSTOM_THEME_WARNING_CLASH_DEGREES
-      ? CUSTOM_THEME_WARNING_FALLBACK_HUE
-      : warning.hue;
-
   return {
-    error: fit(error.hue, error.chroma),
-    success: fit(success.hue, success.chroma),
-    info: fit(info.hue, info.chroma),
-    warning: fit(warningHue, warning.chroma),
+    error: fit('error'),
+    success: fit('success'),
+    info: fit('info'),
+    warning: fit('warning'),
   };
 }
 
@@ -695,7 +741,7 @@ export function createCustomThemePalette(
     Math.abs(toOklch(accent).lightness - accentSource.lightness)
     > ADJUSTMENT_EPSILON;
 
-  const status = buildStatusColors(base, surfaces.page, accentSource.hue);
+  const status = buildStatusColors(base, surfaces.page, accentSource);
   const neutralScale = buildNeutralScale(base, neutral);
   const accentScale = buildColorScale(accent, anchorStep);
 

@@ -1,5 +1,6 @@
 import type { ScreenTile, ScreenWindow } from '~dm-screen/model';
 
+import { omit } from 'es-toolkit';
 import { describe, expect, it } from 'vitest';
 
 import { getSheetPagePath } from '~character-sheet/model';
@@ -20,9 +21,11 @@ import {
   fitScreenView,
   fitScreenWindowSize,
   formatScreenGrid,
+  getScreenArrangeIds,
   getScreenBounds,
   getScreenEdgeTarget,
   getScreenGridCells,
+  getScreenMovableWindows,
   getScreenSplitterPointer,
   getScreenVisibleRect,
   getScreenZoneRect,
@@ -36,6 +39,7 @@ import {
   placeScreenWindow,
   resizeScreenWindow,
   resolveScreenSheet,
+  screenWindowListSchema,
   toScreenCanvasRect,
   toScreenFieldPoint,
   zoomScreenView,
@@ -58,6 +62,7 @@ function createWindow(overrides: Partial<ScreenWindow> = {}): ScreenWindow {
     height: 600,
     layer: 1,
     isMinimized: false,
+    isLocked: false,
     ...overrides,
   };
 }
@@ -710,5 +715,54 @@ describe('выбранная сетка окон', () => {
     );
 
     expect(formatScreenGrid(hovered)).toBe('2 × 2');
+  });
+});
+
+describe('закреплённые окна', () => {
+  it('окна, сохранённые до появления замка, читаются незакреплёнными', () => {
+    const stored = omit(createWindow(), ['isLocked']);
+
+    expect(screenWindowListSchema.parse([stored])).toEqual([
+      createWindow({ isLocked: false }),
+    ]);
+  });
+
+  it('двигать можно только незакреплённые окна', () => {
+    const windows = [
+      createWindow({ id: 'free' }),
+      createWindow({ id: 'locked', isLocked: true }),
+    ];
+
+    expect(
+      getScreenMovableWindows(windows).map((screenWindow) => screenWindow.id),
+    ).toEqual(['free']);
+  });
+
+  it('сетка обходит закреплённые окна и сохраняет порядок чтения', () => {
+    const windows = [
+      createWindow({ id: 'minimized', isMinimized: true, y: 0, x: 0 }),
+      createWindow({ id: 'right', x: 600, y: 100 }),
+      createWindow({ id: 'locked', isLocked: true, x: 0, y: 0 }),
+      createWindow({ id: 'left', x: 100, y: 100 }),
+      createWindow({ id: 'top', x: 900, y: 0 }),
+    ];
+
+    expect(getScreenArrangeIds(windows)).toEqual([
+      'top',
+      'left',
+      'right',
+      'minimized',
+    ]);
+  });
+
+  it('новое окно на ширме не закреплено', () => {
+    const appended = appendScreenWindow(
+      [],
+      { path: '/spells/fireball', title: 'Огненный шар' },
+      BOARD,
+      'new',
+    );
+
+    expect(appended.windows[0]?.isLocked).toBe(false);
   });
 });

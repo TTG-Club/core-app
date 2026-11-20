@@ -38,7 +38,7 @@ const MARKDOWN_PIPE_REGEXP = /\|/g;
  * @param value - Сырой текст из данных
  * @returns Текст с экранированными `\`, бэктиком, `*` и `_`
  */
-export function escapeMarkdown(value: string | undefined): string {
+export function escapeMarkdown(value: string | null | undefined): string {
   return value ? value.replace(MARKDOWN_SPECIAL_REGEXP, '\\$1') : '';
 }
 

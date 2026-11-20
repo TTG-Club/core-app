@@ -11,6 +11,7 @@ import {
   DM_SCREEN_PICKER_DEFAULT,
   DM_SCREEN_PICKER_STORAGE_KEY,
   getScreenEdgeTarget,
+  getScreenMovableWindows,
   getScreenZoneRect,
   isScreenLayoutFitting,
   isScreenPickerBand,
@@ -51,6 +52,9 @@ function readPickerPlacement(storedText: string): ScreenPickerPlacement {
 export const useDmScreenLayouts = createSharedComposable(() => {
   const { windows, board, restore, update } = useDmScreen();
   const { canvas, toCanvasPoint } = useDmScreenView();
+
+  /** Окна, которые можно поставить в раскладку: закреплённые не двигаются. */
+  const movableWindows = computed(() => getScreenMovableWindows(windows.value));
 
   /** Окно, которое тащат сейчас. */
   const draggingId = ref<string>();
@@ -182,7 +186,7 @@ export const useDmScreenLayouts = createSharedComposable(() => {
     const active = assist.value;
 
     return active
-      ? windows.value.filter(
+      ? movableWindows.value.filter(
           (screenWindow) => !active.placedIds.includes(screenWindow.id),
         )
       : [];
@@ -203,7 +207,7 @@ export const useDmScreenLayouts = createSharedComposable(() => {
    * @param nextAssist - раскладка, свободные места и поставленные окна
    */
   function continueAssist(nextAssist: LayoutAssist): void {
-    const hasCandidates = windows.value.some(
+    const hasCandidates = movableWindows.value.some(
       (screenWindow) => !nextAssist.placedIds.includes(screenWindow.id),
     );
 

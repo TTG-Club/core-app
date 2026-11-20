@@ -100,6 +100,9 @@ export interface AddPlayerRequest {
   currentHitPoints?: number;
   maxHitPoints?: number;
 
+  /** Временные хиты игрока с листа персонажа; не задано или `0` — их нет. */
+  temporaryHitPoints?: number;
+
   /** КД игрока: задаёт мастер или лист персонажа. */
   armorClass?: number;
 
@@ -136,6 +139,24 @@ export interface UpdateParticipantRequest {
 
   /** Состояния целиком: присланный список заменяет прежний, пустой — снимает все. */
   conditions?: Array<ParticipantCondition>;
+}
+
+/**
+ * Что мастер вписывает руками за живые кости: итог инициативы, который назвал
+ * игрок (бонус уже учтён), или выпавшее на к20 (бонус добавится сам).
+ */
+export type ManualInitiativeMode = 'total' | 'roll';
+
+/** Вкладка переключателя ручного ввода инициативы. */
+export interface ManualInitiativeModeTab {
+  label: string;
+  value: ManualInitiativeMode;
+}
+
+/** Допустимые пределы числа в поле ручного ввода инициативы. */
+export interface ManualInitiativeRange {
+  min: number;
+  max: number;
 }
 
 /** Хиты участника вместе с временными. */
@@ -195,11 +216,16 @@ export type ConditionKey =
   | 'reduced'
   | 'polymorphed';
 
-/** Состояние в справочнике: подпись и иконка. */
+/** Состояние в справочнике: подпись, иконка и статья с правилами. */
 export interface ConditionOption {
   label: string;
   icon: string;
+  /** Адрес статьи глоссария с описанием; нет — состояние не из правил. */
+  glossaryUrl?: string;
 }
+
+/** Загрузка описания состояния из глоссария. */
+export type ConditionDescriptionStatus = 'pending' | 'success' | 'error';
 
 /**
  * Момент, когда состояние спадает само: на границе раунда (у всех разом), в
@@ -265,6 +291,9 @@ export interface SheetPlayerOption {
 
   /** Текущие хиты листа. */
   currentHitPoints: number;
+
+  /** Временные хиты листа; `0` — их нет. */
+  temporaryHitPoints: number;
 
   /** Аватар персонажа; null — не загружен. */
   avatarUrl: string | null;

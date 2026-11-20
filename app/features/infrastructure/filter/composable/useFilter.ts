@@ -2,12 +2,9 @@ import type { LocationQuery } from 'vue-router';
 
 import type { Filter, FilterRangeOrders } from '../types';
 
-import { isEqual, isPlainObject } from 'es-toolkit';
+import { isEqual } from 'es-toolkit';
 
-import {
-  ONE_YEAR_IN_SECONDS,
-  SECTION_FILTER_STORE_KEY_PREFIX,
-} from '#shared/consts';
+import { ONE_YEAR_IN_SECONDS } from '#shared/consts';
 
 import { parseFilter } from '../schema';
 import {
@@ -15,8 +12,10 @@ import {
   buildFullQuery,
   buildSearchQuery,
   collectGroupKeys,
+  getFilterCookieName,
   getFilterKey,
   normalizeDependentSelections,
+  parseSavedFilterQuery,
 } from '../utils';
 
 /**
@@ -55,28 +54,6 @@ function hasFilterQuery(pristine: Filter, query: LocationQuery): boolean {
 }
 
 /**
- * Читает запомненный фильтр из куки. В куку может попасть что угодно,
- * поэтому берутся только строки и списки строк.
- *
- * @param value содержимое куки.
- * @returns параметры фильтра в виде параметров адреса.
- */
-function parseSavedQuery(value: unknown): LocationQuery {
-  if (!isPlainObject(value)) {
-    return {};
-  }
-
-  return Object.fromEntries(
-    Object.entries(value).filter(
-      (entry): entry is [string, string | Array<string>] =>
-        typeof entry[1] === 'string'
-        || (Array.isArray(entry[1])
-          && entry[1].every((item) => typeof item === 'string')),
-    ),
-  );
-}
-
-/**
  * Состояние фильтра раздела: загружает группы, держит выбор и поисковую
  * строку, синхронизирует их с адресом страницы.
  *
@@ -97,10 +74,10 @@ export async function useFilter(
   const filter = useState<Filter | undefined>(filterKey, () => undefined);
 
   // Выбор раздела ещё и в куке: он переживает перезагрузку и новый заход
-  const savedCookie = useCookie<unknown>(
-    `${SECTION_FILTER_STORE_KEY_PREFIX}${filterKey}`,
-    { maxAge: ONE_YEAR_IN_SECONDS, default: () => undefined },
-  );
+  const savedCookie = useCookie<unknown>(getFilterCookieName(filterKey), {
+    maxAge: ONE_YEAR_IN_SECONDS,
+    default: () => undefined,
+  });
 
   const search = useState<string | undefined>(`${filterKey}_search`, () => {
     const searchVal = route.query.search;
@@ -195,7 +172,7 @@ export async function useFilter(
         isFirstDefaultsRun
         && !filter.value
         && !hasFilterQuery(value, route.query)
-          ? pickFilterQuery(value, parseSavedQuery(savedCookie.value))
+          ? pickFilterQuery(value, parseSavedFilterQuery(savedCookie.value))
           : {};
 
       isSavedFilterRestored = Object.keys(savedQuery).length > 0;

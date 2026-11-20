@@ -1,3 +1,5 @@
+import type { RenderNode } from '~ui/markup';
+
 import type {
   AnonTrackerSlot,
   CreatureOption,
@@ -7,6 +9,7 @@ import type {
 } from './types';
 
 import { z } from '~/utils/zod';
+import { renderNodeSchema } from '~ui/markup';
 
 import { DEFAULT_CONDITION_EXPIRY, DEFAULT_TRACKER_NAME } from './constants';
 import { isConditionKey, isParticipantColor } from './utils';
@@ -224,4 +227,17 @@ export function parseCreatureSummary(input: unknown): CreatureSummary {
     maxHitPoints: parsed.hit.hit,
     hitFormula: parsed.hit.formula,
   };
+}
+
+/** Описание из статьи глоссария `GET /api/v2/glossary/{url}`. */
+const conditionDescriptionSchema = z.object({
+  description: z.array(renderNodeSchema),
+});
+
+/**
+ * Валидирует статью глоссария и возвращает описание состояния разметкой.
+ * @param input Сырой ответ глоссария.
+ */
+export function parseConditionDescription(input: unknown): Array<RenderNode> {
+  return conditionDescriptionSchema.parse(input).description;
 }

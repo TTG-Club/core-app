@@ -27,6 +27,7 @@ import type {
   CharacterSpecies,
   CharacterSpeed,
   CharacterSpell,
+  CharacterSpellcastingSettings,
   CharacterToolProficiency,
   CharacterVision,
   CustomInventoryItemDraft,
@@ -185,6 +186,7 @@ import {
   toStoredSavingThrows,
   toStoredSettings,
   toStoredSpeed,
+  toStoredSpellcastingSettings,
   toTrimmedPersonality,
   toUpdatedCustomInventoryItem,
   VISION_DISTANCE_MAX,
@@ -866,8 +868,8 @@ export function useCharacterSheet(sheetKey: string) {
   }
 
   /**
-   * Установка класса доспеха с ограничением базового значения и своего предела
-   * бонуса Ловкости.
+   * Установка класса доспеха с ограничением базового значения, своего предела
+   * бонуса Ловкости и своих прибавок.
    *
    * @param armorClass новый класс доспеха персонажа.
    */
@@ -894,6 +896,7 @@ export function useCharacterSheet(sheetKey: string) {
                 ARMOR_DEX_LIMIT_MIN,
                 ARMOR_DEX_LIMIT_MAX,
               ),
+        bonuses: toStoredCustomBonuses(armorClass.bonuses),
       },
     };
   }
@@ -2573,23 +2576,34 @@ export function useCharacterSheet(sheetKey: string) {
   }
 
   /**
-   * Установка заклинательной характеристики класса: у мультикласса она своя у
-   * каждого класса, поэтому хранится при нём, а не на всём листе.
+   * Установка заклинательства класса: характеристика и своя настройка Сл
+   * спасброска и бонуса атаки. У мультикласса и то и другое своё у каждого
+   * класса, поэтому хранится при нём, а не на всём листе.
    *
    * @param classUrl URL класса.
-   * @param ability заклинательная характеристика; null — авто по названию класса.
+   * @param ability заклинательная характеристика; null — авто по классу.
+   * @param settings настройка чисел из черновика окна.
    */
-  function setSpellcastingAbility(
+  function setClassSpellcasting(
     classUrl: string,
     ability: AbilityKey | null,
+    settings: CharacterSpellcastingSettings,
   ): void {
     if (!ensureEditable()) {
       return;
     }
 
+    // Настройка по правилам не хранится: undefined при сохранении документа
+    // в JSON пропадает, и запись класса остаётся такой же, как до настройки
+    const spellcastingSettings = toStoredSpellcastingSettings(settings);
+
     const withAbility = (characterClass: CharacterClass): CharacterClass =>
       characterClass.url === classUrl
-        ? { ...characterClass, spellcastingAbility: ability }
+        ? {
+            ...characterClass,
+            spellcastingAbility: ability,
+            spellcastingSettings,
+          }
         : characterClass;
 
     character.value = {
@@ -4077,7 +4091,7 @@ export function useCharacterSheet(sheetKey: string) {
     setSize,
     setSpecies,
     setSpells,
-    setSpellcastingAbility,
+    setClassSpellcasting,
     setSpellSpellcastingAbility,
     setPreparedSpells,
     setVision,

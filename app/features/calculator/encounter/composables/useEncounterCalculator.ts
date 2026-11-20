@@ -1,6 +1,7 @@
 import type { CreatureOption } from '~initiative/model';
 
 import type {
+  CustomCreatureDraft,
   EncounterCreature,
   EncounterPartyRow,
   EncounterResult,
@@ -9,9 +10,11 @@ import type {
 
 import {
   calculateEncounter,
+  createCustomCreature,
   DEFAULT_CHARACTER_LEVEL,
   DEFAULT_ENCOUNTER_STATE,
   ENCOUNTER_STORAGE_KEY,
+  findCustomCreature,
   getExperienceByChallengeRating,
   MAX_CREATURE_ROWS,
   MAX_PARTY_ROWS,
@@ -134,6 +137,17 @@ export function useEncounterCalculator() {
   }
 
   /**
+   * Кладёт новую строку существа в конец списка.
+   * @param creature Новая строка существа.
+   */
+  function appendCreature(creature: EncounterCreature): void {
+    state.value = {
+      ...state.value,
+      creatures: [...state.value.creatures, creature],
+    };
+  }
+
+  /**
    * Добавляет существо из поиска бестиария. Если такое существо уже есть,
    * увеличивает его количество вместо новой строки.
    * @param option Выбранная опция автокомплита.
@@ -167,10 +181,33 @@ export function useEncounterCalculator() {
       count: clampCount(count),
     };
 
-    state.value = {
-      ...state.value,
-      creatures: [...state.value.creatures, creature],
-    };
+    appendCreature(creature);
+  }
+
+  /**
+   * Добавляет своего монстра мастера. Если монстр с тем же названием и
+   * показателем опасности уже есть, увеличивает его количество.
+   * @param draft Название, показатель опасности и количество.
+   */
+  function addCustomCreature(draft: CustomCreatureDraft): void {
+    const existing = findCustomCreature(state.value.creatures, draft);
+
+    if (existing) {
+      updateCreature(existing.id, { count: existing.count + draft.count });
+
+      return;
+    }
+
+    if (!canAddCreature.value) {
+      return;
+    }
+
+    appendCreature(
+      createCustomCreature(crypto.randomUUID(), {
+        ...draft,
+        count: clampCount(draft.count),
+      }),
+    );
   }
 
   /**
@@ -222,6 +259,7 @@ export function useEncounterCalculator() {
     updatePartyRow,
     removePartyRow,
     addCreature,
+    addCustomCreature,
     updateCreature,
     removeCreature,
     clearCreatures,

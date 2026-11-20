@@ -18,6 +18,7 @@
     updatePartyRow,
     removePartyRow,
     addCreature,
+    addCustomCreature,
     updateCreature,
     removeCreature,
     clearCreatures,
@@ -56,6 +57,7 @@
           :creatures="creatures"
           :can-add="canAddCreature"
           @add="addCreature"
+          @add-custom="addCustomCreature"
           @update="updateCreature"
           @remove="removeCreature"
           @clear="clearCreatures"

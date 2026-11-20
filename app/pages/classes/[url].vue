@@ -3,7 +3,7 @@
 
   import { ClassBody } from '~classes/body';
   import { useSubclassPaths } from '~classes/composable';
-  import { getClassMarkdown } from '~classes/model';
+  import { CLASS_SECTION_PATH, getClassMarkdown } from '~classes/model';
   import { PageActions } from '~ui/page';
   import { UiResult } from '~ui/result';
 
@@ -144,7 +144,7 @@
 
           <UButton
             variant="ghost"
-            @click.left.exact.prevent="navigateTo('/classes')"
+            @click.left.exact.prevent="navigateTo(CLASS_SECTION_PATH)"
           >
             Вернуться в список
           </UButton>

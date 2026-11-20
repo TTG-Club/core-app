@@ -83,6 +83,9 @@ export default defineConfig({
       '~vttg-modules': fileURLToPath(
         new URL('./app/features/vttg-modules', import.meta.url),
       ),
+      '~vttg-docs': fileURLToPath(
+        new URL('./app/features/vttg-docs', import.meta.url),
+      ),
       '~vttg': fileURLToPath(new URL('./app/features/vttg', import.meta.url)),
       '~ui': fileURLToPath(new URL('./app/shared/ui', import.meta.url)),
       '~infrastructure': fileURLToPath(

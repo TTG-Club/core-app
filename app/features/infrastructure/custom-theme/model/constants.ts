@@ -42,18 +42,14 @@ export const CUSTOM_THEME_DEFAULT_SETTINGS: CustomThemeSettings = {
   accent: '#d7b06c',
 };
 
-/** Готовые фоны для быстрого выбора: сначала тёмные, потом светлые. */
+/**
+ * Готовые фоны для быстрого выбора — три непохожих, чтобы ряд кружков с полем
+ * кода влезал в панель настроек: графит и бумага тем сайта и синяя ночь.
+ */
 export const CUSTOM_THEME_BACKGROUND_PRESETS = [
   { label: 'Графит', value: '#15171b' },
-  { label: 'Чёрный', value: '#0b0b0b' },
   { label: 'Ночь', value: '#0d1626' },
-  { label: 'Лес', value: '#0c1c12' },
-  { label: 'Вино', value: '#250e12' },
-  { label: 'Какао', value: '#24180f' },
   { label: 'Бумага', value: '#f5f8fe' },
-  { label: 'Пергамент', value: '#f8edd8' },
-  { label: 'Мята', value: '#e2f8ef' },
-  { label: 'Белый', value: '#fcfcfc' },
 ] as const;
 
 /**
@@ -127,12 +123,17 @@ export const CUSTOM_THEME_TEXT_TINT_SHARE = 0.6;
  */
 export const CUSTOM_THEME_LEGACY_MAX_TINT_CHROMA = 0.02;
 
-/** Цвета состояний: оттенок и насыщенность OKLCH. */
+/**
+ * Цвета состояний: оттенок и насыщенность OKLCH. `clashDirection` — в какую
+ * сторону круга оттенков уводить цвет, когда его занял акцент (1 — вперёд,
+ * −1 — назад): предупреждение — в оранжевый, успех — в бирюзовый, ошибка — в
+ * малиновый, инфо — в лиловый.
+ */
 export const CUSTOM_THEME_STATUS_COLORS = {
-  error: { hue: 25, chroma: 0.15 },
-  success: { hue: 150, chroma: 0.15 },
-  info: { hue: 250, chroma: 0.13 },
-  warning: { hue: 80, chroma: 0.14 },
+  error: { hue: 25, chroma: 0.15, clashDirection: -1 },
+  success: { hue: 150, chroma: 0.15, clashDirection: 1 },
+  info: { hue: 250, chroma: 0.13, clashDirection: 1 },
+  warning: { hue: 80, chroma: 0.14, clashDirection: -1 },
 } as const;
 
 /** С какой светлоты начинаются цвета состояний до подгонки под контраст. */
@@ -144,11 +145,28 @@ export const CUSTOM_THEME_STATUS_START_LIGHTNESS: Record<
   light: 0.55,
 };
 
-/** Если акцент ближе к жёлтому, чем на столько градусов, предупреждение уходит в оранжевый. */
-export const CUSTOM_THEME_WARNING_CLASH_DEGREES = 25;
+/**
+ * Наименьшая разница оттенков акцента и цвета состояния, в градусах. Оба
+ * подогнаны под один контраст и выходят одной светлоты, так что различаются
+ * только оттенком: ближе — зелёный успех сливается с зелёным акцентом, синее
+ * инфо с синим, и подсветка цветом состояния (например, умения подкласса
+ * рядом со ссылками-акцентом) перестаёт читаться. Цвет состояния, попавший
+ * ближе, отодвигается от акцента на это расстояние.
+ */
+export const CUSTOM_THEME_STATUS_HUE_GAP = 30;
 
-/** Оттенок предупреждения, когда жёлтый занят акцентом. */
-export const CUSTOM_THEME_WARNING_FALLBACK_HUE = 55;
+/**
+ * Наименьшая разница оттенков отведённого цвета состояния и остальных цветов
+ * состояний, в градусах. Если в свою сторону цвет наехал бы на соседа
+ * (предупреждение при оранжевом акценте — на ошибку), он уходит в другую.
+ */
+export const CUSTOM_THEME_STATUS_NEIGHBOUR_GAP = 20;
+
+/**
+ * Насыщенность OKLCH, ниже которой акцент считается серым: оттенок у него
+ * случайный, и уводить от него цвета состояний незачем.
+ */
+export const CUSTOM_THEME_ACHROMATIC_ACCENT_CHROMA = 0.03;
 
 /** Ступени шкал цветов, как у Tailwind и Nuxt UI. */
 export const CUSTOM_THEME_SCALE_STEPS = [
@@ -164,14 +182,15 @@ export const CUSTOM_THEME_ANCHOR_STEP: Record<CustomThemeBase, number> = {
   light: 500,
 };
 
-/** Готовые акценты для быстрого выбора. */
+/**
+ * Готовые акценты для быстрого выбора — пять далёких друг от друга оттенков,
+ * чтобы ряд кружков с полем кода влезал в панель настроек. Золото — акцент
+ * тем сайта.
+ */
 export const CUSTOM_THEME_ACCENT_PRESETS = [
   { label: 'Золото', value: '#d7b06c' },
   { label: 'Терракота', value: '#c96442' },
-  { label: 'Оранжевый', value: '#f19357' },
-  { label: 'Бирюзовый', value: '#4e99a3' },
+  { label: 'Зелёный', value: '#5fa86a' },
   { label: 'Синий', value: '#5691c7' },
   { label: 'Фиолетовый', value: '#9b7fd4' },
-  { label: 'Зелёный', value: '#5fa86a' },
-  { label: 'Красный', value: '#d0565f' },
 ] as const;

@@ -49,5 +49,6 @@ export { buildMarkdownTable, toMarkdownRow } from './markdown-table';
 export { default as MarkupRender } from './MarkupRender.vue';
 export { parse } from './parser';
 export * from './renderer';
+export { isRenderNode, renderNodeSchema } from './schema';
 export { toMarkdown } from './to-markdown';
 export * from './types';

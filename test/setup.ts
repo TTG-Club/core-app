@@ -4,7 +4,7 @@ import { createError } from 'h3';
 import { getErrorResponse, getPlural, getSlug } from '#shared/utils';
 import { convertKeyboardLayout } from '~/utils/convertKeyboardLayout';
 import { createEntityId } from '~/utils/createEntityId';
-import { getModifier } from '~/utils/modifier';
+import { getFormattedBonus, getModifier } from '~/utils/modifier';
 import { withLayoutFallback } from '~/utils/withLayoutFallback';
 import { z } from '~/utils/zod';
 
@@ -24,6 +24,7 @@ Object.assign(globalThis, {
   createEntityId,
   createError,
   getErrorResponse,
+  getFormattedBonus,
   getModifier,
   getPlural,
   getSlug,

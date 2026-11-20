@@ -38,7 +38,11 @@
    * записи — и выданные, и выбранные игроком, — поэтому живёт своим блоком
    * (`FeatSpellcastingAbility`), а не рядом с одним из списков.
    */
-  const { labels = {}, title = undefined } = defineProps<{
+  const {
+    labels = {},
+    title = undefined,
+    canLimitBySlots = false,
+  } = defineProps<{
     /**
      * Подписи формы-владельца: чертой источник даров называет только форма
      * черты, у умения класса и вида свои формулировки.
@@ -50,6 +54,13 @@
      * шапке. Пусто — форма-владелец рисует заголовок сама.
      */
     title?: string;
+
+    /**
+     * Показывать у перечисленных отметку «открывается, когда есть ячейка круга».
+     * Только у черты («Адепт школы»): у умений класса, вида и предыстории такого
+     * правила нет, и лишний переключатель лишь путал бы автора.
+     */
+    canLimitBySlots?: boolean;
   }>();
 
   const model = defineModel<FeatGrantedSpellBlock>({ required: true });
@@ -68,6 +79,17 @@
   }
 
   /**
+   * Показывать ли у группы отметку «по ячейкам»: она бывает только у
+   * перечисленных — у списка класса то же правило задаёт круг.
+   *
+   * @param group группа выдачи.
+   * @returns `true` — переключатель нужен.
+   */
+  function hasSlotsSwitch(group: FeatGrantedSpellGroupRow): boolean {
+    return canLimitBySlots && !isClassList(group);
+  }
+
+  /**
    * Заголовок группы: что выдаётся и с какого уровня. По нему автор находит
    * нужную ступень, не разворачивая её.
    *
@@ -83,7 +105,12 @@
       ? `${texts.value.grantedSpellGroupFromLevelPrefix} ${group.requiredLevel} ${texts.value.grantedSpellGroupFromLevelSuffix}`
       : texts.value.grantedSpellGroupFromStart;
 
-    return `${kind}${texts.value.grantedSpellGroupTitleSeparator}${level}`;
+    const slots =
+      hasSlotsSwitch(group) && group.limitedBySlots
+        ? texts.value.grantedSpellGroupLimitedBySlotsSuffix
+        : '';
+
+    return `${kind}${texts.value.grantedSpellGroupTitleSeparator}${level}${slots}`;
   }
 
   /**
@@ -246,6 +273,22 @@
               :aria-label="texts.grantedSpellLevel"
             />
           </UFormField>
+
+          <!-- Условие открытия рядом с уровнем: оба складываются через «и» -->
+          <div
+            v-if="hasSlotsSwitch(group)"
+            class="flex items-center md:col-span-24"
+          >
+            <InfoTooltip
+              :text="texts.grantedSpellLimitedBySlotsHint"
+              icon="tabler:info-circle-filled"
+            >
+              <USwitch
+                v-model="group.limitedBySlots"
+                :label="texts.grantedSpellLimitedBySlots"
+              />
+            </InfoTooltip>
+          </div>
 
           <!-- Характеристика у группы, а не у записи: один набор заклинаний
             может считаться от одной характеристики, другой — от другой -->

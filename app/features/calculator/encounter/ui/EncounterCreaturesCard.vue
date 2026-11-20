@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { CreatureOption } from '~initiative/model';
 
-  import type { EncounterCreature } from '../model';
+  import type { CustomCreatureDraft, EncounterCreature } from '../model';
 
   import {
     useCreatureDrawer,
@@ -12,12 +12,14 @@
     BESTIARY_PAGE_PREFIX,
     CREATURE_SEARCH_HINT_LABEL,
     CREATURE_SEARCH_NOT_FOUND_LABEL,
+    CUSTOM_CREATURE_LABELS,
     formatExperience,
     getCreatureExperience,
     MAX_ROW_COUNT,
     MIN_ROW_COUNT,
     TRANSFER_LABELS,
   } from '../model';
+  import EncounterCustomCreatureForm from './EncounterCustomCreatureForm.vue';
   import EncounterNumberInput from './EncounterNumberInput.vue';
 
   const { creatures, canAdd = true } = defineProps<{
@@ -26,14 +28,15 @@
   }>();
 
   const emit = defineEmits<{
-    add: [option: CreatureOption, count: number];
-    update: [
+    'add': [option: CreatureOption, count: number];
+    'add-custom': [draft: CustomCreatureDraft];
+    'update': [
       id: string,
       patch: Partial<Pick<EncounterCreature, 'count' | 'inLair'>>,
     ];
-    remove: [id: string];
-    clear: [];
-    transfer: [];
+    'remove': [id: string];
+    'clear': [];
+    'transfer': [];
   }>();
 
   const { searchTerm, options, isLoading } = useCreatureSearch();
@@ -41,6 +44,7 @@
 
   const selected = ref<CreatureOption | undefined>(undefined);
   const batchCount = ref(MIN_ROW_COUNT);
+  const [isCustomFormOpen, toggleCustomForm] = useToggle(false);
 
   const emptyLabel = computed(() =>
     searchTerm.value.trim()
@@ -54,7 +58,9 @@
 
       return {
         ...creature,
-        href: `${BESTIARY_PAGE_PREFIX}${creature.url}`,
+        href: creature.url
+          ? `${BESTIARY_PAGE_PREFIX}${creature.url}`
+          : undefined,
         hasLair: creature.experienceInLair !== undefined,
         experienceText: formatExperience(experience),
         totalText: formatExperience(experience * creature.count),
@@ -74,6 +80,17 @@
     searchTerm.value = '';
     batchCount.value = MIN_ROW_COUNT;
   }
+
+  /**
+   * Открывает карточку существа бестиария в дровере; у своего монстра
+   * карточки нет.
+   * @param url URL существа в бестиарии.
+   */
+  function openRowCreature(url: string | undefined): void {
+    if (url) {
+      openCreature(url);
+    }
+  }
 </script>
 
 <template>
@@ -88,11 +105,22 @@
       Существа
 
       <UButton
+        size="xs"
+        color="neutral"
+        variant="ghost"
+        icon="tabler:pencil-plus"
+        class="ml-auto"
+        :aria-expanded="isCustomFormOpen"
+        @click.left.exact.prevent="toggleCustomForm()"
+      >
+        {{ CUSTOM_CREATURE_LABELS.toggle }}
+      </UButton>
+
+      <UButton
         v-if="creatures.length"
         size="xs"
         variant="soft"
         icon="tabler:swords"
-        class="ml-auto"
         :aria-label="TRANSFER_LABELS.buttonAria"
         @click.left.exact.prevent="emit('transfer')"
       >
@@ -173,11 +201,20 @@
       />
     </form>
 
+    <UCollapsible v-model:open="isCustomFormOpen">
+      <template #content>
+        <EncounterCustomCreatureForm
+          :disabled="!canAdd"
+          @add="emit('add-custom', $event)"
+        />
+      </template>
+    </UCollapsible>
+
     <p
       v-if="!rows.length"
       class="text-sm text-secondary"
     >
-      Найдите существ в бестиарии и добавьте их в столкновение.
+      {{ CUSTOM_CREATURE_LABELS.emptyList }}
     </p>
 
     <ul
@@ -191,12 +228,28 @@
       >
         <div class="flex min-w-40 flex-1 flex-col">
           <ULink
+            v-if="row.href"
             :to="row.href"
             class="font-medium text-highlighted hover:text-primary"
-            @click.left.exact.prevent="openCreature(row.url)"
+            @click.left.exact.prevent="openRowCreature(row.url)"
           >
             {{ row.name }}
           </ULink>
+
+          <span
+            v-else
+            class="flex items-center gap-2 font-medium text-highlighted"
+          >
+            {{ row.name }}
+
+            <UBadge
+              size="sm"
+              color="neutral"
+              variant="subtle"
+            >
+              {{ CUSTOM_CREATURE_LABELS.badge }}
+            </UBadge>
+          </span>
 
           <span class="text-xs text-muted tabular-nums">
             ПО {{ row.challengeRating }} · опыт {{ row.experienceText }} · всего

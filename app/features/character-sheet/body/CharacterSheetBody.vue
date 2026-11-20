@@ -10,6 +10,8 @@
     SheetPdfVariant,
     SheetRollContext,
     SkillRow,
+    SpellAttackRoll,
+    SpellCastRequest,
     SpellDamageRoll,
   } from '../model';
 
@@ -50,6 +52,7 @@
     SHEET_BODY_LABELS,
     SHEET_EDIT_REVOKED_TOAST,
     SHEET_REMOVE_CONFIRM_TITLE,
+    SPELL_ATTACK_ROLL_LABELS,
   } from '../model';
   import CharacterSheetSkeleton from './CharacterSheetSkeleton.vue';
   import {
@@ -1022,6 +1025,55 @@
     });
   }
 
+  /**
+   * Бросок атаки заклинанием: тот же к20 с модификатором, что у оружия, а
+   * преимущество и помеху дают эффекты атаки заклинанием (`attack.spell.*`).
+   * Ячейку не тратит — её тратит бросок урона, он и есть накладывание.
+   *
+   * @param attack бонус и характеристика заклинательства заклинания.
+   * @returns true — атака брошена, а не отменена.
+   */
+  async function rollSpellAttack(attack: SpellAttackRoll): Promise<boolean> {
+    const attackContext: SheetRollContext = {
+      kind: 'attack',
+      attackType: 'spell',
+    };
+
+    const isRolled = await rollModal.open({
+      sheetKey,
+      title: attack.title,
+      modifier: attack.modifier,
+      ability: attack.ability,
+      actionLabel: SPELL_ATTACK_ROLL_LABELS.action,
+      mode: getRollMode(attackContext),
+      modeSources: getRollModeSources(attackContext),
+    }).result;
+
+    return isRolled === true;
+  }
+
+  /**
+   * Сотворение заклинания кнопкой строки: атака (если заклинание атакует),
+   * затем то же окно урона, что у плитки урона, — оно и тратит ячейку круга.
+   * Отмена любого окна обрывает сотворение: ячейка остаётся. Без урона ячейка
+   * тратится сразу после атаки либо сразу по нажатию; заговор её не тратит.
+   *
+   * @param cast атака, урон и круг заклинания.
+   */
+  async function handleSpellCast(cast: SpellCastRequest) {
+    if (cast.attack && !(await rollSpellAttack(cast.attack))) {
+      return;
+    }
+
+    if (cast.damage) {
+      await handleSpellDamageRoll(cast.damage);
+
+      return;
+    }
+
+    spendSpellSlot(cast.level);
+  }
+
   function handleItemDamageRoll(inventoryItem: CharacterInventoryItem) {
     const damage = inventoryItem.weapon
       ? getWeaponDamageSource(
@@ -1649,6 +1701,7 @@
           @copy-innate-spell="handleInnateSpellCopy"
           @remove-innate-spell="removeInnateSpell"
           @roll-spell-damage="handleSpellDamageRoll"
+          @cast-spell="handleSpellCast"
           @toggle-spell-prepared="toggleSpellPrepared"
           @toggle-innate-spell-prepared="toggleInnateSpellPrepared"
           @toggle-spell-slot="toggleSpellSlot"

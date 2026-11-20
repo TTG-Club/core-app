@@ -6,6 +6,7 @@
     applyHitPointsDelta,
     clampHitPoints,
     mergeTemporaryHitPoints,
+    parseHitPointsExpression,
     TEMPORARY_HIT_POINTS_LABELS,
   } from '~initiative/model';
 
@@ -138,9 +139,6 @@
     }
   }
 
-  /** Ввод хитов: `58` — установить точное значение, `+7`/`-6` — сдвинуть. */
-  const DRAFT_PATTERN = /^([+-])?(\d+)$/;
-
   /**
    * Быстрый шаг урона/лечения — применяется сразу, попап остаётся открытым.
    * @param delta Смещение хитов (отрицательное — урон).
@@ -195,30 +193,23 @@
   }
 
   /**
-   * Применяет введённое значение по `DRAFT_PATTERN`: без знака — точные хиты
-   * (временные не трогаются), со знаком — сдвиг от текущих (`+7` — лечение,
-   * `-6` — урон, сначала по временным хитам). Невалидный ввод закрывает попап
-   * без изменений.
+   * Применяет введённое значение (`parseHitPointsExpression`): без знака —
+   * точные хиты (временные не трогаются), со знаком — сдвиг от текущих (`+7` —
+   * лечение, `-6` — урон, сначала по временным хитам). Невалидный ввод
+   * закрывает попап без изменений.
    */
   function applyDraft(): void {
     isOpen.value = false;
 
-    const match = DRAFT_PATTERN.exec(draft.value.trim());
+    const expression = parseHitPointsExpression(draft.value);
 
-    if (!match) {
+    if (!expression) {
       return;
     }
 
-    const [, sign, digits] = match;
-    const amount = Number(digits);
-
-    if (sign) {
+    if (expression.delta !== null) {
       emitHitPoints(
-        applyHitPointsDelta(
-          hitPointsState.value,
-          sign === '-' ? -amount : amount,
-          max,
-        ),
+        applyHitPointsDelta(hitPointsState.value, expression.delta, max),
       );
 
       return;
@@ -226,7 +217,7 @@
 
     emitHitPoints({
       ...hitPointsState.value,
-      current: clampHitPoints(amount, max),
+      current: clampHitPoints(expression.amount, max),
     });
   }
 
