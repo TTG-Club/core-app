@@ -41,6 +41,9 @@
 
   const emit = defineEmits<{
     select: [refs: Array<{ url: string; name: string }>];
+
+    /** Названия предметов по слагу, которые поле уже знает. */
+    resolve: [names: Record<string, string>];
   }>();
 
   /** Закреплённый отбор поля: категории предметов, если они заданы. */
@@ -61,5 +64,6 @@
     :exclude-urls="excludeUrls"
     :placeholder="placeholder || `Выбери предмет${multiple ? 'ы' : ''}`"
     @select="emit('select', $event)"
+    @resolve="emit('resolve', $event)"
   />
 </template>
