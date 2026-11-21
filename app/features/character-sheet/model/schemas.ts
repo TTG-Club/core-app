@@ -3534,32 +3534,36 @@ const backgroundDetailSchema = z.object({
   startingEquipment: z.unknown().optional(),
 });
 
-/** Ссылки предыстории с непустой подписью — те, что лист может показать. */
+/**
+ * Ссылка предыстории на запись справочника. Название — снимок на момент
+ * сохранения, его может не быть: тогда его подставляет каталог по адресу.
+ */
 interface BackgroundRef {
   url: string;
   name: string | null;
 }
 
 /**
- * Ссылки на инструменты с названиями из каталога. Снимок названия в ссылке
+ * Ссылки предыстории с названиями из каталога. Снимок названия в ссылке
  * необязателен: записи, сохранённые без него, иначе выпали бы из листа, и
- * предыстория показывала бы «инструмент: нет». Снимок, если он есть, главнее.
+ * предыстория показывала бы «инструмент: нет» или пустой выбор черты. Снимок,
+ * если он есть, главнее.
  *
- * @param toolRefs ссылки на карточки инструментов.
- * @param toolEntries инструменты каталога сайта.
+ * @param references ссылки на записи справочника.
+ * @param catalogEntries записи каталога сайта с адресом и названием.
  * @returns те же ссылки; ненайденная в каталоге остаётся без названия.
  */
-function nameToolRefs(
-  toolRefs: BackgroundRef[],
-  toolEntries: ToolCatalogEntry[],
+function nameRefsByCatalog(
+  references: BackgroundRef[],
+  catalogEntries: ReadonlyArray<{ url: string; name: string }>,
 ): BackgroundRef[] {
-  const toolNamesByUrl = new Map(
-    toolEntries.map((toolEntry) => [toolEntry.url, toolEntry.name]),
+  const namesByUrl = new Map(
+    catalogEntries.map((catalogEntry) => [catalogEntry.url, catalogEntry.name]),
   );
 
-  return toolRefs.map((reference) => ({
+  return references.map((reference) => ({
     url: reference.url,
-    name: reference.name || toolNamesByUrl.get(reference.url) || null,
+    name: reference.name || namesByUrl.get(reference.url) || null,
   }));
 }
 
@@ -3574,7 +3578,7 @@ function toToolProficiencies(
   toolRefs: BackgroundRef[],
   toolEntries: ToolCatalogEntry[],
 ): CharacterToolProficiency[] {
-  return nameToolRefs(toolRefs, toolEntries)
+  return nameRefsByCatalog(toolRefs, toolEntries)
     .filter((reference) => reference.name)
     .map((reference) => ({ name: reference.name ?? '', url: reference.url }));
 }
@@ -3601,7 +3605,7 @@ function toBackgroundToolChoice(
     kind: 'tool',
     label: BACKGROUND_TOOL_CHOICE_LABEL,
     count: choice.count,
-    listed: nameToolRefs(choice.from, toolEntries)
+    listed: nameRefsByCatalog(choice.from, toolEntries)
       .filter((reference) => reference.name)
       .map((reference) => reference.name ?? ''),
   };
@@ -3631,12 +3635,14 @@ function hasOwnBackgroundGrants(grants: FeatSummary): boolean {
  * @param input сырой детальный ответ предыстории.
  * @param skillNames имена всех навыков персонажа (для распознавания навыков).
  * @param toolEntries инструменты каталога — названия ссылкам без снимка.
+ * @param featEntries черты каталога — названия вариантам черты без снимка.
  * @returns деталь предыстории или null при неожиданном ответе.
  */
 export function parseBackgroundDetail(
   input: unknown,
   skillNames: string[],
   toolEntries: ToolCatalogEntry[],
+  featEntries: FeatSelectOption[],
 ): BackgroundSummary | null {
   const result = backgroundDetailSchema.safeParse(input);
 
@@ -3711,12 +3717,14 @@ export function parseBackgroundDetail(
     featUrl: feat.url,
     featName: feat.name,
     featSubchoice: feat.subchoice,
-    featChoices: detail.featChoices
-      .filter((reference) => reference.name)
-      .map((reference) => ({
+    // Ненайденный в каталоге вариант остаётся с адресом вместо подписи: черта
+    // выбирается по адресу, а без варианта игрок остался бы вовсе без черты.
+    featChoices: nameRefsByCatalog(detail.featChoices, featEntries).map(
+      (reference) => ({
         url: reference.url,
-        name: reference.name ?? '',
-      })),
+        name: reference.name ?? reference.url,
+      }),
+    ),
     ownGrants,
     equipment: detail.equipment,
     startingEquipment: toStartingEquipmentOptions(detail.startingEquipment),

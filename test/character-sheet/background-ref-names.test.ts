@@ -1,4 +1,7 @@
-import type { ToolCatalogEntry } from '~character-sheet/model';
+import type {
+  FeatSelectOption,
+  ToolCatalogEntry,
+} from '~character-sheet/model';
 
 import { describe, expect, it } from 'vitest';
 
@@ -26,18 +29,18 @@ const TOOL_ENTRIES: ToolCatalogEntry[] = [
 ];
 
 /**
- * Собирает ответ справочника с владением инструментами ссылками.
+ * Собирает ответ справочника со ссылками на инструменты или черты.
  *
- * @param toolFields поля владения инструментами поверх заготовки.
+ * @param extraFields поля ссылок поверх заготовки.
  * @returns детальный ответ предыстории.
  */
 function createBackgroundResponse(
-  toolFields: Record<string, unknown>,
+  extraFields: Record<string, unknown>,
 ): Record<string, unknown> {
   return {
     url: 'criminal-phb',
     name: { rus: 'Преступник' },
-    ...toolFields,
+    ...extraFields,
   };
 }
 
@@ -49,6 +52,7 @@ describe('названия инструментов предыстории', () 
       }),
       [],
       TOOL_ENTRIES,
+      [],
     );
 
     expect(background?.toolFixed).toEqual([
@@ -63,6 +67,7 @@ describe('названия инструментов предыстории', () 
       }),
       [],
       TOOL_ENTRIES,
+      [],
     );
 
     expect(background?.toolFixed).toEqual([
@@ -75,6 +80,7 @@ describe('названия инструментов предыстории', () 
       createBackgroundResponse({
         toolProficiencies: [{ url: THIEVES_TOOLS_URL }],
       }),
+      [],
       [],
       [],
     );
@@ -91,6 +97,7 @@ describe('названия инструментов предыстории', () 
       }),
       [],
       [],
+      [],
     );
 
     expect(background?.hasUnnamedTools).toBe(false);
@@ -101,6 +108,7 @@ describe('названия инструментов предыстории', () 
       createBackgroundResponse({}),
       [],
       TOOL_ENTRIES,
+      [],
     );
 
     expect(background?.hasUnnamedTools).toBe(false);
@@ -113,8 +121,99 @@ describe('названия инструментов предыстории', () 
       }),
       [],
       TOOL_ENTRIES,
+      [],
     );
 
     expect(background?.toolChoice?.listed).toEqual([DICE_SET_NAME]);
+  });
+});
+
+/** Адрес черты из выбора предыстории. */
+const GATHERED_WHISPERS_URL = 'gathered-whispers-rhw';
+
+/** Название той же черты в каталоге черт. */
+const GATHERED_WHISPERS_NAME = 'Собранный шёпот';
+
+/** Адрес черты, которой нет в каталоге черт. */
+const UNKNOWN_FEAT_URL = 'unknown-feat';
+
+/** Каталог черт сайта в тестах. */
+const FEAT_ENTRIES: FeatSelectOption[] = [
+  {
+    url: GATHERED_WHISPERS_URL,
+    name: GATHERED_WHISPERS_NAME,
+    category: '',
+    sourceLabel: '',
+    repeatability: false,
+    abilities: [],
+    abilityIncreaseCount: 0,
+  },
+];
+
+describe('названия черт на выбор у предыстории', () => {
+  it('подписывает вариант без названия по каталогу черт', () => {
+    const background = parseBackgroundDetail(
+      createBackgroundResponse({
+        featChoices: [{ url: GATHERED_WHISPERS_URL }],
+      }),
+      [],
+      [],
+      FEAT_ENTRIES,
+    );
+
+    expect(background?.featChoices).toEqual([
+      { url: GATHERED_WHISPERS_URL, name: GATHERED_WHISPERS_NAME },
+    ]);
+  });
+
+  it('оставляет вариант, которого нет в каталоге, с адресом вместо названия', () => {
+    const background = parseBackgroundDetail(
+      createBackgroundResponse({
+        featChoices: [{ url: GATHERED_WHISPERS_URL }],
+      }),
+      [],
+      [],
+      [],
+    );
+
+    expect(background?.featChoices).toEqual([
+      { url: GATHERED_WHISPERS_URL, name: GATHERED_WHISPERS_URL },
+    ]);
+  });
+
+  it('оставляет название, сохранённое в ссылке', () => {
+    const background = parseBackgroundDetail(
+      createBackgroundResponse({
+        featChoices: [{ url: GATHERED_WHISPERS_URL, name: SNAPSHOT_NAME }],
+      }),
+      [],
+      [],
+      FEAT_ENTRIES,
+    );
+
+    expect(background?.featChoices).toEqual([
+      { url: GATHERED_WHISPERS_URL, name: SNAPSHOT_NAME },
+    ]);
+  });
+
+  it('называет каждый вариант отдельно, не теряя порядок', () => {
+    const background = parseBackgroundDetail(
+      createBackgroundResponse({
+        featChoices: [
+          { url: GATHERED_WHISPERS_URL },
+          { url: UNKNOWN_FEAT_URL, name: SNAPSHOT_NAME },
+          { url: UNKNOWN_FEAT_URL },
+        ],
+      }),
+      [],
+      [],
+      FEAT_ENTRIES,
+    );
+
+    expect(background?.featChoices).toEqual([
+      { url: GATHERED_WHISPERS_URL, name: GATHERED_WHISPERS_NAME },
+      { url: UNKNOWN_FEAT_URL, name: SNAPSHOT_NAME },
+      { url: UNKNOWN_FEAT_URL, name: UNKNOWN_FEAT_URL },
+    ]);
   });
 });

@@ -10,6 +10,7 @@
     CharacterFeature,
     CharacterInventoryItem,
     ClassChoice,
+    FeatSelectOption,
     FeatSummary,
     SheetChoiceControl,
     SheetChoiceOption,
@@ -50,6 +51,7 @@
     CURRENT_SELECTION_LABELS,
     CUSTOM_BACKGROUND_LABELS,
     FEATS_DETAIL_BASE_PATH,
+    FEATS_SELECT_PATH,
     FEATURE_ORIGIN_LABELS,
     getChoiceModalSubtitle,
     getChoiceSpellClassUrls,
@@ -66,6 +68,7 @@
     parseBackgroundOptions,
     parseClassOptions,
     parseFeatDetail,
+    parseFeatSelectOptions,
     resolveChoiceOptions,
     SHEET_SEARCH_LABELS,
     STARTING_EQUIPMENT_SKIP_VALUE,
@@ -170,6 +173,30 @@
   }
 
   const toolCatalogLoading = loadToolCatalog().catch(logToolCatalogError);
+
+  /**
+   * Каталог черт — только ради названий вариантов черты, сохранённых без
+   * снимка. Ошибка мастер не роняет: варианты покажутся по адресу.
+   *
+   * @returns черты каталога; при сбое — null, чтобы загрузку можно было
+   *   повторить.
+   */
+  async function loadFeatCatalog(): Promise<FeatSelectOption[] | null> {
+    try {
+      const response = await $fetch<unknown>(FEATS_SELECT_PATH, {
+        method: 'GET',
+        retry: 0,
+      });
+
+      return parseFeatSelectOptions(response);
+    } catch (error) {
+      consola.error(BACKGROUND_WIZARD_LABELS.featCatalogErrorLog, error);
+
+      return null;
+    }
+  }
+
+  let featCatalogLoading = loadFeatCatalog();
 
   // Источники берутся из глобальной настройки профиля — визард не показывает
   // предыстории из отключённых книг. Запрос ждём до списка: иначе первая выдача
@@ -913,14 +940,24 @@
       { method: 'GET', retry: 0 },
     );
 
-    // Ссылки на инструменты бывают без названия — его даёт каталог, поэтому
-    // разбор ждёт фоновую загрузку.
-    await toolCatalogLoading;
+    // Ссылки на инструменты и черты бывают без названия — его дают каталоги,
+    // поэтому разбор ждёт фоновые загрузки.
+    const [, featCatalog] = await Promise.all([
+      toolCatalogLoading,
+      featCatalogLoading,
+    ]);
+
+    // Сбой каталога черт не запоминается на всё время мастера: повтор идёт
+    // фоном и не задерживает эту предысторию, но успеет к следующей.
+    if (!featCatalog) {
+      featCatalogLoading = loadFeatCatalog();
+    }
 
     return parseBackgroundDetail(
       response,
       skillNames.value,
       toolCatalogItems.value,
+      featCatalog ?? [],
     );
   }
 
