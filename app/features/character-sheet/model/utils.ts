@@ -113,6 +113,7 @@ import type {
   InventoryItemOrigin,
   InventoryWeapon,
   InventoryWeaponDamage,
+  ItemCatalogItem,
   ItemPurchaseLine,
   ItemSummary,
   LevelUpAbilityImprovement,
@@ -405,8 +406,10 @@ import {
   LEVEL_UP_WIZARD_LABELS,
   LEVEL_XP_THRESHOLDS,
   MAGIC_ITEM_ARTIFACT_COST_LABEL,
+  MAGIC_ITEM_BASE_AUTO_LIMIT,
   MAGIC_ITEM_CATALOG_EMPTY_GROUP_LABELS,
   MAGIC_ITEM_RARITY_COSTS,
+  MAGIC_ITEM_VARIANT_ID_SEPARATOR,
   MAGIC_ITEMS_DETAIL_BASE_PATH,
   MAX_HIT_POINTS_LABELS,
   MULTICLASS_ABILITY_REQUIREMENT,
@@ -460,6 +463,7 @@ import {
   SHEET_DOWNLOAD_PDF_LABEL,
   SHEET_EDIT_ACCESS_LABELS,
   SHEET_FEAT_CHOICE_LABELS,
+  SHEET_MAGIC_ITEM_BASE_LABELS,
   SHEET_PDF_MIME_TYPE,
   SHEET_PDF_VARIANT_OPTIONS,
   SHEET_PERSONALITY_LABELS,
@@ -2860,6 +2864,76 @@ function getMagicItemArmor(
 }
 
 /**
+ * Идентификатор записи инвентаря магического предмета на выбранной основе.
+ * Основа входит в идентификатор: тот же предмет на другой основе — отдельная
+ * запись, а не повтор уже добавленной.
+ *
+ * @param magicItemUrl слаг магического предмета.
+ * @param baseItemUrl слаг выбранной немагической основы.
+ * @returns идентификатор записи инвентаря.
+ */
+export function getMagicItemVariantId(
+  magicItemUrl: string,
+  baseItemUrl: string,
+): string {
+  return `${getInventoryItemId('magic-item', magicItemUrl)}${MAGIC_ITEM_VARIANT_ID_SEPARATOR}${baseItemUrl}`;
+}
+
+/**
+ * Название магического предмета на выбранной основе: «Меч мести (Рапира)».
+ *
+ * @param magicItemName название магического предмета.
+ * @param baseItemName название выбранной немагической основы.
+ * @returns название записи инвентаря.
+ */
+export function getMagicItemVariantName(
+  magicItemName: string,
+  baseItemName: string,
+): string {
+  return `${magicItemName} (${baseItemName.trim()})`;
+}
+
+/**
+ * Нужно ли спросить игрока, чем будет магический предмет: основ у него
+ * несколько, и взять одну за игрока нельзя.
+ *
+ * @param baseItemUrls слаги немагических предметов, связанных с магическим.
+ * @returns true — основу выбирает игрок.
+ */
+export function hasMagicItemBaseChoice(baseItemUrls: string[]): boolean {
+  return baseItemUrls.length > MAGIC_ITEM_BASE_AUTO_LIMIT;
+}
+
+/**
+ * Подзаголовок окна выбора основы: о каком предмете спрашивают и что выбрать.
+ *
+ * @param magicItemName название магического предмета.
+ * @returns подзаголовок окна.
+ */
+export function getMagicItemBaseChoiceSubtitle(magicItemName: string): string {
+  return `${magicItemName}: ${SHEET_MAGIC_ITEM_BASE_LABELS.subtitleSuffix}`;
+}
+
+/**
+ * Варианты окна выбора основы магического предмета: немагические предметы,
+ * которыми он может быть. Описание варианта открывается карточкой раздела
+ * «Предметы» — по ней игрок сверяет урон и свойства до выбора.
+ *
+ * @param baseItems предметы каталога, связанные с магическим.
+ * @returns варианты единого пикера; значение варианта — слаг предмета.
+ */
+export function getMagicItemBaseOptions(
+  baseItems: ItemCatalogItem[],
+): SheetChoiceOption[] {
+  return baseItems.map((baseItem) => ({
+    value: baseItem.url,
+    label: baseItem.name.trim(),
+    sublabel: baseItem.nameEng,
+    detail: { kind: 'item', url: baseItem.url },
+  }));
+}
+
+/**
  * Сборка предмета инвентаря из ссылки каталога магических предметов: категория
  * и редкость известны прямо из поиска, а своих веса и стоимости раздел не
  * отдаёт. Цена берётся по редкости из таблицы, и предмет, сделанный на основе
@@ -2887,10 +2961,18 @@ export function buildMagicItemInventoryItem(
   const baseItem = summary?.baseItem ?? null;
   const armor = getMagicItemArmor(baseItem?.armor ?? null, bonuses.armorClass);
 
+  // Основа, выбранная игроком из нескольких: без неё «Меч мести» рапирой и
+  // «Меч мести» глефой слились бы в одну запись с одним названием.
+  const chosenBaseItem = summary?.baseItemChosen ? baseItem : null;
+
   return {
-    id: getInventoryItemId('magic-item', catalogItem.url),
+    id: chosenBaseItem
+      ? getMagicItemVariantId(catalogItem.url, chosenBaseItem.url)
+      : getInventoryItemId('magic-item', catalogItem.url),
     url: catalogItem.url,
-    name: catalogItem.name,
+    name: chosenBaseItem
+      ? getMagicItemVariantName(catalogItem.name, chosenBaseItem.name)
+      : catalogItem.name,
     category: 'MAGIC_ITEM',
     typesLabel,
     cost: summary ? getMagicItemCost(summary.rarity, baseItem) : '',
