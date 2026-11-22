@@ -248,7 +248,9 @@
             :min="minimumVersion"
             :step="VTTG_COMPENDIUM_VERSION_STEP"
             :disabled="isInputDisabled"
-            class="w-40"
+            :increment="false"
+            :decrement="false"
+            class="w-24"
           />
 
           <UButton
