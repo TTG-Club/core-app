@@ -732,6 +732,13 @@ modals), so its capabilities are listed here rather than squeezed into the table
   also becomes a sheet record of its own carrying the option's description, and
   the same descriptions open in the shared `FeatureOptionsDrawer` — the class
   page and both wizards render it.
+- `optionsChoice.replacement` lets the level-up wizard swap one option taken
+  earlier for another (`EVERY_LEVEL` — warlock invocations on any new class
+  level; `CHOICE_LEVELS` — manoeuvres only where a step opens). The swap is
+  optional and asked by `SheetOptionReplacementField`; its answer is a
+  «removed, taken» pair under its own id (`<list>-replace-<level>`) and never
+  rewrites the step answers: the final set is the steps with the swaps applied
+  in level order, so a level-down drops the swap and the old set comes back.
 - Depth in the class editor is drawn with two visual languages, not seven
   identical frames: a BOX is a list object (feature, option, grant row, effect)
   and a RAIL — `EditorNestedSection`, a line running down from the collapse

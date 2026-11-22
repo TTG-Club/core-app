@@ -5635,6 +5635,21 @@ export const LEGACY_NOTE_ID = 'note:legacy';
  */
 export const CLASS_SOURCES_ASYNC_DATA_KEY = 'character-sheet:class-sources';
 
+/**
+ * Подписи замены варианта умения в мастере повышения уровня: при новом уровне
+ * класса колдун может заменить одно воззвание, мастер боевых искусств — манёвр.
+ */
+export const OPTION_REPLACEMENT_LABELS = {
+  title: 'Заменить вариант',
+  hint: 'Необязательно: на этом уровне можно заменить один ранее выбранный вариант на другой доступный.',
+  remove: 'Что убрать',
+  removeExplanation: 'Один из вариантов, взятых на прошлых уровнях',
+  take: 'На что заменить',
+  takeExplanation:
+    'Доступный на этом уровне вариант, которого у персонажа ещё нет',
+  takeAfterRemove: 'Сначала выберите, что убрать',
+} as const;
+
 /** Подписи мастера повышения уровня. */
 export const LEVEL_UP_WIZARD_LABELS: Record<
   | 'progressStep'
@@ -6217,6 +6232,13 @@ export const ABILITY_VARIANT_CHOICE_ID_SEGMENT = 'ability-variant';
  * ключом выбора механики того же уровня.
  */
 export const OPTION_CHOICE_ID_SEGMENT = 'options';
+
+/**
+ * Вставка идентификатора замены варианта: `<список>-replace-<уровень>`, хвост
+ * на записи умения — `options-replace-<уровень>`. Ответ — пара «убранный
+ * вариант, взятый вместо него»; ответы самих ступеней замена не переписывает.
+ */
+export const OPTION_REPLACEMENT_ID_SEGMENT = 'replace';
 
 /** Сколько вариантов берут, когда справочник количества не назвал. */
 export const OPTION_CHOICE_DEFAULT_COUNT = 1;

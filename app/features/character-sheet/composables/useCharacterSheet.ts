@@ -192,6 +192,7 @@ import {
   VISION_DISTANCE_MAX,
   VISION_DISTANCE_MIN,
   withFeatModifiers,
+  withoutDroppedOptionFeatures,
   withProficiencyGrant,
   withSavingThrowProficiencies,
   withSettledCurrentHitPoints,
@@ -1230,7 +1231,12 @@ export function useCharacterSheet(sheetKey: string) {
           character.value.abilities.constitution,
           abilities.constitution,
         ),
-        features: mergeCharacterFeatures(withLevels.features, payload.features),
+        // Записи вариантов, которые пересобранное умение больше не даёт (их
+        // унесла замена), уходят вместе с дарами — слияние их бы оставило
+        features: mergeCharacterFeatures(
+          withoutDroppedOptionFeatures(withLevels.features, payload.features),
+          payload.features,
+        ),
         classResources: mergeClassResources(
           withLevels.classResources,
           payload.classResources,

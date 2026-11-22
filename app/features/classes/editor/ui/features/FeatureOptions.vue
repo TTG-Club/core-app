@@ -20,6 +20,8 @@
     CLASS_OPTION_MECHANICS_TITLES,
     CLASS_OPTIONS_CHOICE_COUNT_BOUNDS,
     CLASS_OPTIONS_CHOICE_DEFAULTS,
+    CLASS_OPTIONS_REPLACEMENT_ITEMS,
+    CLASS_OPTIONS_REPLACEMENT_NONE,
     getClassFeatureOptionLevelBadge,
     getClassFeatureOptionRemoveDescription,
     getClassOptionMechanicsBadge,
@@ -88,6 +90,27 @@
   /** Выбираемый ли список: настройка выбора у умения есть — значит, да. */
   const isSelectable = computed(() => choice.value !== undefined);
 
+  /**
+   * Значение списка замены: «нет» в данных — отсутствие поля, а в списке —
+   * служебный ключ, потому что пустое значение пункта список не принимает.
+   */
+  const replacementValue = computed({
+    get: () => choice.value?.replacement ?? CLASS_OPTIONS_REPLACEMENT_NONE,
+    set: (value) => {
+      const current = choice.value;
+
+      if (!current) {
+        return;
+      }
+
+      choice.value = {
+        ...current,
+        replacement:
+          value === CLASS_OPTIONS_REPLACEMENT_NONE ? undefined : value,
+      };
+    },
+  });
+
   /** Ступени количества по уровням; их правят только у выбираемого списка. */
   const scaling = computed(() => choice.value?.scaling ?? []);
 
@@ -112,6 +135,7 @@
             label: undefined,
             count: CLASS_OPTIONS_CHOICE_DEFAULTS.count,
             scaling: [],
+            replacement: undefined,
           }
         : undefined;
   }
@@ -294,6 +318,17 @@
               />
             </UFormField>
           </div>
+
+          <UFormField
+            :label="CLASS_FEATURE_OPTIONS_CHOICE_EDITOR.replacement"
+            :help="CLASS_FEATURE_OPTIONS_CHOICE_EDITOR.replacementHint"
+          >
+            <USelect
+              v-model="replacementValue"
+              :items="CLASS_OPTIONS_REPLACEMENT_ITEMS"
+              class="w-full md:w-96"
+            />
+          </UFormField>
 
           <!-- Рост количества: ступень называет итог к уровню, а не прибавку —
             мастеру повышения уровня остаётся спросить разницу с предыдущей -->

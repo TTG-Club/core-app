@@ -186,7 +186,8 @@ export function getClassMechanicsFilledBlocksCount(
 
 /**
  * Подпись бейджа выбираемого списка вариантов: сколько из скольких берут и до
- * скольких это число дорастает. Справочный список бейджа с выбором не получает
+ * скольких это число дорастает, и можно ли заменять взятое при повышении
+ * уровня. Справочный список бейджа с выбором не получает
  * — там важна только длина списка.
  *
  * @param feature умение из состояния формы.
@@ -207,7 +208,11 @@ export function getClassFeatureOptionsChoiceBadge(
   const total = Math.max(start, ...steps);
   const range = total > start ? `${start}–${total}` : `${start}`;
 
-  return `${CLASS_FEATURES_EDITOR.optionsChoiceBadge}${range} ${CLASS_FEATURES_EDITOR.optionsChoiceBadgeOf} ${feature.options.length}`;
+  const replacement = choice.replacement
+    ? CLASS_FEATURES_EDITOR.optionsChoiceBadgeReplacement
+    : '';
+
+  return `${CLASS_FEATURES_EDITOR.optionsChoiceBadge}${range} ${CLASS_FEATURES_EDITOR.optionsChoiceBadgeOf} ${feature.options.length}${replacement}`;
 }
 
 /**
