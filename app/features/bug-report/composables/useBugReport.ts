@@ -16,7 +16,9 @@ import {
   SCREENSHOT_FILE_NAME_PNG,
   SCREENSHOT_FILE_NAME_WEBP,
   SOURCE_PLATFORM,
-} from '../model';
+  // Сам файл констант, а не barrel модели: barrel тянет разбор разметки, а
+  // этим композаблом пользуется кнопка в сайдбаре каждой страницы
+} from '../model/constants';
 
 /**
  * Форматирует выделенный текст с контекстом в строку вида `...before[selected]after...`.

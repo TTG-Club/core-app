@@ -1,5 +1,5 @@
 import { S3_URL_PREFIX } from '#shared/consts';
-import { getSlug } from '#shared/utils';
+import { getSlug } from '#shared/utils/getSlug';
 
 import { USER_AVATAR_UPLOAD_SECTION } from '../model';
 

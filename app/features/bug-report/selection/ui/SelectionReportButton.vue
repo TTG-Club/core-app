@@ -4,11 +4,13 @@
   import {
     BUG_REPORT_SELECTION_BUTTON_LABEL,
     SELECTION_CONTEXT_LENGTH,
-  } from '../../model';
+    // Сам файл констант, а не barrel модели: barrel тянет разбор разметки, а
+    // кнопка выделения стоит в сайдбаре каждой страницы
+  } from '../../model/constants';
 </script>
 
 <script setup lang="ts">
-  import { useBugReport } from '../../composables';
+  import { useBugReport } from '../../composables/useBugReport';
 
   /**
    * Извлекает текстовый контекст вокруг выделения из DOM.

@@ -2,16 +2,41 @@
   import { ru } from '@nuxt/ui/locale';
 
   import { GRAPHICS_MODE_ATTRIBUTE } from '~/shared/consts';
-  import { DiceRollerFloatButton } from '~dice-roller/float-button';
-  import { DiceRollerModal } from '~dice-roller/modal';
   import { CookieConsentBanner } from '~infrastructure/cookie-consent/ui';
   import { useMaintenanceGate } from '~infrastructure/maintenance/composables';
-  import { MaintenanceScreen } from '~infrastructure/maintenance/ui';
   import { PwaConfig } from '~infrastructure/pwa';
   import { SidebarPanel } from '~infrastructure/sidebar';
-  import { SubscriptionExpiryNotice } from '~profile/activation/ui';
 
   import '~/assets/css/index.scss';
+
+  // Всё, что ниже, на первом экране не участвует: кубики и напоминание о
+  // подписке рисуются только в браузере уже после запуска страницы, заглушка
+  // обновления — только пока сайт закрыт. Они грузятся отдельными чанками,
+  // чтобы история бросков (IndexedDB), разбор формул кубиков и модели
+  // подписки не лежали в стартовом скрипте каждой страницы
+  const DiceRollerFloatButton = defineAsyncComponent(() =>
+    import('~dice-roller/float-button').then(
+      (buttonModule) => buttonModule.DiceRollerFloatButton,
+    ),
+  );
+
+  const DiceRollerModal = defineAsyncComponent(() =>
+    import('~dice-roller/modal').then(
+      (modalModule) => modalModule.DiceRollerModal,
+    ),
+  );
+
+  const SubscriptionExpiryNotice = defineAsyncComponent(() =>
+    import('~profile/activation/ui').then(
+      (noticeModule) => noticeModule.SubscriptionExpiryNotice,
+    ),
+  );
+
+  const MaintenanceScreen = defineAsyncComponent(() =>
+    import('~infrastructure/maintenance/ui').then(
+      (screenModule) => screenModule.MaintenanceScreen,
+    ),
+  );
 
   useThemeHead();
 

@@ -1,7 +1,8 @@
 import { consola } from 'consola';
 import { createError } from 'h3';
 
-import { getErrorResponse, getPlural, getSlug } from '#shared/utils';
+import { getErrorResponse, getPlural } from '#shared/utils';
+import { getSlug } from '#shared/utils/getSlug';
 import { convertKeyboardLayout } from '~/utils/convertKeyboardLayout';
 import { createEntityId } from '~/utils/createEntityId';
 import { getFormattedBonus, getModifier } from '~/utils/modifier';

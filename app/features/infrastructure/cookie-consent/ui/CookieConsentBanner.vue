@@ -2,7 +2,7 @@
   import {
     PRIVACY_POLICY_LINK_LABEL,
     PRIVACY_POLICY_ROUTE,
-  } from '~infrastructure/privacy-policy/model';
+  } from '~infrastructure/privacy-policy/model/navigation';
 
   import { useCookieNotice } from '../composables';
   import {

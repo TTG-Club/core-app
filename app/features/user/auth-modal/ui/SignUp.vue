@@ -6,11 +6,11 @@
   import {
     PRIVACY_POLICY_ROUTE,
     PRIVACY_POLICY_UPDATED_AT,
-  } from '~infrastructure/privacy-policy/model';
+  } from '~infrastructure/privacy-policy/model/navigation';
   import {
     PUBLIC_OFFER_ROUTE,
     PUBLIC_OFFER_UPDATED_AT,
-  } from '~infrastructure/public-offer/model';
+  } from '~infrastructure/public-offer/model/navigation';
 
   const emit = defineEmits<{
     (e: 'switch:sign-in'): void;

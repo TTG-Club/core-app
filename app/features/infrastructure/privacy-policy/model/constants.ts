@@ -14,16 +14,6 @@ import {
   COOKIE_POLICY_ROUTE,
 } from '~infrastructure/cookie-consent/model';
 
-/** Адрес страницы политики обработки персональных данных */
-export const PRIVACY_POLICY_ROUTE = '/privacy';
-
-/** Название страницы юридического документа */
-export const PRIVACY_POLICY_PAGE_TITLE =
-  'Политика обработки персональных данных';
-
-/** Короткая подпись ссылки в баннере и подвале */
-export const PRIVACY_POLICY_LINK_LABEL = 'Политика конфиденциальности';
-
 /** Подзаголовок страницы */
 export const PRIVACY_POLICY_PAGE_SUBTITLE =
   'Какие сведения о пользователях получает TTG Club, для чего и на каком основании';
@@ -32,14 +22,8 @@ export const PRIVACY_POLICY_PAGE_SUBTITLE =
 export const PRIVACY_POLICY_PAGE_DESCRIPTION =
   'Политика TTG Club в отношении обработки персональных данных: цели и основания обработки, состав данных и сроки хранения по каждой цели, передача данных, меры защиты и порядок запросов пользователей.';
 
-/** Дата текущей редакции политики */
-export const PRIVACY_POLICY_UPDATED_AT = '2026-09-18';
-
 /** Подпись перед датой редакции */
 export const PRIVACY_POLICY_UPDATED_PREFIX = 'Редакция от';
-
-/** Иконка ссылки на политику */
-export const PRIVACY_POLICY_ICON = 'tabler:shield-lock';
 
 /** Ссылка на почту оператора — повторяется в нескольких разделах */
 const SUPPORT_EMAIL_LINK: LegalDocumentLink = {

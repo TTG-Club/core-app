@@ -28,12 +28,6 @@ import {
   SELLER_STATUS,
 } from './requisites';
 
-/** Адрес страницы публичной оферты */
-export const PUBLIC_OFFER_ROUTE = '/offer';
-
-/** Название страницы и подпись ссылки на неё */
-export const PUBLIC_OFFER_PAGE_TITLE = 'Публичная оферта';
-
 /** Подзаголовок страницы */
 export const PUBLIC_OFFER_PAGE_SUBTITLE =
   'Условия платной подписки TTG Club: что входит, сколько стоит, как оплатить и когда возвращаются деньги';
@@ -42,14 +36,8 @@ export const PUBLIC_OFFER_PAGE_SUBTITLE =
 export const PUBLIC_OFFER_PAGE_DESCRIPTION =
   'Публичная оферта TTG Club о платной подписке: предмет договора, стоимость и порядок оплаты, срок доступа, условия возврата денег, реквизиты исполнителя.';
 
-/** Дата текущей редакции оферты */
-export const PUBLIC_OFFER_UPDATED_AT = '2026-10-12';
-
 /** Подпись перед датой редакции */
 export const PUBLIC_OFFER_UPDATED_PREFIX = 'Редакция от';
-
-/** Иконка ссылки на оферту */
-export const PUBLIC_OFFER_ICON = 'tabler:file-text';
 
 /** Стоимость одного периода подписки — та же, что на странице подписки */
 const SUBSCRIPTION_PRICE_LABEL = `${VTTG_SUBSCRIPTION_PRICE.amount} ${VTTG_SUBSCRIPTION_PRICE.currency}`;

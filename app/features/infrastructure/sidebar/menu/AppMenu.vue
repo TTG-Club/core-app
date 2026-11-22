@@ -4,7 +4,6 @@
     SUPPORT_EMAIL_HREF,
     SUPPORT_EMAIL_ICON,
   } from '~/shared/consts';
-  import { MulticlassDrawer } from '~classes/multiclass-drawer';
   import { HamburgerIcon, SvgLogo } from '~ui/icon';
   import { useVttgDocsAccess } from '~vttg-docs/composables';
 
@@ -18,6 +17,15 @@
     MENU_SUPPORT,
   } from './model';
   import { MenuContacts, MenuSection, MenuSupport } from './ui';
+
+  // Дровер мультикласса открывают из меню редко, а тянет он таблицы классов,
+  // подбор записей каталога и галерею. Меню стоит на каждой странице, поэтому
+  // дровер грузится отдельным чанком при первом открытии
+  const MulticlassDrawer = defineAsyncComponent(() =>
+    import('~classes/multiclass-drawer').then(
+      (drawerModule) => drawerModule.MulticlassDrawer,
+    ),
+  );
 
   const overlay = useOverlay();
 

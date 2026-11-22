@@ -1,18 +1,24 @@
 import type { MenuSection } from './types';
 
+// Разделы подключены файлами с адресами и подписями, а не barrel-файлами
+// моделей: меню стоит на каждой странице, и barrel положил бы в стартовый
+// скрипт модель раздела целиком (схемы, запросы, тексты страниц).
 import { VTTG_DOCS_ROUTE } from '#shared/consts';
 import { Role } from '~/shared/types';
 import {
   DICE_CALCULATOR_ICON,
   DICE_CALCULATOR_ROUTE,
   DICE_CALCULATOR_TITLE,
-} from '~calculator/dice/model';
+} from '~calculator/dice/model/constants';
 import {
   ENCOUNTER_CALCULATOR_ICON,
   ENCOUNTER_CALCULATOR_ROUTE,
   ENCOUNTER_CALCULATOR_TITLE,
-} from '~calculator/encounter/model';
-import { RECENT_COMMENTS_ROUTE, RECENT_COMMENTS_TITLE } from '~comments/model';
+} from '~calculator/encounter/model/constants';
+import {
+  RECENT_COMMENTS_ROUTE,
+  RECENT_COMMENTS_TITLE,
+} from '~comments/model/constants';
 import {
   COMMUNITY_NEWS_ICON,
   COMMUNITY_NEWS_ROUTE,
@@ -22,7 +28,7 @@ import {
   DM_SCREEN_ICON,
   DM_SCREEN_ROUTE,
   DM_SCREEN_TITLE,
-} from '~dm-screen/model';
+} from '~dm-screen/model/constants';
 import {
   FIND_GAME_PROFILE_NAVIGATION_LABEL,
   FIND_GAME_PROFILE_ROUTE,
@@ -33,31 +39,34 @@ import {
   GAMES_MY_ROUTE,
   GAMES_NAVIGATION_LABEL,
   GAMES_ROUTE,
-} from '~find-game/model';
+} from '~find-game/model/navigation';
 import {
   COOKIE_POLICY_PAGE_TITLE,
   COOKIE_POLICY_ROUTE,
-} from '~infrastructure/cookie-consent/model';
+} from '~infrastructure/cookie-consent/model/constants';
 import {
   PRIVACY_POLICY_LINK_LABEL,
   PRIVACY_POLICY_ROUTE,
-} from '~infrastructure/privacy-policy/model';
+} from '~infrastructure/privacy-policy/model/navigation';
 import {
   PUBLIC_OFFER_PAGE_TITLE,
   PUBLIC_OFFER_ROUTE,
-} from '~infrastructure/public-offer/model';
+} from '~infrastructure/public-offer/model/navigation';
 import {
   USER_AGREEMENT_PAGE_TITLE,
   USER_AGREEMENT_ROUTE,
-} from '~infrastructure/user-agreement/model';
-import { VTTG_DOCS_ICON, VTTG_DOCS_MENU_LABEL } from '~vttg-docs/model';
+} from '~infrastructure/user-agreement/model/navigation';
+import {
+  VTTG_DOCS_ICON,
+  VTTG_DOCS_MENU_LABEL,
+} from '~vttg-docs/model/constants';
 import {
   VTTG_LANDING_PATH,
   VTTG_PASSWORD_RESET_PAGE,
   VTTG_PASSWORD_RESET_PATH,
   VTTG_SUBSCRIPTION_NAVIGATION_LABEL,
   VTTG_SUBSCRIPTION_PATH,
-} from '~vttg/model';
+} from '~vttg/model/navigation';
 
 /** Название сайта в шапке меню */
 export const MENU_SITE_TITLE = 'TTG Club';

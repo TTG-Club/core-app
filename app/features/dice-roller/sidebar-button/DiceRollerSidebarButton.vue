@@ -1,5 +1,8 @@
 <script setup lang="ts">
-  import { useDiceRollerState } from '../composables';
+  // Сам файл, а не barrel: рядом в barrel лежит история бросков с IndexedDB
+  // (dexie), а кнопка стоит в сайдбаре каждой страницы и ей нужно только
+  // состояние «окно кубиков открыто»
+  import { useDiceRollerState } from '../composables/useDiceRollerState';
 
   const { isOpen, toggleModal } = useDiceRollerState();
 

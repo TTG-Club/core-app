@@ -1,5 +1,7 @@
 <script setup lang="ts">
-  import { useBugReport } from '../composables';
+  // Сам файл, а не barrel: соседние композаблы тянут модель баг-репортов с
+  // разбором разметки, а кнопке нужно только открыть окно
+  import { useBugReport } from '../composables/useBugReport';
   import { SelectionReportButton } from '../selection';
 
   // Модалка тянет за собой редактор разметки (tiptap с prosemirror — больше

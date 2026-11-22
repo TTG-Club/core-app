@@ -29,12 +29,6 @@ import {
   SELLER_STATUS,
 } from '~infrastructure/public-offer/model';
 
-/** Адрес страницы пользовательского соглашения */
-export const USER_AGREEMENT_ROUTE = '/terms';
-
-/** Название страницы и подпись ссылки на неё */
-export const USER_AGREEMENT_PAGE_TITLE = 'Пользовательское соглашение';
-
 /** Подзаголовок страницы */
 export const USER_AGREEMENT_PAGE_SUBTITLE =
   'Правила, по которым работает TTG Club и которые принимает каждый пользователь';
@@ -43,14 +37,8 @@ export const USER_AGREEMENT_PAGE_SUBTITLE =
 export const USER_AGREEMENT_PAGE_DESCRIPTION =
   'Пользовательское соглашение TTG Club: учётная запись, правила поведения и публикации материалов, права на содержимое сайта, платные возможности, ответственность сторон.';
 
-/** Дата текущей редакции соглашения */
-export const USER_AGREEMENT_UPDATED_AT = '2026-10-07';
-
 /** Подпись перед датой редакции */
 export const USER_AGREEMENT_UPDATED_PREFIX = 'Редакция от';
-
-/** Иконка ссылки на соглашение */
-export const USER_AGREEMENT_ICON = 'tabler:file-certificate';
 
 /** Ссылка на почту администрации — повторяется в нескольких разделах */
 const SUPPORT_EMAIL_LINK: LegalDocumentLink = {

@@ -2,7 +2,13 @@
   import { USER_TOKEN_COOKIE } from '#shared/consts';
   import { AuthModal } from '~user/auth-modal';
 
-  import { UserMenu } from './ui';
+  // Меню вошедшего следит за новостями листов персонажей, игр, комментариев
+  // и баг-репортов и тянет код этих разделов. Гостю (а это большинство
+  // посетителей) оно не показывается вовсе, поэтому грузится отдельным чанком
+  // по факту входа, а не в стартовом скрипте каждой страницы
+  const UserMenu = defineAsyncComponent(() =>
+    import('./ui').then((menuModule) => menuModule.UserMenu),
+  );
 
   const { fetch: fetchUser, pending, isLoggedIn } = useUser();
 
