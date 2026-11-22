@@ -101,10 +101,24 @@
 
   /**
    * Плитка урона заклинания повторяет боевую плитку строки снаряжения: тёплый
-   * акцент и нажатие, катящее формулу.
+   * акцент и нажатие, катящее формулу. Раскладка та же: на второй строке узкой
+   * карточки плитки делят свободное место поровну (`basis-0`), на широкой
+   * строке остаются по содержимому.
    */
   const DAMAGE_STAT_CLASS =
-    'relative z-10 flex shrink-0 cursor-pointer flex-col items-center rounded border border-primary/40 bg-primary/10 px-2 py-0.5 whitespace-nowrap transition-colors hover:border-primary hover:bg-primary/20';
+    'relative z-10 flex shrink-0 grow basis-0 cursor-pointer flex-col items-center rounded border border-primary/40 bg-primary/10 px-2 py-0.5 whitespace-nowrap transition-colors hover:border-primary hover:bg-primary/20 @xl:grow-0 @xl:basis-auto';
+
+  /**
+   * Группа бросков строки с плитками урона: на узкой карточке занимает вторую
+   * строку целиком, на широкой стоит в ряду перед меню.
+   */
+  const ROLL_GROUP_WIDE_CLASS = 'order-3 w-full @xl:order-2 @xl:w-auto';
+
+  /**
+   * Группа бросков без урона — одна кнопка «Сотворить»: ради неё вторая строка
+   * не заводится, кнопка встаёт рядом с меню.
+   */
+  const ROLL_GROUP_COMPACT_CLASS = 'order-2 shrink-0';
 
   /** Разделитель частей подсказки плитки урона (формула, тип, условие). */
   const DAMAGE_TOOLTIP_SEPARATOR = ' · ';
@@ -850,6 +864,8 @@
 
           const damageStats = getSpellDamageStats(spell);
 
+          const castAction = getSpellCastButton(spell, damageStats);
+
           // Заклинание класса стоит в круге (заговор — в группе выданных), а
           // ведётся как врождённое: и пометка подготовки, и меню строки у них
           // общие
@@ -916,7 +932,13 @@
             // Урон каталожного заклинания приходит из справочника; у своего его
             // нет — форма листа урон не заполняет.
             damageStats,
-            castAction: getSpellCastButton(spell, damageStats),
+            castAction,
+            // Урон и «Сотворить» на узкой карточке уходят на вторую строку;
+            // без них строки нет вовсе
+            hasRollControls: damageStats.length > 0 || Boolean(castAction),
+            rollGroupClass: damageStats.length
+              ? ROLL_GROUP_WIDE_CLASS
+              : ROLL_GROUP_COMPACT_CLASS,
             // У каталожных заклинаний этих полей нет — список выйдет пустым.
             statRows: getSpellStatRows(spell),
             descriptionNodes: spell.description ?? [],
@@ -1287,135 +1309,191 @@
         <div
           v-for="spell in group.spells"
           :key="spell.url"
-          class="flex flex-col rounded-lg border border-default/50 bg-elevated/20 transition-colors hover:border-primary/60"
+          class="@container flex flex-col rounded-lg border border-default/50 bg-elevated/20 transition-colors hover:border-primary/60"
         >
-          <div class="relative flex items-center gap-3 p-3">
-            <!-- Значок заклинания — переключатель подготовки: нажатие метит
-              заклинание подготовленным, повторное — снимает пометку. Горит при
-              этом только сам квадрат, строка остаётся обычной. У выданного
-              заговора квадрат ничего не переключает: он подготовлен всегда -->
-            <UTooltip :text="spell.preparedIcon.tooltip">
-              <button
-                v-if="spell.preparedIcon.interactive"
-                type="button"
-                :class="[
-                  SPELL_ICON_CLASS,
-                  SPELL_ICON_BUTTON_CLASS,
-                  spell.preparedIcon.iconClass,
-                ]"
-                :aria-pressed="spell.preparedIcon.isPrepared"
-                :aria-label="spell.preparedIcon.ariaLabel"
-                @click.left.exact.prevent="handlePreparedToggle(spell)"
-              >
-                <UIcon
-                  name="tabler:wand"
-                  class="size-5"
-                />
-              </button>
-
-              <span
-                v-else
-                :class="[SPELL_ICON_CLASS, spell.preparedIcon.iconClass]"
-                :aria-label="spell.preparedIcon.ariaLabel"
-              >
-                <UIcon
-                  name="tabler:wand"
-                  class="size-5"
-                />
-              </span>
-            </UTooltip>
-
-            <button
-              type="button"
-              class="flex min-w-0 grow cursor-pointer items-center gap-3 text-left after:absolute after:inset-0 after:cursor-pointer"
-              :aria-label="spell.openLabel"
-              :aria-expanded="spell.ariaExpanded"
-              @click.left.exact.prevent="handleSpellOpen(spell)"
-            >
-              <span class="flex min-w-0 grow flex-col">
-                <span class="flex min-w-0 items-center gap-2">
-                  <span class="truncate text-sm font-medium text-highlighted">
-                    {{ spell.name }}
-                  </span>
-
-                  <!-- Своя характеристика стоит у названия: она относится к
-                    самому заклинанию, а не к его броску, как плитка урона -->
-                  <UTooltip
-                    v-if="spell.abilityBadge"
-                    :text="spell.abilityBadge.hint"
-                  >
-                    <UBadge
-                      size="sm"
-                      color="secondary"
-                      variant="subtle"
-                      icon="tabler:wand"
-                      class="relative z-10 shrink-0"
-                    >
-                      {{ spell.abilityBadge.label }}
-                    </UBadge>
-                  </UTooltip>
-                </span>
-
-                <!-- Время накладывания стоит рядом со школой: значок и цвет
-                  различают действие, бонусное действие и реакцию с одного
-                  взгляда. Школа уступает место и обрезается первой -->
-                <span
-                  v-if="spell.hasSubtitle"
-                  class="flex min-w-0 items-center gap-2 text-xs"
+          <!-- Свой @container, как у строки снаряжения: до @xl (36rem) значок,
+            название и меню занимают первую строку, а урон с «Сотворить» уходят
+            на вторую. На широкой карточке всё стоит в один ряд -->
+          <div class="relative flex flex-wrap items-center gap-x-3 gap-y-2 p-3">
+            <div class="flex min-w-0 flex-1 items-center gap-3">
+              <!-- Значок заклинания — переключатель подготовки: нажатие метит
+                заклинание подготовленным, повторное — снимает пометку. Горит при
+                этом только сам квадрат, строка остаётся обычной. У выданного
+                заговора квадрат ничего не переключает: он подготовлен всегда -->
+              <UTooltip :text="spell.preparedIcon.tooltip">
+                <button
+                  v-if="spell.preparedIcon.interactive"
+                  type="button"
+                  :class="[
+                    SPELL_ICON_CLASS,
+                    SPELL_ICON_BUTTON_CLASS,
+                    spell.preparedIcon.iconClass,
+                  ]"
+                  :aria-pressed="spell.preparedIcon.isPrepared"
+                  :aria-label="spell.preparedIcon.ariaLabel"
+                  @click.left.exact.prevent="handlePreparedToggle(spell)"
                 >
-                  <!-- Источник — первым словом подписи: заклинание от умения
-                    класса стоит в общем круге, и без пометки строка ничем не
-                    отличалась бы от книги, а живёт она иначе -->
-                  <UTooltip
-                    v-if="spell.sourceLabel"
-                    :text="CLASS_SPELL_BADGE.hint"
-                  >
-                    <span class="relative z-10 shrink-0 text-muted">
-                      {{ spell.sourceLabel }}
-                    </span>
-                  </UTooltip>
+                  <UIcon
+                    name="tabler:wand"
+                    class="size-5"
+                  />
+                </button>
 
-                  <span
-                    v-if="spell.hasSchoolSeparator"
-                    class="shrink-0 text-dimmed"
-                  >
-                    {{ SPELL_SUBTITLE_SEPARATOR }}
-                  </span>
-
-                  <span
-                    v-if="spell.school"
-                    class="truncate text-dimmed"
-                  >
-                    {{ spell.school }}
-                  </span>
-
-                  <UTooltip
-                    v-for="castingKind in spell.castingKinds"
-                    :key="castingKind.kind"
-                    :text="SPELL_CASTING_TIME_LABEL"
-                  >
-                    <span
-                      class="relative z-10 flex shrink-0 items-center gap-1 text-muted"
-                    >
-                      <UIcon
-                        :name="castingKind.icon"
-                        class="size-3.5"
-                        :class="castingKind.iconClass"
-                      />
-
-                      {{ castingKind.label }}
-                    </span>
-                  </UTooltip>
+                <span
+                  v-else
+                  :class="[SPELL_ICON_CLASS, spell.preparedIcon.iconClass]"
+                  :aria-label="spell.preparedIcon.ariaLabel"
+                >
+                  <UIcon
+                    name="tabler:wand"
+                    class="size-5"
+                  />
                 </span>
-              </span>
-            </button>
+              </UTooltip>
+
+              <button
+                type="button"
+                class="flex min-w-0 grow cursor-pointer items-center gap-3 text-left after:absolute after:inset-0 after:cursor-pointer"
+                :aria-label="spell.openLabel"
+                :aria-expanded="spell.ariaExpanded"
+                @click.left.exact.prevent="handleSpellOpen(spell)"
+              >
+                <span class="flex min-w-0 grow flex-col gap-y-0.5">
+                  <!-- Значки переносятся под название на узкой карточке, на
+                    широкой стоят рядом, а длинное название обрезается -->
+                  <span
+                    class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 @xl:flex-nowrap"
+                  >
+                    <!-- На узкой карточке название переносится целиком: обрезка
+                      вида «Погре…» ничего не говорит о заклинании -->
+                    <span
+                      class="text-sm font-medium wrap-break-word text-highlighted @xl:truncate"
+                    >
+                      {{ spell.name }}
+                    </span>
+
+                    <!-- Своя характеристика стоит у названия: она относится к
+                      самому заклинанию, а не к его броску, как плитка урона -->
+                    <UTooltip
+                      v-if="spell.abilityBadge"
+                      :text="spell.abilityBadge.hint"
+                    >
+                      <UBadge
+                        size="sm"
+                        color="secondary"
+                        variant="subtle"
+                        icon="tabler:wand"
+                        class="relative z-10 shrink-0"
+                      >
+                        {{ spell.abilityBadge.label }}
+                      </UBadge>
+                    </UTooltip>
+
+                    <UTooltip
+                      v-if="spell.isCustom"
+                      :text="CUSTOM_SPELL_BADGE_HINT"
+                    >
+                      <UBadge
+                        size="sm"
+                        color="neutral"
+                        variant="subtle"
+                        class="relative z-10 shrink-0"
+                      >
+                        {{ SHEET_SPELL_ROW_LABELS.custom }}
+                      </UBadge>
+                    </UTooltip>
+
+                    <UTooltip
+                      v-if="spell.concentration"
+                      :text="SHEET_SPELL_ROW_LABELS.concentration"
+                    >
+                      <UBadge
+                        size="sm"
+                        color="primary"
+                        variant="subtle"
+                        class="relative z-10 shrink-0"
+                      >
+                        {{ SHEET_SPELL_ROW_LABELS.concentrationShort }}
+                      </UBadge>
+                    </UTooltip>
+
+                    <UTooltip
+                      v-if="spell.ritual"
+                      :text="SHEET_SPELL_ROW_LABELS.ritual"
+                    >
+                      <UBadge
+                        size="sm"
+                        color="info"
+                        variant="subtle"
+                        class="relative z-10 shrink-0"
+                      >
+                        {{ SHEET_SPELL_ROW_LABELS.ritualShort }}
+                      </UBadge>
+                    </UTooltip>
+                  </span>
+
+                  <!-- Время накладывания стоит рядом со школой: значок и цвет
+                    различают действие, бонусное действие и реакцию с одного
+                    взгляда. Школа уступает место и обрезается первой -->
+                  <span
+                    v-if="spell.hasSubtitle"
+                    class="flex min-w-0 flex-wrap items-center gap-x-2 text-xs @xl:flex-nowrap"
+                  >
+                    <!-- Источник — первым словом подписи: заклинание от умения
+                      класса стоит в общем круге, и без пометки строка ничем не
+                      отличалась бы от книги, а живёт она иначе -->
+                    <UTooltip
+                      v-if="spell.sourceLabel"
+                      :text="CLASS_SPELL_BADGE.hint"
+                    >
+                      <span class="relative z-10 shrink-0 text-muted">
+                        {{ spell.sourceLabel }}
+                      </span>
+                    </UTooltip>
+
+                    <span
+                      v-if="spell.hasSchoolSeparator"
+                      class="shrink-0 text-dimmed"
+                    >
+                      {{ SPELL_SUBTITLE_SEPARATOR }}
+                    </span>
+
+                    <span
+                      v-if="spell.school"
+                      class="truncate text-dimmed"
+                    >
+                      {{ spell.school }}
+                    </span>
+
+                    <UTooltip
+                      v-for="castingKind in spell.castingKinds"
+                      :key="castingKind.kind"
+                      :text="SPELL_CASTING_TIME_LABEL"
+                    >
+                      <span
+                        class="relative z-10 flex shrink-0 items-center gap-1 text-muted"
+                      >
+                        <UIcon
+                          :name="castingKind.icon"
+                          class="size-3.5"
+                          :class="castingKind.iconClass"
+                        />
+
+                        {{ castingKind.label }}
+                      </span>
+                    </UTooltip>
+                  </span>
+                </span>
+              </button>
+            </div>
 
             <!-- Плитки урона — те же, что и у оружия в снаряжении: нажатие
               катит формулу справочника. Взаимоисключающие броски (по состоянию
               цели) стоят отдельными плитками, их различает подсказка -->
             <div
-              v-if="spell.damageStats.length"
-              class="relative z-10 flex shrink-0 items-center gap-1.5"
+              v-if="spell.hasRollControls"
+              class="flex items-stretch gap-1.5"
+              :class="spell.rollGroupClass"
             >
               <UTooltip
                 v-for="damageStat in spell.damageStats"
@@ -1445,94 +1523,55 @@
                   </span>
                 </button>
               </UTooltip>
+
+              <!-- «Сотворить» стоит рядом с уроном: атака, затем окно урона,
+                которое и тратит ячейку круга. Подсказка говорит, что именно
+                будет по нажатию. Кнопка ростом с плитку урона: рядом с ней
+                тянется по высоте группы, одна — держит ту же высоту сама -->
+              <UTooltip
+                v-if="spell.castAction"
+                :text="spell.castAction.tooltip"
+              >
+                <UButton
+                  :icon="SPELL_CAST_LABELS.icon"
+                  color="primary"
+                  variant="soft"
+                  size="md"
+                  square
+                  class="relative z-10 h-auto min-h-9 w-9 shrink-0 justify-center"
+                  :aria-label="spell.castAction.ariaLabel"
+                  @click.left.exact.prevent="handleSpellCast(spell)"
+                />
+              </UTooltip>
             </div>
-
-            <!-- «Сотворить» стоит рядом с уроном: атака, затем окно урона,
-              которое и тратит ячейку круга. Подсказка говорит, что именно
-              будет по нажатию -->
-            <UTooltip
-              v-if="spell.castAction"
-              :text="spell.castAction.tooltip"
-            >
-              <UButton
-                :icon="SPELL_CAST_LABELS.icon"
-                color="primary"
-                variant="soft"
-                size="sm"
-                square
-                class="relative z-10 shrink-0"
-                :aria-label="spell.castAction.ariaLabel"
-                @click.left.exact.prevent="handleSpellCast(spell)"
-              />
-            </UTooltip>
-
-            <UTooltip
-              v-if="spell.isCustom"
-              :text="CUSTOM_SPELL_BADGE_HINT"
-            >
-              <UBadge
-                size="sm"
-                color="neutral"
-                variant="subtle"
-                class="relative z-10 shrink-0"
-              >
-                {{ SHEET_SPELL_ROW_LABELS.custom }}
-              </UBadge>
-            </UTooltip>
-
-            <UTooltip
-              v-if="spell.concentration"
-              :text="SHEET_SPELL_ROW_LABELS.concentration"
-            >
-              <UBadge
-                size="sm"
-                color="primary"
-                variant="subtle"
-                class="relative z-10 shrink-0"
-              >
-                {{ SHEET_SPELL_ROW_LABELS.concentrationShort }}
-              </UBadge>
-            </UTooltip>
-
-            <UTooltip
-              v-if="spell.ritual"
-              :text="SHEET_SPELL_ROW_LABELS.ritual"
-            >
-              <UBadge
-                size="sm"
-                color="info"
-                variant="subtle"
-                class="relative z-10 shrink-0"
-              >
-                {{ SHEET_SPELL_ROW_LABELS.ritualShort }}
-              </UBadge>
-            </UTooltip>
 
             <!-- Меню действий над заклинанием: тот же трейлинг, что и у строки
               снаряжения — правка своего, копия каталожного в лист и удаление.
               У врождённого в меню только удаление -->
-            <UDropdownMenu
-              :items="spell.menuItems"
-              :content="{ align: 'end' }"
-            >
-              <UButton
-                icon="tabler:dots-vertical"
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                square
-                class="relative z-10 shrink-0"
-                :class="editControlClass"
-                :aria-label="`${SHEET_SPELL_ROW_LABELS.menuAria}: ${spell.name}`"
-              />
-            </UDropdownMenu>
+            <div class="order-2 flex shrink-0 items-center gap-1 @xl:order-3">
+              <UDropdownMenu
+                :items="spell.menuItems"
+                :content="{ align: 'end' }"
+              >
+                <UButton
+                  icon="tabler:dots-vertical"
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  square
+                  class="relative z-10 shrink-0"
+                  :class="editControlClass"
+                  :aria-label="`${SHEET_SPELL_ROW_LABELS.menuAria}: ${spell.name}`"
+                />
+              </UDropdownMenu>
 
-            <UIcon
-              v-if="spell.isCustom"
-              name="tabler:chevron-down"
-              class="size-4 shrink-0 text-muted transition-transform"
-              :class="spell.chevronClass"
-            />
+              <UIcon
+                v-if="spell.isCustom"
+                name="tabler:chevron-down"
+                class="size-4 shrink-0 text-muted transition-transform"
+                :class="spell.chevronClass"
+              />
+            </div>
           </div>
 
           <div
