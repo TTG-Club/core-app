@@ -87,6 +87,24 @@ function formatScenarioSaveDc(
 }
 
 /**
+ * Фраза срабатывания так же, как в сводке формы: Сл 0 называется Сл источника
+ * этого места. Нужна плашке неработающих настроек — там срабатывание
+ * описывается отдельно от сводки.
+ *
+ * @param trigger срабатывание.
+ * @param context место формы.
+ * @returns фраза со строчной буквы либо пустая строка.
+ */
+export function describeEffectTriggerInPlace(
+  trigger: EffectTrigger,
+  context: EffectFormContext,
+): string {
+  return describeEffectTrigger(trigger, {
+    formatDc: (save) => formatScenarioSaveDc(save, context),
+  });
+}
+
+/**
  * Навык, итог проверки которого становится Сл спасброска: «(при применении —
  * итог проверки: Запугивание)».
  *
@@ -345,9 +363,7 @@ function describeLastingPayload(
       continue;
     }
 
-    const phrase = describeEffectTrigger(trigger, {
-      formatDc: (save) => formatScenarioSaveDc(save, layout.context),
-    });
+    const phrase = describeEffectTriggerInPlace(trigger, layout.context);
 
     if (phrase) {
       parts.push(phrase);

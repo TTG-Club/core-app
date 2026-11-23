@@ -43,6 +43,7 @@ import type {
   EffectNotifyTarget,
   EffectRestoreKind,
   EffectTempHpMode,
+  EffectTrigger,
   EffectTriggerActionGate,
   EffectTriggerAreaShiftKind,
   EffectTriggerAreaTarget,
@@ -101,7 +102,7 @@ import {
 } from './triggerTypes';
 
 /** Версия системы dnd5e-2024, с которой снят порт справочников и подписей. */
-export const EFFECT_SYSTEM_VERSION = '0.8.157';
+export const EFFECT_SYSTEM_VERSION = '0.10.3';
 
 /** Язык сортировки пунктов меню «Готовые»: навыки ищут по русскому названию. */
 export const EFFECT_MENU_SORT_LOCALE = 'ru';
@@ -559,6 +560,27 @@ const TEMP_HP_GAIN_KEY = 'tempHp.gain';
 const ATTACK_REACH_KEY = 'attack.reach';
 
 /**
+ * Ключ дальности прыжка в длину с разбегом, в футах. По правилам — значение
+ * Силы; лист VTTG считает его поверх правила, поэтому «умножить на 2» («Шаг
+ * ветра») и «повысить до 30» (заклинание «Прыжок») ложатся сверху. Прыжок с
+ * места — половина итога.
+ */
+const JUMP_LONG_KEY = 'jump.long';
+
+/**
+ * Ключ высоты прыжка с разбегом, в футах. По правилам — 3 + модификатор Силы,
+ * не меньше нуля; с места — половина.
+ */
+const JUMP_HIGH_KEY = 'jump.high';
+
+/**
+ * Ключ своей цены прыжка в футах хода. По правилам цены нет — фут прыжка стоит
+ * фут хода; строка задаёт фиксированную: заклинание «Прыжок» — «заменить» на
+ * 10 вместе с «повысить до 30» у дальности. Такой прыжок не требует разбега.
+ */
+export const JUMP_COST_KEY = 'jump.cost';
+
+/**
  * Ключ Скрытой атаки: кости, которые идут в урон атаки оружием, когда
  * выполнено условие строки (`SNEAK_ATTACK_CONDITION`). Общий механизм для
  * любого источника — класса, существа, черты, предмета.
@@ -713,6 +735,9 @@ export const EFFECT_TARGET_KEY_SUGGESTIONS: Array<Option<string>> = [
   { value: 'movement.swim', label: 'Скорость (плавание)' },
   { value: 'movement.climb', label: 'Скорость (лазание)' },
   { value: 'movement.burrow', label: 'Скорость (копание)' },
+  { value: JUMP_LONG_KEY, label: 'Прыжок в длину с разбегом, фт' },
+  { value: JUMP_HIGH_KEY, label: 'Прыжок в высоту с разбегом, фт' },
+  { value: JUMP_COST_KEY, label: 'Цена прыжка, фт хода (вместо фута за фут)' },
 
   // Чувства (дальность в футах)
   { value: 'sense.darkvision', label: 'Чувство: Тёмное зрение' },
@@ -1449,6 +1474,14 @@ export const EFFECT_TRIGGER_FIXED_CONDITIONS: Partial<
   attackSneakAttack: SNEAK_ATTACK_APPLIED_CONDITION,
   movementOwn: 'move.forced === false',
   movementForced: 'move.forced === true',
+  selfSeesOther: 'self.canSee === true',
+  selfSeesOtherNot: 'self.canSee === false',
+  otherSeesSelf: 'target.canSee === true',
+  otherSeesSelfNot: 'target.canSee === false',
+  selfInDarkness: 'self.light === "dark"',
+  selfInLight: 'self.light !== "dark"',
+  otherInDarkness: 'target.light === "dark"',
+  otherInLight: 'target.light !== "dark"',
   spellVerbal: 'spell.verbal === true',
 };
 
@@ -2091,6 +2124,10 @@ export const EFFECT_FLAG_LABELS: Record<string, string> = Object.fromEntries([
     'Игнорирует труднопроходимую местность (клетки зон стоят как обычные)',
   ],
   [
+    'terrain.impassable',
+    'Зона — провал: пешком не пройти, только перепрыгнуть (яма, пропасть, ручей)',
+  ],
+  [
     'mark.bySource',
     'Метка наложившего: его условие «цель помечена мной» (Метка охотника, Сглаз)',
   ],
@@ -2156,6 +2193,13 @@ export const EFFECT_FLAG_LABELS: Record<string, string> = Object.fromEntries([
   ['hitPoints.maxReductionBlocked', 'Максимум хитов нельзя уменьшать'],
   ['attacksAgainst.forceCritical', 'Попадание по этому существу — крит'],
   ['movement.teleportBlocked', 'Не может телепортироваться'],
+  [
+    'movement.levitate',
+    'Левитация: держится в воздухе, движется только вверх и вниз (до 20 фт)',
+  ],
+  ['movement.hover', 'Парит: сбитый с ног или без Скорости, не падает'],
+  ['fall.featherFall', 'Падение пёрышком: падение без урона и на ноги'],
+  ['scene.offScene', 'Убран со сцены: фишки нет, пока эффект действует'],
   ['rest.noBenefit.short', 'Короткий отдых не приносит пользы'],
   ['rest.noBenefit.long', 'Продолжительный отдых не приносит пользы'],
 
@@ -2233,7 +2277,40 @@ export interface EffectConditionTemplate {
   flags: string[];
   changes: EffectChange[];
   conditionImmunities?: EffectConditionKey[];
+  /** Снятие после броска атаки: «В засаде» кончается своей атакой. */
+  consumeOn?: EffectAttackTrigger;
+  /**
+   * Срабатывания, которые состояние несёт само: «В засаде» снимается
+   * заклинанием с вербальным компонентом, «Застигнутый врасплох» — в начале
+   * своего хода.
+   */
+  triggers?: readonly EffectTrigger[];
 }
+
+/**
+ * «В засаде» кончается и заклинанием с вербальным компонентом: срабатывание на
+ * касте снимает само состояние.
+ */
+const HIDDEN_TRIGGERS: readonly EffectTrigger[] = [
+  {
+    id: 'hidden.verbalSpell',
+    event: 'spellCast',
+    condition: 'spell.verbal === true',
+    actions: [{ type: 'removeSelf' }],
+  },
+];
+
+/**
+ * «Застигнутый врасплох» нужен только броску инициативы: к первому ходу
+ * существа инициатива уже брошена, и состояние снимается само.
+ */
+const SURPRISED_TRIGGERS: readonly EffectTrigger[] = [
+  {
+    id: 'surprised.firstTurn',
+    event: 'turnStart',
+    actions: [{ type: 'removeSelf' }],
+  },
+];
 
 /**
  * Следствия Недееспособности (PHB 2024): само состояние плюс помеха на
@@ -2333,6 +2410,23 @@ export const EFFECT_CONDITION_TEMPLATES: EffectConditionTemplate[] = [
     flags: ['speed.zero'],
     changes: [],
   },
+  // Как «Невидимый», но без `vision.invisible`: VTTG прячет от игроков фишку
+  // с этим флагом, а спрятавшегося союзники видят
+  {
+    key: 'hidden',
+    name: 'В засаде',
+    icon: 'tabler:spy',
+    description:
+      'Итог действия «Засада»: преимущество на инициативу, ваши атаки — с преимуществом, атаки против вас — с помехой. Кончается, когда вы атакуете, накладываете заклинание с вербальным компонентом, издаёте звук громче шёпота или враг находит вас проверкой Мудрости (Внимательность) против Сл поиска.',
+    flags: [
+      'attack.advantage',
+      'attacksAgainst.disadvantage',
+      'initiative.advantage',
+    ],
+    changes: [],
+    consumeOn: 'carrierAttack',
+    triggers: HIDDEN_TRIGGERS,
+  },
   {
     key: 'incapacitated',
     name: 'Недееспособный',
@@ -2422,6 +2516,16 @@ export const EFFECT_CONDITION_TEMPLATES: EffectConditionTemplate[] = [
     // двигаться» — в отличие от Парализованного и Без сознания.
     flags: [...INCAPACITATED_FLAGS, ...HELPLESS_FLAGS],
     changes: [],
+  },
+  {
+    key: 'surprised',
+    name: 'Застигнутый врасплох',
+    icon: 'tabler:mood-surprised',
+    description:
+      'Начало боя для вас — неожиданность: помеха на бросок инициативы. Снимается в начале вашего первого хода.',
+    flags: ['initiative.disadvantage'],
+    changes: [],
+    triggers: SURPRISED_TRIGGERS,
   },
   {
     key: 'unconscious',
@@ -2738,6 +2842,7 @@ export const EFFECT_TRIGGER_EVENT_PHRASES: Record<EffectTriggerEvent, string> =
     hpZero: 'когда хиты падают до 0',
     downedOther: 'когда носитель сваливает цель',
     damageDealt: 'когда носитель наносит урон',
+    allyHurt: 'когда на глазах носителя ранят союзника',
     spellCast: 'когда носитель накладывает заклинание',
     conditionLost: 'когда состояние снимается',
     rest: 'после отдыха',
@@ -2960,6 +3065,14 @@ export const EFFECT_TRIGGER_CONDITION_PHRASES: Record<
   combatRoundAtLeast: (round) => `с ${round}-го раунда боя`,
   movementOwn: () => 'носитель шёл сам',
   movementForced: () => 'носителя переставили толчком или переносом',
+  selfSeesOther: () => 'носитель видит другую сторону',
+  selfSeesOtherNot: () => 'носитель не видит другую сторону',
+  otherSeesSelf: () => 'другая сторона видит носителя',
+  otherSeesSelfNot: () => 'другая сторона не видит носителя',
+  selfInDarkness: () => 'носитель в темноте',
+  selfInLight: () => 'носитель на свету',
+  otherInDarkness: () => 'другая сторона в темноте',
+  otherInLight: () => 'другая сторона на свету',
   spellVerbal: () => 'у заклинания вербальный компонент',
 };
 
@@ -3112,10 +3225,6 @@ export const ACTIVE_EFFECT_FORM_LABELS = {
   iconPlaceholder: 'Напр: tabler:sparkles',
   statusActive: 'Работает',
   statusDisabled: 'Отключён',
-  conditionPreset: 'Шаблон состояния',
-  conditionPresetHint:
-    'Заполнить тем, что делает стандартное состояние. Когда эффект '
-    + 'срабатывает, спасбросок, урон и длительность останутся как есть.',
   summaryHint: 'Так эффект сработает с текущими настройками',
   ability: 'Характеристика',
   saveDc: 'Сложность',
@@ -3852,15 +3961,6 @@ export const EFFECT_TURN_DURATION_TYPE = 'turn' satisfies EffectDurationType;
 /** Наименьшее число у длительности в раундах, минутах или часах. */
 export const MIN_EFFECT_DURATION_VALUE = 0;
 
-/** Подписи плашки неработающих настроек. */
-export const EFFECT_INERT_FIELDS_LABELS = {
-  title: 'Эти настройки здесь не работают',
-  description:
-    'Они остались от прежнего редактора или от другого места эффекта и при '
-    + 'срабатывании будут пропущены: ',
-  clear: 'Убрать',
-} as const;
-
 /** Значение выбора «Действует» для эффекта без применения. */
 export const EFFECT_PERMANENT_ACTIVATION = 'permanent';
 
@@ -4211,11 +4311,101 @@ export const EFFECT_INERT_FIELD_NAMES: Record<InertEffectField, string> = {
   triggers: 'срабатывания не для этого места',
 };
 
-/** Разделитель названий в перечне неработающих настроек. */
-export const EFFECT_INERT_FIELDS_SEPARATOR = EFFECT_PHRASE_PARTS.listJoiner;
+/** Подписи плашки неработающих настроек: строка на каждую настройку. */
+export const EFFECT_INERT_NOTICE_LABELS = {
+  title: 'Не работает в этом месте',
+  titleHint:
+    'Настройки остались от прежнего редактора или от другого места эффекта. '
+    + 'При срабатывании они пропускаются. «Убрать» стирает строку целиком: '
+    + 'настройку или всё срабатывание, вместе с его рабочими действиями. '
+    + 'Остальное в эффекте не меняется.',
+  clear: 'Убрать',
+  clearAll: 'Убрать всё',
+  triggerName: 'Срабатывание',
+  /** Между названием настройки и тем, что именно задано. */
+  detailSeparator: ': ',
+  actionsUnavailablePrefix: 'Здесь нет действий: ',
+  actionsJoiner: ', ',
+  actionsTerminator: '.',
+  /** Перед переключателями, которые включают момент срабатывания. */
+  switchesPrefix: ` Выберите в шаге «${EFFECT_FORM_STEP_TITLES.trigger}»: `,
+  switchesJoiner: ' или ',
+  switchesTerminator: '.',
+  switchQuoteOpen: '«',
+  switchQuoteClose: '»',
+} as const;
 
-/** Знак в конце перечня неработающих настроек. */
-export const EFFECT_INERT_FIELDS_TERMINATOR = '.';
+/** Почему неработающая настройка пропускается — вторая строка плашки. */
+export const EFFECT_INERT_FIELD_REASONS: Record<InertEffectField, string> = {
+  charges: 'Заряды тратят срабатывания, а здесь эффект их не выполняет.',
+  saveOverride:
+    'Провал превращает в успех носитель эффекта, а здесь эффект на носителе '
+    + 'не лежит.',
+  activation: 'Такого способа включения здесь нет.',
+  landingCondition:
+    'Условие проверяется, когда эффект накладывают, а отсюда его не '
+    + 'накладывают.',
+  variant: 'Выбор варианта здесь не предлагается.',
+  effectTarget:
+    'Отсюда эффект так не накладывается: на цель — только ударом или '
+    + 'заклинанием, в зону — только заклинанием с областью.',
+  aura: 'Аурой эффект отсюда не работает.',
+  areaTrigger: 'Вход и выход бывают только у зоны и ауры.',
+  areaChoice:
+    'Цели выбираются из области, только когда применение ставит шаблон на '
+    + 'карту, а здесь его нет.',
+  applySave:
+    'Спасбросок кидает тот, на кого эффект ложится, а здесь эффект просто '
+    + 'лежит на носителе.',
+  successOutcome: 'Исход при успехе бывает только у спасброска.',
+  damageParts:
+    'Урон получает тот, на кого эффект ложится, а здесь эффект ни на кого не '
+    + 'ложится.',
+  recurringDamage:
+    'Каждый ход тикает только эффект, который лежит на существе сам.',
+  recurringSave:
+    'Повторный спасбросок бывает только у эффекта, который лежит на существе '
+    + 'сам.',
+  consumeOn:
+    'Снимается после атаки только эффект, который лежит на существе сам.',
+  pay:
+    'Цену платит тот, кто применяет, включает или колдует, а этот эффект '
+    + 'действует постоянно — платить некому.',
+  duration:
+    'Здесь эффект действует, пока есть источник: срок не отсчитывается.',
+  conditionImmunities: 'Иммунитет отсюда не действует.',
+  triggers: 'Такой момент здесь не наступает.',
+};
+
+/**
+ * Почему момент срабатывания не наступает. Что переключить, дописывает
+ * плашка — только то, что в этом месте есть. Нет в списке — общая причина
+ * `EFFECT_INERT_FIELD_REASONS.triggers`.
+ */
+export const EFFECT_TRIGGER_EVENT_UNAVAILABLE_REASONS: Partial<
+  Record<EffectTriggerEvent, string>
+> = {
+  applied: '«При наложении» бывает, только когда эффект накладывают.',
+  activate:
+    '«При действии или включении» бывает, только когда эффект включают.',
+};
+
+/** Иконка шаблона состояния. */
+export const EFFECT_CONDITION_PRESET_ICON = 'tabler:template';
+
+/** Подписи шаблона состояния в шаге «Что меняет» и в меню особых правил. */
+export const EFFECT_CONDITION_PRESET_LABELS = {
+  title: 'Готовое состояние',
+  hint:
+    'Отравленный, Ослеплённый и другие состояния: модификаторы и правила '
+    + 'заполнятся сами. Спасбросок, урон и длительность останутся как есть.',
+  pick: 'Выбрать состояние',
+  change: 'Сменить',
+  changeHint: 'Заменить модификаторы и особые правила другим состоянием',
+  /** Раздел состояний в меню «Готовые» у особых правил. */
+  flagMenuGroup: 'Состояния (Отравленный и др.)',
+  flagMenuNote: 'Заменит модификаторы и правила эффекта',
+} as const;
 
 /** Подписи сворачиваемого раздела «Описание». */
 export const EFFECT_DESCRIPTION_LABELS = {
@@ -4412,6 +4602,7 @@ export const EFFECT_TRIGGER_EVENT_LABELS: Partial<
   hpZero: 'Когда хиты носителя падают до 0',
   downedOther: 'Когда носитель сваливает цель',
   damageDealt: 'Когда носитель наносит урон',
+  allyHurt: 'Когда на глазах носителя ранят союзника',
   spellCast: 'Когда носитель накладывает заклинание',
   conditionLost: 'Когда с носителя снимается состояние',
   castEnd: 'Когда заклинание заканчивается',
@@ -4797,6 +4988,14 @@ export const EFFECT_TRIGGER_CONDITION_KIND_LABELS: Record<
   combatRoundAtLeast: 'Раунд боя не раньше',
   movementOwn: 'Носитель шёл сам',
   movementForced: 'Носителя переставили (толчок, перенос)',
+  selfSeesOther: 'Носитель видит другую сторону',
+  selfSeesOtherNot: 'Носитель не видит другую сторону',
+  otherSeesSelf: 'Другая сторона видит носителя',
+  otherSeesSelfNot: 'Другая сторона не видит носителя',
+  selfInDarkness: 'Носитель в темноте',
+  selfInLight: 'Носитель на свету',
+  otherInDarkness: 'Другая сторона в темноте',
+  otherInLight: 'Другая сторона на свету',
   spellVerbal: 'Заклинание с вербальным компонентом',
 };
 

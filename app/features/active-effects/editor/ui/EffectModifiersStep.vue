@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { DropdownMenuItem } from '@nuxt/ui';
+
   import type {
     ActiveEffect,
     CreatureTypeCondition,
@@ -12,6 +14,8 @@
   import {
     ADJACENT_ALLY_CONDITION_LABEL,
     ADJACENT_ALLY_CONDITION_OPTIONS,
+    applyConditionPresetToEffect,
+    buildConditionActiveEffect,
     DEFAULT_CONDITION_CREATURE_TYPE,
     describeConditionName,
     describeEffectChangeCondition,
@@ -19,7 +23,10 @@
     EFFECT_CONDITION_EXPR_SUGGESTIONS,
     EFFECT_CONDITION_KEY_ITEMS,
     EFFECT_CONDITION_OPTIONS,
+    EFFECT_CONDITION_PRESET_ICON,
+    EFFECT_CONDITION_PRESET_LABELS,
     EFFECT_CONDITION_REMOVE_ICON,
+    EFFECT_CONDITION_TEMPLATES,
     EFFECT_CREATURE_CATEGORY_OPTIONS,
     EFFECT_CREATURE_TYPE_SUBJECT_OPTIONS,
     EFFECT_MODIFIERS_STEP_LABELS,
@@ -40,8 +47,12 @@
    * Шаг «Что меняет»: состояние, модификаторы, особые правила, сохранённый
    * бросок, иммунитеты к состояниям и их подавление. При заведённых ступенях
    * строки и правила — это строки действующей ступени, правка уходит в неё.
+   *
+   * Готовое состояние стоит первым в шаге, а его пункты повторены в меню
+   * «Готовые» у особых правил — как в системе: «Отравленного» ищут среди
+   * правил, а в шапке формы шаблон никто не находил.
    */
-  defineProps<{
+  const { layout } = defineProps<{
     /** Раскладка формы. */
     layout: EffectFormLayout;
     /** Показывать приоритет у всех модификаторов. */
@@ -287,6 +298,38 @@
   });
 
   /**
+   * Заполняет эффект тем, что делает состояние, не трогая срабатывание:
+   * доставка, момент, спасбросок, урон, длительность и источник остаются.
+   *
+   * @param conditionKey ключ состояния.
+   */
+  function applyConditionPreset(conditionKey: EffectConditionKey): void {
+    const conditionEffect = buildConditionActiveEffect(conditionKey);
+
+    if (!conditionEffect) {
+      return;
+    }
+
+    effect.value = applyConditionPresetToEffect(effect.value, conditionEffect);
+  }
+
+  // Истощения в меню нет: его модификаторы зависят от степени. В форме самого
+  // состояния шаблона нет — там эффект и есть состояние
+  const conditionPresetItems = computed<DropdownMenuItem[]>(() =>
+    layout.showConditionPreset
+      ? EFFECT_CONDITION_TEMPLATES.map((template) => ({
+          label: template.name,
+          icon: template.icon,
+          onSelect: () => applyConditionPreset(template.key),
+        }))
+      : [],
+  );
+
+  const hasConditionPreset = computed(
+    () => conditionPresetItems.value.length > 0,
+  );
+
+  /**
    * Перестаёт считать эффект состоянием: модификаторы и правила остаются, но
    * иммунитет к состоянию на нём больше не сработает.
    */
@@ -313,6 +356,21 @@
       {{ conditionBadgeLabel }}
     </UBadge>
 
+    <UDropdownMenu
+      v-if="hasConditionPreset"
+      :items="conditionPresetItems"
+      :ui="{ content: 'max-h-72 overflow-y-auto' }"
+    >
+      <UButton
+        color="neutral"
+        variant="ghost"
+        size="xs"
+        :icon="EFFECT_CONDITION_PRESET_ICON"
+        :label="EFFECT_CONDITION_PRESET_LABELS.change"
+        :title="EFFECT_CONDITION_PRESET_LABELS.changeHint"
+      />
+    </UDropdownMenu>
+
     <UButton
       color="neutral"
       variant="ghost"
@@ -322,6 +380,34 @@
       :title="EFFECT_MODIFIERS_STEP_LABELS.conditionRemoveHint"
       @click.left.exact.prevent="removeCondition"
     />
+  </div>
+
+  <div
+    v-else-if="hasConditionPreset"
+    class="flex items-center justify-between gap-2"
+  >
+    <InfoTooltip
+      :text="EFFECT_CONDITION_PRESET_LABELS.hint"
+      icon="tabler:info-circle-filled"
+    >
+      <span class="text-sm font-medium">
+        {{ EFFECT_CONDITION_PRESET_LABELS.title }}
+      </span>
+    </InfoTooltip>
+
+    <UDropdownMenu
+      :items="conditionPresetItems"
+      :content="{ align: 'end' }"
+      :ui="{ content: 'max-h-72 overflow-y-auto' }"
+    >
+      <UButton
+        color="primary"
+        variant="soft"
+        size="xs"
+        :icon="EFFECT_CONDITION_PRESET_ICON"
+        :label="EFFECT_CONDITION_PRESET_LABELS.pick"
+      />
+    </UDropdownMenu>
   </div>
 
   <div class="flex flex-col gap-1.5">
@@ -410,7 +496,10 @@
     :show-priority-field="showPriorityField"
   />
 
-  <EffectFlags v-model="flags" />
+  <EffectFlags
+    v-model="flags"
+    :condition-preset-items="conditionPresetItems"
+  />
 
   <UFormField
     :label="EFFECT_MODIFIERS_STEP_LABELS.savedRollTitle"

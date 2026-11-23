@@ -28,6 +28,7 @@ import {
   EFFECT_STRENGTH_ATTACK_CONDITION,
   EFFECT_TARGET_KEY_SUGGESTIONS,
   EFFECT_TARGET_TYPE_CONDITION_PREFIX,
+  JUMP_COST_KEY,
   POISONERS_KIT_CONDITION,
   RAGE_DAMAGE_BONUS_FORMULA,
   SAVE_VS_CONDITION_FLAG_KEYS,
@@ -312,6 +313,7 @@ const EFFECT_MODIFIER_GROUPS = [
   { key: 'core', label: 'Основное' },
   { key: 'senses', label: 'Чувства' },
   { key: 'movement', label: 'Скорости' },
+  { key: 'terrain', label: 'Местность (только для зоны сцены)' },
   { key: 'abilities', label: 'Характеристики' },
   { key: 'saves', label: 'Спасброски' },
   { key: 'skills', label: 'Проверки и навыки' },
@@ -360,8 +362,15 @@ function getModifierGroupKey(changeKey: string): string {
     return 'weapon';
   }
 
-  if (changeKey.startsWith('movement.')) {
+  // Прыжок ищут рядом со скоростями: он тоже тратит ход
+  if (changeKey.startsWith('movement.') || changeKey.startsWith('jump.')) {
     return 'movement';
+  }
+
+  // Своим разделом, а не среди скоростей: это правило ЗОНЫ, а не носителя.
+  // На листе такая строка не считается вовсе, и путать её со Скоростью нельзя.
+  if (changeKey.startsWith('terrain.')) {
+    return 'terrain';
   }
 
   if (changeKey.startsWith('sense.')) {
@@ -384,8 +393,20 @@ function getDefaultModeOfKey(changeKey: string): EffectChangeMode {
     return 'upgrade';
   }
 
+  // Цена клетки — не прибавка к чему-то, а само значение: «здесь клетка стоит
+  // вдвое». Прибавка тут читалась бы как «+2 к обычной цене», то есть ×3.
+  if (changeKey.startsWith('terrain.')) {
+    return 'override';
+  }
+
   if (changeKey.startsWith('movement.') && changeKey !== 'movement.walk') {
     return 'upgrade';
+  }
+
+  // Цена прыжка — само значение («прыжок стоит 10 фт хода»), с нуля его не
+  // прибавить: своей цены по правилам нет
+  if (changeKey === JUMP_COST_KEY) {
+    return 'override';
   }
 
   // Кость, характеристику и тип урона оружия не прибавить — только заменить;
@@ -402,12 +423,17 @@ function getDefaultModeOfKey(changeKey: string): EffectChangeMode {
 
 /**
  * Значение по умолчанию раздела: только там, где единица выглядела бы ошибкой —
- * чувство «1 фут» или скорость полёта «1 фут».
+ * чувство «1 фут», скорость полёта «1 фут» или цена клетки «×1» (то есть «зона
+ * ничего не меняет»).
  *
  * @param groupKey ключ раздела меню.
  * @returns значение по умолчанию либо `undefined`.
  */
 function getDefaultValueOfGroup(groupKey: string): string | undefined {
+  if (groupKey === 'terrain') {
+    return '2';
+  }
+
   if (groupKey === 'senses') {
     return '60';
   }

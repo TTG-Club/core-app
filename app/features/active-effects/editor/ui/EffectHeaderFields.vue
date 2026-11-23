@@ -1,21 +1,13 @@
 <script setup lang="ts">
-  import type { DropdownMenuItem } from '@nuxt/ui';
+  import type { ActiveEffect } from '../../model';
 
-  import type { ActiveEffect, EffectConditionKey } from '../../model';
-
-  import {
-    ACTIVE_EFFECT_FORM_LABELS,
-    applyConditionPresetToEffect,
-    buildConditionActiveEffect,
-    EFFECT_CONDITION_TEMPLATES,
-  } from '../../model';
+  import { ACTIVE_EFFECT_FORM_LABELS } from '../../model';
 
   /**
-   * Шапка эффекта: название, иконка, работает ли эффект и шаблон состояния.
+   * Шапка эффекта: название, иконка и работает ли эффект. Готовое состояние
+   * выбирается в шаге «Что меняет», как в системе: из шапки его не находили.
    */
   defineProps<{
-    /** Показывать кнопку «Шаблон состояния». */
-    showConditionPreset: boolean;
     /**
      * Показывать переключатель «Работает». У шаблона применения его нет: на
      * листе такой шаблон всегда лежит выключенным.
@@ -55,31 +47,6 @@
 
   /** Иконка в поле иконки: пустое поле — без иконки. */
   const iconPreview = computed(() => icon.value || undefined);
-
-  /**
-   * Заполняет эффект тем, что делает состояние, не трогая срабатывание:
-   * доставка, момент, спасбросок, урон, длительность и источник остаются.
-   *
-   * @param conditionKey ключ состояния.
-   */
-  function applyConditionPreset(conditionKey: EffectConditionKey): void {
-    const conditionEffect = buildConditionActiveEffect(conditionKey);
-
-    if (!conditionEffect) {
-      return;
-    }
-
-    effect.value = applyConditionPresetToEffect(effect.value, conditionEffect);
-  }
-
-  // Истощения в меню нет: его модификаторы зависят от степени
-  const conditionPresetItems = computed<Array<Array<DropdownMenuItem>>>(() => [
-    EFFECT_CONDITION_TEMPLATES.map((template) => ({
-      label: template.name,
-      icon: template.icon,
-      onSelect: () => applyConditionPreset(template.key),
-    })),
-  ]);
 </script>
 
 <template>
@@ -105,21 +72,6 @@
         class="w-full"
       />
     </UFormField>
-
-    <UDropdownMenu
-      v-if="showConditionPreset"
-      :items="conditionPresetItems"
-      :content="{ align: 'end' }"
-      :ui="{ content: 'max-h-72 overflow-y-auto' }"
-    >
-      <UButton
-        icon="tabler:template"
-        :label="ACTIVE_EFFECT_FORM_LABELS.conditionPreset"
-        :title="ACTIVE_EFFECT_FORM_LABELS.conditionPresetHint"
-        color="neutral"
-        variant="outline"
-      />
-    </UDropdownMenu>
 
     <USwitch
       v-if="showStatusToggle"

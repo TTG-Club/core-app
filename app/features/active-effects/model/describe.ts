@@ -13,7 +13,7 @@ import type {
   CreatureTypeCondition,
   CreatureTypeConditionSubject,
 } from './creatureTypeCondition';
-import type { EffectFormLayout, InertEffectField } from './layout';
+import type { EffectFormLayout } from './layout';
 import type { SaveAbilityChoice } from './saveAbilities';
 import type { SaveDcSource } from './saveDc';
 import type { EffectAreaChoice } from './triggerTypes';
@@ -60,10 +60,6 @@ import {
   EFFECT_DELIVERY_HINTS,
   EFFECT_FLAG_LABELS,
   EFFECT_HEAL_KIND_LABELS,
-  EFFECT_INERT_FIELD_NAMES,
-  EFFECT_INERT_FIELDS_LABELS,
-  EFFECT_INERT_FIELDS_SEPARATOR,
-  EFFECT_INERT_FIELDS_TERMINATOR,
   EFFECT_LIGHT_PHRASES,
   EFFECT_MODIFIERS_STEP_LABELS,
   EFFECT_PHRASE_PARTS,
@@ -1014,23 +1010,6 @@ export function describeSaveOverride(saveOverride: EffectSaveOverride): string {
   const timesText = `${max} ${getPlural(max, EFFECT_SAVE_OVERRIDE_TIMES_FORMS)}`;
 
   return `${EFFECT_SAVE_OVERRIDE_PHRASES.head}${EFFECT_SAVE_OVERRIDE_PHRASES.limit(timesText, EFFECT_SAVE_OVERRIDE_PERIOD_PHRASES[per])}`;
-}
-
-/**
- * Текст плашки неработающих настроек: пояснение и перечень названий через
- * запятую с точкой в конце.
- *
- * @param fields неработающие поля эффекта.
- * @returns текст плашки.
- */
-export function describeInertEffectFields(
-  fields: readonly InertEffectField[],
-): string {
-  const names = fields
-    .map((field) => EFFECT_INERT_FIELD_NAMES[field])
-    .join(EFFECT_INERT_FIELDS_SEPARATOR);
-
-  return `${EFFECT_INERT_FIELDS_LABELS.description}${names}${EFFECT_INERT_FIELDS_TERMINATOR}`;
 }
 
 /**

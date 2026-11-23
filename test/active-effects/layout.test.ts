@@ -913,6 +913,7 @@ describe('список «Срабатывания»', () => {
       'downedOther',
       'damageDealt',
       'spellCast',
+      'allyHurt',
       'moved',
       'rest',
     ]);
@@ -1006,6 +1007,7 @@ describe('список «Срабатывания»', () => {
       'downedOther',
       'damageDealt',
       'spellCast',
+      'allyHurt',
       'moved',
       'castEnd',
       'rest',
@@ -1065,6 +1067,7 @@ describe('список «Срабатывания»', () => {
       'downedOther',
       'damageDealt',
       'spellCast',
+      'allyHurt',
       'moved',
       'rest',
     ]);
@@ -1106,6 +1109,7 @@ describe('список «Срабатывания»', () => {
       'downedOther',
       'damageDealt',
       'spellCast',
+      'allyHurt',
       'moved',
       'rest',
     ]);
@@ -1122,6 +1126,7 @@ describe('список «Срабатывания»', () => {
       'downedOther',
       'damageDealt',
       'spellCast',
+      'allyHurt',
       'moved',
       'rest',
     ]);
@@ -1139,6 +1144,7 @@ describe('список «Срабатывания»', () => {
       'downedOther',
       'damageDealt',
       'spellCast',
+      'allyHurt',
       'moved',
       'rest',
     ]);

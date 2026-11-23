@@ -98,6 +98,7 @@ import {
   SPELL_CAST_TRIGGER_EVENTS,
   triggerEventAcceptsAreaTemplate,
   TURN_TRIGGER_EVENTS,
+  WITNESS_TRIGGER_EVENTS,
 } from './triggerTypes';
 import {
   DEFAULT_ACTIVATION_AMOUNT,
@@ -1161,6 +1162,9 @@ function resolveTriggerListLayout(
     ...(place.actsWithCarrier ? OWN_DEED_TRIGGER_EVENTS : []),
     // «Накладывает заклинание» — тоже поступок живого носителя
     ...(place.actsWithCarrier ? SPELL_CAST_TRIGGER_EVENTS : []),
+    // «На глазах ранили союзника» — про носителя с фишкой: кого он видит,
+    // знает только сцена
+    ...(place.actsWithCarrier ? WITNESS_TRIGGER_EVENTS : []),
     // «Прошёл N футов» — про носителя, у которого есть фишка и путь
     ...(place.actsWithCarrier ? MOVEMENT_TRIGGER_EVENTS : []),
     ...(place.endsWithCast ? (['castEnd'] as const) : []),
@@ -1559,6 +1563,99 @@ export function writeEffectTriggerRow(
 }
 
 /**
+ * Переключатель формы, после которого событие срабатывания начинает
+ * наступать: способ «При применении», «Переключателем» или доставка «На цели».
+ */
+export type EffectTriggerEventSwitch = 'use' | 'toggle' | 'target';
+
+/** Срабатывание, которое в месте формы не работает, и что именно мешает. */
+export interface UnsupportedEffectTrigger {
+  /** Само срабатывание. */
+  trigger: EffectTrigger;
+  /** Его событие здесь не наступает — тогда не работает целиком. */
+  eventUnavailable: boolean;
+  /**
+   * Что можно выбрать в этой же форме, чтобы событие наступало. Пусто — в
+   * этом месте событие не наступит ни при какой настройке.
+   */
+  eventSwitches: EffectTriggerEventSwitch[];
+  /** Действия, которых на этом событии здесь нет. */
+  unavailableActions: EffectTriggerActionType[];
+}
+
+/**
+ * Что в форме включает событие, которого сейчас нет. «При наложении» — у
+ * эффекта, который накладывают: применением или на цель. «При действии или
+ * включении» — у включаемого переключателем. Предлагается только то, что в
+ * этом месте есть: у заклинания переключателя нет, и советовать его нельзя.
+ *
+ * @param event событие срабатывания.
+ * @param layout раскладка формы.
+ * @returns переключатели в порядке показа.
+ */
+function listTriggerEventSwitches(
+  event: EffectTriggerEvent,
+  layout: EffectFormLayout,
+): EffectTriggerEventSwitch[] {
+  switch (event) {
+    case 'applied':
+      return [
+        ...(layout.activationModes.includes('use') ? (['use'] as const) : []),
+        ...(layout.deliveryOptions.includes('target')
+          ? (['target'] as const)
+          : []),
+      ];
+    case 'activate':
+      return layout.activationModes.includes('toggle') ? ['toggle'] : [];
+    default:
+      return [];
+  }
+}
+
+/**
+ * Что мешает явному срабатыванию работать в месте формы: событие здесь не
+ * наступает или действие форма на этом событии не предлагает. Единственное
+ * место этого правила: по нему судят и сводка (`isEffectTriggerSupported`),
+ * и плашка «Не работает в этом месте».
+ *
+ * @param trigger срабатывание.
+ * @param layout раскладка формы.
+ * @returns помеха либо `null`, если срабатывание работает целиком.
+ */
+export function explainUnsupportedEffectTrigger(
+  trigger: EffectTrigger,
+  layout: EffectFormLayout,
+): UnsupportedEffectTrigger | null {
+  if (!layout.triggerEvents.includes(trigger.event)) {
+    return {
+      trigger,
+      eventUnavailable: true,
+      eventSwitches: listTriggerEventSwitches(trigger.event, layout),
+      unavailableActions: [],
+    };
+  }
+
+  const actionTypes = listTriggerActionTypes(layout, trigger.event);
+
+  const unavailableActions = [
+    ...new Set(
+      trigger.actions
+        .map((action) => action.type)
+        .filter((actionType) => !actionTypes.includes(actionType)),
+    ),
+  ];
+
+  return unavailableActions.length > 0
+    ? {
+        trigger,
+        eventUnavailable: false,
+        eventSwitches: [],
+        unavailableActions,
+      }
+    : null;
+}
+
+/**
  * Работает ли явное срабатывание в месте формы: его событие здесь срабатывает,
  * и каждое его действие форма на этом событии предлагает. Иначе срабатывание
  * считалось бы собираемым, хотя действие в списке формы не найти.
@@ -1571,13 +1668,7 @@ export function isEffectTriggerSupported(
   trigger: EffectTrigger,
   layout: EffectFormLayout,
 ): boolean {
-  if (!layout.triggerEvents.includes(trigger.event)) {
-    return false;
-  }
-
-  const actionTypes = listTriggerActionTypes(layout, trigger.event);
-
-  return trigger.actions.every((action) => actionTypes.includes(action.type));
+  return explainUnsupportedEffectTrigger(trigger, layout) === null;
 }
 
 /**
