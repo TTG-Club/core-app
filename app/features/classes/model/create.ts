@@ -29,6 +29,14 @@ export interface ClassFeatureScalingCreate {
 }
 
 /**
+ * Когда при повышении уровня класса можно заменить один ранее выбранный
+ * вариант на другой: `EVERY_LEVEL` — на любом новом уровне класса,
+ * `CHOICE_LEVELS` — только на уровнях ступеней выбора (уровень умения и уровни
+ * `scaling`). Зеркало поля `replacement` из core-api.
+ */
+export type ClassFeatureOptionsReplacement = 'EVERY_LEVEL' | 'CHOICE_LEVELS';
+
+/**
  * Ступень количества выбора вариантов: с какого уровня сколько выбирают ВСЕГО.
  *
  * Ступень называет итог, а не прибавку: воззваний у колдуна одно с первого
@@ -60,6 +68,12 @@ export interface ClassFeatureOptionsChoiceCreate {
 
   /** Ступени количества по уровням класса; пусто — количество не растёт. */
   scaling: Array<ClassFeatureOptionsScalingCreate>;
+
+  /**
+   * Замена одного ранее выбранного варианта при повышении уровня класса; пусто
+   * — замены нет. Замена всегда одна и всегда необязательна.
+   */
+  replacement: ClassFeatureOptionsReplacement | undefined;
 }
 
 /**

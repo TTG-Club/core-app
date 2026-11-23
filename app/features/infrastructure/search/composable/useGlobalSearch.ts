@@ -1,4 +1,11 @@
-import { SearchPalette } from '../palette';
+/**
+ * Палитра поиска грузится отдельным чанком при первом открытии: вместе с ней
+ * приходят нечёткий поиск (fuse.js) и список команд, а кнопка поиска стоит в
+ * сайдбаре каждой страницы.
+ */
+const SearchPalette = defineAsyncComponent(() =>
+  import('../palette').then((paletteModule) => paletteModule.SearchPalette),
+);
 
 /**
  * Управляет палитрой глобального поиска.

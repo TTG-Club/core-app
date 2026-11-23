@@ -140,6 +140,14 @@ export const TRIGGER_CONDITION_KINDS = [
   'otherCreatureTypeChosen',
   'selfHpMaxAtMost',
   'otherIsSourceSide',
+  'selfSeesOther',
+  'selfSeesOtherNot',
+  'otherSeesSelf',
+  'otherSeesSelfNot',
+  'selfInDarkness',
+  'selfInLight',
+  'otherInDarkness',
+  'otherInLight',
   'spellVerbal',
 ] as const;
 
@@ -191,7 +199,16 @@ export const TRIGGER_CONDITION_KINDS = [
  *   («существо из вашего Гримуара»);
  * - `selfHpMaxAtMost` — максимум хитов носителя не больше N;
  * - `otherIsSourceSide` — другая сторона — наложивший эффект или его союзник
- *   («пока вы или ваши союзники не нанесёте ей урон»).
+ *   («пока вы или ваши союзники не нанесёте ей урон»);
+ * - `selfSeesOther` / `selfSeesOtherNot` — носитель видит / не видит другую
+ *   сторону (стены, свет, тёмное зрение, слепота и невидимость считает сцена
+ *   VTTG);
+ * - `otherSeesSelf` / `otherSeesSelfNot` — другая сторона видит / не видит
+ *   носителя;
+ * - `selfInDarkness` / `selfInLight` — носитель в темноте / на свету (ярком
+ *   или тусклом);
+ * - `otherInDarkness` / `otherInLight` — другая сторона в темноте / на свету;
+ * - `spellVerbal` — заклинание события с вербальным компонентом.
  */
 export type TriggerConditionKind = (typeof TRIGGER_CONDITION_KINDS)[number];
 
@@ -284,6 +301,14 @@ const KIND_EVENTS: Record<
   otherCreatureTypeChosen: OTHER_CONDITION_EVENTS,
   selfHpMaxAtMost: undefined,
   otherIsSourceSide: OTHER_CONDITION_EVENTS,
+  selfSeesOther: OTHER_CONDITION_EVENTS,
+  selfSeesOtherNot: OTHER_CONDITION_EVENTS,
+  otherSeesSelf: OTHER_CONDITION_EVENTS,
+  otherSeesSelfNot: OTHER_CONDITION_EVENTS,
+  selfInDarkness: undefined,
+  selfInLight: undefined,
+  otherInDarkness: OTHER_CONDITION_EVENTS,
+  otherInLight: OTHER_CONDITION_EVENTS,
   spellVerbal: SPELL_CAST_TRIGGER_EVENTS,
 };
 

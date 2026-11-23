@@ -9,6 +9,8 @@
   import {
     ACTIVE_EFFECT_LABELS,
     DEFAULT_EFFECT_FLAG,
+    EFFECT_CONDITION_PRESET_ICON,
+    EFFECT_CONDITION_PRESET_LABELS,
     EFFECT_FLAG_LABELS,
     EFFECT_FLAG_LIBRARY,
     EFFECT_FLAG_MENU,
@@ -19,13 +21,21 @@
    * Особые правила эффекта — флаги. Тот же блок правит флаги состояния,
    * которое кладёт срабатывание: там у него свой заголовок и пояснение.
    */
-  const { title = EFFECT_MODIFIERS_STEP_LABELS.flagsTitle, hint = undefined } =
-    defineProps<{
-      /** Заголовок блока; по умолчанию — «Особые правила». */
-      title?: string;
-      /** Пояснение к заголовку под значком. */
-      hint?: string;
-    }>();
+  const {
+    title = EFFECT_MODIFIERS_STEP_LABELS.flagsTitle,
+    hint = undefined,
+    conditionPresetItems = [],
+  } = defineProps<{
+    /** Заголовок блока; по умолчанию — «Особые правила». */
+    title?: string;
+    /** Пояснение к заголовку под значком. */
+    hint?: string;
+    /**
+     * Шаблоны состояний: в меню «Готовые» они идут своим разделом первыми —
+     * «Отравленного» ищут среди правил. Пусто — раздела нет.
+     */
+    conditionPresetItems?: DropdownMenuItem[];
+  }>();
 
   const model = defineModel<Array<string>>({ default: () => [] });
 
@@ -70,9 +80,31 @@
     };
   }
 
-  const flagMenuItems = computed<Array<Array<DropdownMenuItem>>>(() =>
-    EFFECT_FLAG_MENU.map((group) => [toFlagMenuItem(group)]),
-  );
+  /** Разделы правил: правил под сотню, поэтому по разделам. */
+  const flagMenuGroups: DropdownMenuItem[][] = EFFECT_FLAG_MENU.map((group) => [
+    toFlagMenuItem(group),
+  ]);
+
+  /**
+   * Меню «Готовые»: состояния отдельным разделом в самом начале — подпись
+   * внутри предупреждает, что выбор заменит правила, а не добавит одно.
+   */
+  const flagMenuItems = computed<DropdownMenuItem[][]>(() => {
+    if (conditionPresetItems.length === 0) {
+      return flagMenuGroups;
+    }
+
+    const conditionGroup: DropdownMenuItem = {
+      label: EFFECT_CONDITION_PRESET_LABELS.flagMenuGroup,
+      icon: EFFECT_CONDITION_PRESET_ICON,
+      children: [
+        { type: 'label', label: EFFECT_CONDITION_PRESET_LABELS.flagMenuNote },
+        ...conditionPresetItems,
+      ],
+    };
+
+    return [[conditionGroup], ...flagMenuGroups];
+  });
 
   function removeFlag(index: number) {
     model.value = model.value.filter((_, position) => position !== index);

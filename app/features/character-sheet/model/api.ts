@@ -8,7 +8,9 @@ import type {
   FeatSpellChoiceFilter,
   FeatSummary,
   FeatureDescriptionNode,
+  ItemCatalogItem,
   ItemSummary,
+  MagicItemRawDetail,
   MagicItemSummary,
   SavedCharacterSheet,
   SavedCharacterSheetListPage,
@@ -45,6 +47,7 @@ import {
   CHOICE_SPELL_POOL_SIZE,
   FEATS_DETAIL_BASE_PATH,
   ITEMS_DETAIL_BASE_PATH,
+  ITEMS_SEARCH_PATH,
   MAGIC_ITEMS_DETAIL_BASE_PATH,
   RAW_DETAIL_PATH_SUFFIX,
   SHEET_UNKNOWN_ERROR_MESSAGE,
@@ -57,6 +60,7 @@ import {
   parseCatalogSpellDetail,
   parseFeatDetail,
   parseItemArmor,
+  parseItemCatalog,
   parseItemDetail,
   parseItemWeapon,
   parseMagicItemRaw,
@@ -450,27 +454,96 @@ export async function fetchItemSummary(
 export async function fetchMagicItemSummary(
   magicItemUrl: string,
 ): Promise<MagicItemSummary | null> {
+  const rawDetail = await fetchMagicItemRawDetail(magicItemUrl);
+
+  return rawDetail ? resolveMagicItemSummary(rawDetail, null) : null;
+}
+
+/**
+ * «Сырой» ответ магического предмета: редкость, механика и слаги немагических
+ * предметов, которыми он может быть. Ошибку глотаем — предмет добавится без
+ * цены и боевых параметров.
+ *
+ * @param magicItemUrl слаг магического предмета в каталоге.
+ * @returns разобранный «сырой» ответ; null — он не загрузился.
+ */
+export async function fetchMagicItemRawDetail(
+  magicItemUrl: string,
+): Promise<MagicItemRawDetail | null> {
   try {
     const response = await $fetch<unknown>(
       `${MAGIC_ITEMS_DETAIL_BASE_PATH}/${magicItemUrl}/${RAW_DETAIL_PATH_SUFFIX}`,
       { method: 'GET', retry: 0 },
     );
 
-    const { baseItemUrls, ...summary } = parseMagicItemRaw(response);
-
-    const [baseItemUrl] = baseItemUrls;
-
-    if (baseItemUrls.length !== 1 || !baseItemUrl) {
-      return { ...summary, baseItem: null };
-    }
-
-    // Деталь основы не загрузилась — редкость всё равно даёт цену по таблице.
-    const baseItem = await fetchItemSummary(baseItemUrl).catch(() => null);
-
-    return { ...summary, baseItem };
+    return parseMagicItemRaw(response);
   } catch {
     return null;
   }
+}
+
+/**
+ * Справочные данные магического предмета с разрешённой основой. Основа берётся
+ * та, что выбрал игрок, а без выбора — единственная связанная. У предмета с
+ * несколькими основами без выбора её нет: назвать один урон за «Меч мести»,
+ * который бывает шестью мечами, нельзя.
+ *
+ * @param rawDetail разобранный «сырой» ответ магического предмета.
+ * @param chosenBaseItemUrl слаг основы, выбранной игроком; null — выбора не было.
+ * @returns редкость, механика и деталь основы.
+ */
+export async function resolveMagicItemSummary(
+  rawDetail: MagicItemRawDetail,
+  chosenBaseItemUrl: string | null,
+): Promise<MagicItemSummary> {
+  const { baseItemUrls, ...summary } = rawDetail;
+  const [onlyBaseItemUrl] = baseItemUrls;
+
+  const baseItemUrl =
+    chosenBaseItemUrl ?? (baseItemUrls.length === 1 ? onlyBaseItemUrl : null);
+
+  if (!baseItemUrl) {
+    return { ...summary, baseItem: null, baseItemChosen: false };
+  }
+
+  // Деталь основы не загрузилась — редкость всё равно даёт цену по таблице.
+  const baseItem = await fetchItemSummary(baseItemUrl).catch(() => null);
+
+  return {
+    ...summary,
+    baseItem,
+    baseItemChosen: chosenBaseItemUrl !== null && baseItem !== null,
+  };
+}
+
+/**
+ * Названия немагических предметов по слагу — для окна выбора основы. Раздел
+ * «Предметы» отдаёт каталог одним запросом, поэтому полсотни основ «Убийцы
+ * великанов» не превращаются в полсотни запросов деталей.
+ *
+ * @param itemUrls слаги предметов, названия которых нужны.
+ * @returns предметы каталога в порядке слагов; не найденные пропускаются.
+ */
+export async function fetchItemCatalogEntries(
+  itemUrls: string[],
+): Promise<ItemCatalogItem[]> {
+  const response = await $fetch<unknown>(ITEMS_SEARCH_PATH, {
+    method: 'GET',
+    retry: 0,
+  });
+
+  const catalogByUrl = new Map(
+    parseItemCatalog(response).map((catalogItem) => [
+      catalogItem.url,
+      catalogItem,
+    ]),
+  );
+
+  return itemUrls.flatMap((itemUrl) => {
+    const catalogItem = catalogByUrl.get(itemUrl);
+
+    return catalogItem ? [catalogItem] : [];
+  });
 }
 
 /**

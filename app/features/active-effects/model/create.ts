@@ -105,5 +105,7 @@ export function buildConditionActiveEffect(
     conditionImmunities: template.conditionImmunities
       ? [...template.conditionImmunities]
       : undefined,
+    consumeOn: template.consumeOn,
+    triggers: template.triggers?.map((trigger) => structuredClone(trigger)),
   };
 }

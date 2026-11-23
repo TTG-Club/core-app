@@ -61,6 +61,7 @@ export { default as SheetMagicItemAddModal } from './SheetMagicItemAddModal.vue'
 export { default as SheetNameModal } from './SheetNameModal.vue';
 export { default as SheetNoteModal } from './SheetNoteModal.vue';
 export { default as SheetNotesTab } from './SheetNotesTab.vue';
+export { default as SheetOptionReplacementField } from './SheetOptionReplacementField.vue';
 export { default as SheetPanel } from './SheetPanel.vue';
 export { default as SheetPersonalityDescriptionModal } from './SheetPersonalityDescriptionModal.vue';
 export { default as SheetPersonalityModal } from './SheetPersonalityModal.vue';

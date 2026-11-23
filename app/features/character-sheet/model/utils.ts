@@ -56,6 +56,7 @@ import type {
   ClassFeatureRow,
   ClassFeatureSummary,
   ClassOption,
+  ClassOptionReplacement,
   ClassResourceRecoveryBadge,
   ClassSpellListMode,
   ClassSpellListPickContext,
@@ -113,6 +114,7 @@ import type {
   InventoryItemOrigin,
   InventoryWeapon,
   InventoryWeaponDamage,
+  ItemCatalogItem,
   ItemPurchaseLine,
   ItemSummary,
   LevelUpAbilityImprovement,
@@ -405,15 +407,19 @@ import {
   LEVEL_UP_WIZARD_LABELS,
   LEVEL_XP_THRESHOLDS,
   MAGIC_ITEM_ARTIFACT_COST_LABEL,
+  MAGIC_ITEM_BASE_AUTO_LIMIT,
   MAGIC_ITEM_CATALOG_EMPTY_GROUP_LABELS,
   MAGIC_ITEM_RARITY_COSTS,
+  MAGIC_ITEM_VARIANT_ID_SEPARATOR,
   MAGIC_ITEMS_DETAIL_BASE_PATH,
   MAX_HIT_POINTS_LABELS,
   MULTICLASS_ABILITY_REQUIREMENT,
   MULTICLASS_REQUIREMENT_WARNING_PREFIX,
   NEW_CUSTOM_BONUS,
   NEW_CUSTOM_INVENTORY_ITEM,
+  OPTION_CHOICE_ID_SEGMENT,
   OPTION_CHOICE_REPEAT_PREFIX,
+  OPTION_REPLACEMENT_ID_SEGMENT,
   ORIGIN_FEAT_CATEGORY,
   PACT_SPELL_SLOT_LABEL,
   PACT_SPELL_SLOTS_LABEL,
@@ -460,6 +466,7 @@ import {
   SHEET_DOWNLOAD_PDF_LABEL,
   SHEET_EDIT_ACCESS_LABELS,
   SHEET_FEAT_CHOICE_LABELS,
+  SHEET_MAGIC_ITEM_BASE_LABELS,
   SHEET_PDF_MIME_TYPE,
   SHEET_PDF_VARIANT_OPTIONS,
   SHEET_PERSONALITY_LABELS,
@@ -2860,6 +2867,76 @@ function getMagicItemArmor(
 }
 
 /**
+ * Идентификатор записи инвентаря магического предмета на выбранной основе.
+ * Основа входит в идентификатор: тот же предмет на другой основе — отдельная
+ * запись, а не повтор уже добавленной.
+ *
+ * @param magicItemUrl слаг магического предмета.
+ * @param baseItemUrl слаг выбранной немагической основы.
+ * @returns идентификатор записи инвентаря.
+ */
+export function getMagicItemVariantId(
+  magicItemUrl: string,
+  baseItemUrl: string,
+): string {
+  return `${getInventoryItemId('magic-item', magicItemUrl)}${MAGIC_ITEM_VARIANT_ID_SEPARATOR}${baseItemUrl}`;
+}
+
+/**
+ * Название магического предмета на выбранной основе: «Меч мести (Рапира)».
+ *
+ * @param magicItemName название магического предмета.
+ * @param baseItemName название выбранной немагической основы.
+ * @returns название записи инвентаря.
+ */
+export function getMagicItemVariantName(
+  magicItemName: string,
+  baseItemName: string,
+): string {
+  return `${magicItemName} (${baseItemName.trim()})`;
+}
+
+/**
+ * Нужно ли спросить игрока, чем будет магический предмет: основ у него
+ * несколько, и взять одну за игрока нельзя.
+ *
+ * @param baseItemUrls слаги немагических предметов, связанных с магическим.
+ * @returns true — основу выбирает игрок.
+ */
+export function hasMagicItemBaseChoice(baseItemUrls: string[]): boolean {
+  return baseItemUrls.length > MAGIC_ITEM_BASE_AUTO_LIMIT;
+}
+
+/**
+ * Подзаголовок окна выбора основы: о каком предмете спрашивают и что выбрать.
+ *
+ * @param magicItemName название магического предмета.
+ * @returns подзаголовок окна.
+ */
+export function getMagicItemBaseChoiceSubtitle(magicItemName: string): string {
+  return `${magicItemName}: ${SHEET_MAGIC_ITEM_BASE_LABELS.subtitleSuffix}`;
+}
+
+/**
+ * Варианты окна выбора основы магического предмета: немагические предметы,
+ * которыми он может быть. Описание варианта открывается карточкой раздела
+ * «Предметы» — по ней игрок сверяет урон и свойства до выбора.
+ *
+ * @param baseItems предметы каталога, связанные с магическим.
+ * @returns варианты единого пикера; значение варианта — слаг предмета.
+ */
+export function getMagicItemBaseOptions(
+  baseItems: ItemCatalogItem[],
+): SheetChoiceOption[] {
+  return baseItems.map((baseItem) => ({
+    value: baseItem.url,
+    label: baseItem.name.trim(),
+    sublabel: baseItem.nameEng,
+    detail: { kind: 'item', url: baseItem.url },
+  }));
+}
+
+/**
  * Сборка предмета инвентаря из ссылки каталога магических предметов: категория
  * и редкость известны прямо из поиска, а своих веса и стоимости раздел не
  * отдаёт. Цена берётся по редкости из таблицы, и предмет, сделанный на основе
@@ -2887,10 +2964,18 @@ export function buildMagicItemInventoryItem(
   const baseItem = summary?.baseItem ?? null;
   const armor = getMagicItemArmor(baseItem?.armor ?? null, bonuses.armorClass);
 
+  // Основа, выбранная игроком из нескольких: без неё «Меч мести» рапирой и
+  // «Меч мести» глефой слились бы в одну запись с одним названием.
+  const chosenBaseItem = summary?.baseItemChosen ? baseItem : null;
+
   return {
-    id: getInventoryItemId('magic-item', catalogItem.url),
+    id: chosenBaseItem
+      ? getMagicItemVariantId(catalogItem.url, chosenBaseItem.url)
+      : getInventoryItemId('magic-item', catalogItem.url),
     url: catalogItem.url,
-    name: catalogItem.name,
+    name: chosenBaseItem
+      ? getMagicItemVariantName(catalogItem.name, chosenBaseItem.name)
+      : catalogItem.name,
     category: 'MAGIC_ITEM',
     typesLabel,
     cost: summary ? getMagicItemCost(summary.rarity, baseItem) : '',
@@ -13414,9 +13499,101 @@ export function buildLevelClassFeatures(
     // выбирает ещё два — без пересборки ответу этого уровня некуда лечь.
     // Мастер повышения уровня показывает такое умение по тому же правилу
     // ({@link getLevelFeatureRows}).
+    // Так же — на уровне, где игрок заменил вариант: строка умения и записи
+    // вариантов собираются из итогового набора, и без пересборки замена на
+    // листе не появилась бы
     (summary) =>
-      summary.level === level || hasFeatureChoiceAtLevel(summary, level),
+      summary.level === level
+      || hasFeatureChoiceAtLevel(summary, level)
+      || hasOptionReplacementAtLevel(summary, level, answers?.answers ?? {}),
   );
+}
+
+/**
+ * Разрешает ли правило списка замену варианта на этом уровне класса.
+ *
+ * @param choice выбор списка вариантов.
+ * @param level уровень класса, который берут сейчас.
+ * @returns `true` — на этом уровне вариант можно заменить.
+ */
+function allowsOptionReplacementAt(
+  choice: ClassChoice,
+  level: number,
+): boolean {
+  const rule = choice.optionReplacement;
+
+  return Boolean(rule && (rule.everyLevel || rule.levels.includes(level)));
+}
+
+/**
+ * Заменил ли игрок вариант умения на этом уровне: ответ замены есть, и в нём
+ * названы оба варианта.
+ *
+ * @param summary умение класса или подкласса.
+ * @param level уровень класса, который берут сейчас.
+ * @param answers ответы игрока по идентификаторам выборов.
+ * @returns `true` — на этом уровне вариант заменён.
+ */
+function hasOptionReplacementAtLevel(
+  summary: ClassFeatureSummary,
+  level: number,
+  answers: Record<string, string[]>,
+): boolean {
+  return getOptionPoolChoices(summary.choices).some((pool) => {
+    const [removed, taken] =
+      answers[getOptionReplacementId(pool.poolKey, level)] ?? [];
+
+    return allowsOptionReplacementAt(pool, level) && Boolean(removed && taken);
+  });
+}
+
+/**
+ * Замена варианта умения на уровне мастера повышения: что можно убрать —
+ * варианты, взятые до этого уровня итоговым набором, — и из чего брать взамен:
+ * пул ступени этого уровня, без взятого и без убранного.
+ *
+ * @param summary умение класса или подкласса.
+ * @param level уровень класса, который берут сейчас.
+ * @param answers ответы игрока вместе с ответами прошлых уровней.
+ * @returns замена уровня; null — правило её не разрешает или убирать нечего.
+ */
+function getLevelOptionReplacement(
+  summary: ClassFeatureSummary,
+  level: number,
+  answers: Record<string, string[]>,
+): ClassOptionReplacement | null {
+  const pool = getOptionPoolChoices(summary.choices).find((choice) =>
+    allowsOptionReplacementAt(choice, level),
+  );
+
+  if (!pool) {
+    return null;
+  }
+
+  const id = getOptionReplacementId(pool.poolKey, level);
+
+  // Убирают взятое раньше этого уровня: новые варианты той же ступени игрок
+  // и так выбирает здесь же, а их замена ничего бы не значила
+  const removable = uniq(
+    resolveOptionPicks(pool.poolKey, answers, id)
+      .filter((pick) => (pick.level || summary.level) < level)
+      .map((pick) => pick.value),
+  );
+
+  if (!removable.length) {
+    return null;
+  }
+
+  return {
+    id,
+    removable,
+    choice: {
+      ...narrowOptionPool(pool, level),
+      id,
+      count: 1,
+      requiredLevel: level,
+    },
+  };
 }
 
 /**
@@ -13483,8 +13660,13 @@ function toCharacterFeature(
 
   // Ответы всех выборов, включая вопросы взятых вариантов: по ним умение,
   // пересобранное на следующем уровне, возвращает выбранное раньше
+  // Замены вариантов лежат рядом с ответами ступеней своим ключом: ответы
+  // ступеней они не переписывают, и итоговый набор собирается из обоих
   const choiceAnswers = answers
-    ? pickChoiceAnswers(activeChoices, answers.answers)
+    ? {
+        ...pickChoiceAnswers(activeChoices, answers.answers),
+        ...pickOptionReplacementAnswers(summary.choices, answers.answers),
+      }
     : {};
 
   // Заклинание умения считается от характеристики умения, если та задана:
@@ -13529,6 +13711,9 @@ function toCharacterFeature(
  * с кратностью («Инфузия ×2»): дважды подряд то же название читалось бы как
  * ошибка, а без кратности второй выбор пропал бы из строки вовсе.
  *
+ * Варианты берутся итоговым набором — с применёнными заменами
+ * ({@link resolveOptionPicks}).
+ *
  * @param featureChoices выборы умения.
  * @param answers ответы игрока; не заданы — строки нет.
  * @returns строка выбранных вариантов; пусто — вариантов не выбирали.
@@ -13541,10 +13726,22 @@ function getOptionChoiceText(
     return '';
   }
 
-  const values = featureChoices.flatMap((choice) =>
-    choice.kind === 'option' ? (answers.answers[choice.id] ?? []) : [],
+  // Итоговый набор — с заменами прошлых уровней: убранное воззвание из строки
+  // уходит, взятое вместо него встаёт
+  const values = getOptionPoolChoices(featureChoices).flatMap((pool) =>
+    resolveOptionPicks(pool.poolKey, answers.answers).map((pick) => pick.value),
   );
 
+  return formatOptionChoiceText(values);
+}
+
+/**
+ * Строка выбранных вариантов с кратностью повторов («Инфузия ×2»).
+ *
+ * @param values подписи выбранных вариантов, повтор — столько раз, сколько взят.
+ * @returns строка вариантов; пусто — вариантов нет.
+ */
+function formatOptionChoiceText(values: string[]): string {
   const optionCounts = new Map<string, number>();
 
   for (const value of values) {
@@ -13574,17 +13771,200 @@ export function getChosenFeatureOptionKeys(
 ): Set<string> {
   const keys = new Set<string>();
 
-  for (const choice of featureChoices) {
-    if (choice.kind !== 'option') {
-      continue;
-    }
-
-    for (const value of answers[choice.id] ?? []) {
-      keys.add(choice.optionValues?.[value] ?? value);
+  for (const pool of getOptionPoolChoices(featureChoices)) {
+    for (const pick of resolveOptionPicks(pool.poolKey, answers)) {
+      keys.add(pool.optionValues?.[pick.value] ?? pick.value);
     }
   }
 
   return keys;
+}
+
+/** Выбор списка вариантов с ключом списка: только такие и несут ответы. */
+type OptionPoolChoice = ClassChoice & { poolKey: string };
+
+/**
+ * Взятый вариант итогового набора: подпись, уровень взятия и ответ, из
+ * которого он пришёл.
+ */
+interface OptionPick {
+  /** Подпись варианта — ответ пикера. */
+  value: string;
+
+  /**
+   * Уровень класса, на котором вариант взят; 0 — ступень без уровня, она
+   * спрашивается на уровне самого умения.
+   */
+  level: number;
+
+  /** Идентификатор ответа: ступени выбора или замены. */
+  sourceId: string;
+}
+
+/**
+ * По одному выбору на список вариантов: ступени одного списка делят пул, ключ,
+ * описания и правило замены, и для итогового набора хватает любой из них.
+ *
+ * @param featureChoices выборы умения.
+ * @returns первая ступень каждого списка вариантов.
+ */
+function getOptionPoolChoices(
+  featureChoices: ClassChoice[],
+): OptionPoolChoice[] {
+  return uniqBy(
+    featureChoices.flatMap((choice) =>
+      choice.kind === 'option' && choice.poolKey
+        ? [{ ...choice, poolKey: choice.poolKey }]
+        : [],
+    ),
+    (choice) => choice.poolKey,
+  );
+}
+
+/**
+ * Идентификатор ответа замены варианта на уровне: `<список>-replace-<уровень>`.
+ * Хвост после последнего `:` — `options-replace-<уровень>` — служит ключом
+ * ответа на записи умения, как и у ступеней.
+ *
+ * @param poolKey ключ списка вариантов.
+ * @param level уровень класса, на котором заменяют.
+ * @returns идентификатор ответа замены.
+ */
+export function getOptionReplacementId(poolKey: string, level: number): string {
+  return `${poolKey}-${OPTION_REPLACEMENT_ID_SEGMENT}-${level}`;
+}
+
+/**
+ * Уровень из хвоста идентификатора: `<приставка><уровень>`.
+ *
+ * @param id идентификатор ответа.
+ * @param prefix приставка перед уровнем.
+ * @returns уровень; null — идентификатор не того вида.
+ */
+function parseOptionAnswerLevel(id: string, prefix: string): number | null {
+  if (!id.startsWith(prefix)) {
+    return null;
+  }
+
+  const rest = id.slice(prefix.length);
+
+  return /^\d+$/.test(rest) ? Number(rest) : null;
+}
+
+/**
+ * Уровень ступени выбора по идентификатору ответа: `<список>` — ступень без
+ * уровня, `<список>-<уровень>` — ступень роста. Вопросы вариантов
+ * (`<список>-<вариант>-<ключ>`) и замены ступенями не считаются.
+ *
+ * @param id идентификатор ответа.
+ * @param poolKey ключ списка вариантов.
+ * @returns уровень ступени (0 — без уровня); null — не ступень этого списка.
+ */
+function getOptionStepLevel(id: string, poolKey: string): number | null {
+  return id === poolKey ? 0 : parseOptionAnswerLevel(id, `${poolKey}-`);
+}
+
+/**
+ * Уровень замены по идентификатору ответа (`<список>-replace-<уровень>`).
+ *
+ * @param id идентификатор ответа.
+ * @param poolKey ключ списка вариантов.
+ * @returns уровень замены; null — не замена этого списка.
+ */
+function getOptionReplacementLevel(id: string, poolKey: string): number | null {
+  return parseOptionAnswerLevel(
+    id,
+    `${poolKey}-${OPTION_REPLACEMENT_ID_SEGMENT}-`,
+  );
+}
+
+/**
+ * Итоговый набор вариантов списка: ответы ступеней по порядку уровней, к
+ * которым по порядку уровней применены замены.
+ *
+ * Замена уровня убирает вариант, взятый на уровне НИЖЕ её (последнее его
+ * взятие), и добавляет взятый вместо него с уровнем замены. Ответы ступеней
+ * замена не переписывает: откат уровня снимает её, и прежний набор
+ * возвращается сам. Замена, чей убранный вариант к её уровню не взят (игрок
+ * передумал на прошлой ступени), не применяется.
+ *
+ * Работает и с полными идентификаторами ответов мастера, и с хвостами на
+ * записи умения: у вторых ключ списка — сам `options`.
+ *
+ * @param poolKey ключ списка вариантов.
+ * @param selections ответы по идентификаторам.
+ * @param exceptReplacementId замена, которую не применять: пул самой замены
+ *   собирается без неё.
+ * @returns взятые варианты итогового набора.
+ */
+function resolveOptionPicks(
+  poolKey: string,
+  selections: Record<string, string[]>,
+  exceptReplacementId?: string,
+): OptionPick[] {
+  const steps: Array<{ id: string; level: number; values: string[] }> = [];
+
+  const replacements: Array<{
+    id: string;
+    level: number;
+    removed: string;
+    taken: string;
+  }> = [];
+
+  for (const [id, values] of Object.entries(selections)) {
+    const stepLevel = getOptionStepLevel(id, poolKey);
+
+    if (stepLevel !== null) {
+      steps.push({ id, level: stepLevel, values });
+
+      continue;
+    }
+
+    const replacementLevel = getOptionReplacementLevel(id, poolKey);
+    const [removed = '', taken = ''] = values;
+
+    if (
+      replacementLevel !== null
+      && id !== exceptReplacementId
+      && removed
+      && taken
+      && removed !== taken
+    ) {
+      replacements.push({ id, level: replacementLevel, removed, taken });
+    }
+  }
+
+  const stepPicks = steps
+    .toSorted((left, right) => left.level - right.level)
+    .flatMap((step) =>
+      step.values.map((value) => ({
+        value,
+        level: step.level,
+        sourceId: step.id,
+      })),
+    );
+
+  return replacements
+    .toSorted((left, right) => left.level - right.level)
+    .reduce<OptionPick[]>((picks, replacement) => {
+      const index = picks.findLastIndex(
+        (pick) =>
+          pick.value === replacement.removed && pick.level < replacement.level,
+      );
+
+      if (index < 0) {
+        return picks;
+      }
+
+      return [
+        ...picks.toSpliced(index, 1),
+        {
+          value: replacement.taken,
+          level: replacement.level,
+          sourceId: replacement.id,
+        },
+      ];
+    }, stepPicks);
 }
 
 /**
@@ -13610,14 +13990,13 @@ function getOptionTakenLevels(
 ): Map<string, number[]> {
   const takenLevels = new Map<string, number[]>();
 
-  for (const choice of summary.choices) {
-    if (choice.kind !== 'option') {
-      continue;
-    }
+  // Итоговым набором: вариант, взятый заменой, берётся на уровне замены — там
+  // мастер и спрашивает его вопросы, а убранный вопросов больше не задаёт
+  for (const pool of getOptionPoolChoices(summary.choices)) {
+    for (const pick of resolveOptionPicks(pool.poolKey, answers)) {
+      const key = pool.optionValues?.[pick.value] ?? pick.value;
+      const level = pick.level || summary.level;
 
-    const level = choice.requiredLevel ?? summary.level;
-
-    for (const key of getChosenFeatureOptionKeys([choice], answers)) {
       takenLevels.set(key, [...(takenLevels.get(key) ?? []), level]);
     }
   }
@@ -13706,23 +14085,27 @@ function buildFeatureOptionFeatures(
     return [];
   }
 
-  // Один и тот же вариант на разных ступенях выбора даёт одну запись
-  const chosen = new Map<string, FeatureOptionEntry>();
+  // Один и тот же вариант на разных ступенях выбора даёт одну запись — с
+  // самым ранним уровнем взятия. Набор итоговый: замена уносит запись
+  // убранного варианта вместе с её дарами и заводит запись взятого
+  const chosen = new Map<
+    string,
+    { detail: FeatureOptionEntry; takenLevel: number }
+  >();
 
-  for (const choice of summary.choices) {
-    if (choice.kind !== 'option') {
-      continue;
-    }
-
-    for (const value of answers.answers[choice.id] ?? []) {
-      const detail = choice.optionDetails?.find(
-        (entry) => entry.name === value,
+  for (const pool of getOptionPoolChoices(summary.choices)) {
+    for (const pick of resolveOptionPicks(pool.poolKey, answers.answers)) {
+      const detail = pool.optionDetails?.find(
+        (entry) => entry.name === pick.value,
       );
+
+      const takenLevel = pick.level || summary.level;
+      const previous = detail ? chosen.get(detail.key) : undefined;
 
       // Вариант, которого нет в записи класса, записью не заводится: кроме
       // названия, о нём нечего сказать, а оно и так стоит строкой у умения
-      if (detail && !chosen.has(detail.key)) {
-        chosen.set(detail.key, detail);
+      if (detail && (!previous || takenLevel < previous.takenLevel)) {
+        chosen.set(detail.key, { detail, takenLevel });
       }
     }
   }
@@ -13736,7 +14119,7 @@ function buildFeatureOptionFeatures(
     summary.optionGrants.map((grants) => [grants.key, grants]),
   );
 
-  return [...chosen.values()].map((detail) => {
+  return [...chosen.values()].map(({ detail, takenLevel }) => {
     const grants = grantsByKey.get(detail.key);
 
     // Заклинание варианта считается от его характеристики, если та задана, — как
@@ -13758,9 +14141,10 @@ function buildFeatureOptionFeatures(
       description: toDescriptionNodes(detail.description),
       origin: 'class',
       originName,
-      // Уровень варианта, а не умения: снижение уровня забирает воззвание,
-      // которое стало доступно только на снимаемом уровне
-      level: detail.requiredClassLevel || summary.level,
+      // Уровень взятия варианта, а не умения: снижение уровня забирает
+      // воззвание, взятое (или взятое заменой) на снимаемом уровне, и то, что
+      // стало доступно только на нём
+      level: Math.max(detail.requiredClassLevel, takenLevel),
       choice: null,
       // Пассивные прибавки считаются один раз, при взятии варианта, — наравне с
       // бонусами надетого снаряжения; условные проверяются по самому эффекту
@@ -13802,6 +14186,38 @@ function pickChoiceAnswers(
     const key = choice.id.slice(choice.id.lastIndexOf(':') + 1);
 
     result[key] = [...values];
+  }
+
+  return result;
+}
+
+/**
+ * Ответы замен вариантов умения — снимком у самой записи, ключом-хвостом
+ * (`options-replace-<уровень>`), как и ответы ступеней. Берутся только
+ * полные замены: без одного из вариантов замена ничего не значит.
+ *
+ * @param featureChoices выборы записи.
+ * @param answers ответы игрока по id выбора.
+ * @returns ответы замен по ключу; пусто — игрок ничего не заменял.
+ */
+function pickOptionReplacementAnswers(
+  featureChoices: ClassChoice[],
+  answers: Record<string, string[]>,
+): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+
+  for (const pool of getOptionPoolChoices(featureChoices)) {
+    for (const [id, values] of Object.entries(answers)) {
+      const [removed, taken] = values;
+
+      if (
+        getOptionReplacementLevel(id, pool.poolKey) !== null
+        && removed
+        && taken
+      ) {
+        result[id.slice(id.lastIndexOf(':') + 1)] = [removed, taken];
+      }
+    }
   }
 
   return result;
@@ -14035,6 +14451,25 @@ export function withStoredFeatureAnswers(
         result[choice.id] = [...values];
       }
     }
+
+    // Замены вариантов выбором умения не значатся — их ключи берутся по виду:
+    // без них повторное повышение собрало бы набор без прошлых замен
+    for (const pool of getOptionPoolChoices(summary.choices)) {
+      const poolTail = pool.poolKey.slice(pool.poolKey.lastIndexOf(':') + 1);
+      const poolPrefix = pool.poolKey.slice(0, -poolTail.length);
+
+      for (const [key, values] of Object.entries(stored)) {
+        const id = `${poolPrefix}${key}`;
+
+        if (
+          getOptionReplacementLevel(key, poolTail) !== null
+          && values.length
+          && !result[id]?.length
+        ) {
+          result[id] = [...values];
+        }
+      }
+    }
   }
 
   return result;
@@ -14076,11 +14511,19 @@ export function getLevelFeatureRows(
       // книге одно — повтор описан строкой роста.
       const hasChoiceAtLevel = hasFeatureChoiceAtLevel(summary, level);
 
+      // Умение возвращается и туда, где правило разрешает заменить взятый
+      // раньше вариант: воззвание колдун меняет на любом новом уровне
+      const optionReplacement =
+        summary.isSubclass === onlySubclass
+          ? getLevelOptionReplacement(summary, level, answers)
+          : null;
+
       if (
         summary.isSubclass !== onlySubclass
         || (summary.level !== level
           && !isRepeatedImprovement
-          && !hasChoiceAtLevel)
+          && !hasChoiceAtLevel
+          && !optionReplacement)
       ) {
         continue;
       }
@@ -14139,6 +14582,9 @@ export function getLevelFeatureRows(
           ...getChosenOptionFeatUrls(summary, levelChosenOptionKeys),
         ],
         abilityImprovement: summary.abilityImprovement,
+        optionReplacement: summary.abilityImprovement
+          ? null
+          : optionReplacement,
       });
     }
   };
@@ -14210,6 +14656,7 @@ function toClassOwnChoiceRows(
       featChoices: [],
       grantedFeatUrls: [],
       abilityImprovement: false,
+      optionReplacement: null,
     },
   ];
 }
@@ -14380,11 +14827,124 @@ export function removeFeaturesAboveLevel(
     getFeaturesAboveLevel(features, classLevels).map((feature) => feature.id),
   );
 
-  if (!removedIds.size) {
-    return features;
+  // Ответы ступеней и замены вариантов снятых уровней уходят вместе с ними: у
+  // записи умения уровень свой, и она остаётся, а без отката повторное
+  // повышение вернуло бы снятую замену
+  return features.flatMap((feature) => {
+    if (removedIds.has(feature.id)) {
+      return [];
+    }
+
+    const classUrl = Object.keys(classLevels).find((url) =>
+      feature.id.startsWith(getClassFeatureIdPrefix(url)),
+    );
+
+    return [
+      classUrl === undefined
+        ? feature
+        : withoutOptionAnswersAboveLevel(feature, classLevels[classUrl] ?? 0),
+    ];
+  });
+}
+
+/**
+ * Запись умения без ответов ступеней выбора вариантов и замен выше уровня
+ * класса. Строка выбранных вариантов пересчитывается, только если она была
+ * собрана из этих ответов: свой текст игрока не трогается.
+ *
+ * @param feature запись умения класса.
+ * @param classLevel новый уровень класса.
+ * @returns запись с откатанными ответами; та же запись — откатывать нечего.
+ */
+function withoutOptionAnswersAboveLevel(
+  feature: CharacterFeature,
+  classLevel: number,
+): CharacterFeature {
+  const stored = feature.choiceAnswers;
+
+  if (!stored) {
+    return feature;
   }
 
-  return features.filter((feature) => !removedIds.has(feature.id));
+  const kept = Object.fromEntries(
+    Object.entries(stored).filter(
+      ([key]) => !isOptionAnswerAboveLevel(key, classLevel),
+    ),
+  );
+
+  if (Object.keys(kept).length === Object.keys(stored).length) {
+    return feature;
+  }
+
+  const isGeneratedText =
+    (feature.choice ?? '') === getStoredOptionChoiceText(stored);
+
+  return {
+    ...feature,
+    choice: isGeneratedText
+      ? getStoredOptionChoiceText(kept) || null
+      : feature.choice,
+    choiceAnswers: Object.keys(kept).length ? kept : undefined,
+  };
+}
+
+/**
+ * Относится ли ответ записи умения (ступень выбора вариантов или замена) к
+ * уровню выше уровня класса.
+ *
+ * @param key ключ-хвост ответа на записи умения (`options`, `options-<уровень>`,
+ *   `options-replace-<уровень>`).
+ * @param classLevel новый уровень класса.
+ * @returns `true` — ответ дан на снимаемом уровне.
+ */
+function isOptionAnswerAboveLevel(key: string, classLevel: number): boolean {
+  const level =
+    getOptionReplacementLevel(key, OPTION_CHOICE_ID_SEGMENT)
+    ?? getOptionStepLevel(key, OPTION_CHOICE_ID_SEGMENT);
+
+  return level !== null && level > classLevel;
+}
+
+/**
+ * Строка выбранных вариантов по ответам записи умения. На записи ключ списка —
+ * сам хвост `options`: итоговый набор собирается тем же разбором, что и в
+ * мастере.
+ *
+ * @param answers ответы записи умения по ключам-хвостам.
+ * @returns строка вариантов; пусто — вариантов нет.
+ */
+function getStoredOptionChoiceText(answers: Record<string, string[]>): string {
+  return formatOptionChoiceText(
+    resolveOptionPicks(OPTION_CHOICE_ID_SEGMENT, answers).map(
+      (pick) => pick.value,
+    ),
+  );
+}
+
+/**
+ * Записи листа без записей вариантов, которых пересобранное умение больше не
+ * даёт: замена уносит воззвание, и его запись с дарами должна уйти вместе с
+ * ним. Остальные записи не трогаются — их заменит или дополнит слияние.
+ *
+ * @param current особенности листа.
+ * @param incoming пересобранные особенности.
+ * @returns особенности листа без записей убранных вариантов.
+ */
+export function withoutDroppedOptionFeatures(
+  current: CharacterFeature[],
+  incoming: CharacterFeature[],
+): CharacterFeature[] {
+  const incomingIds = new Set(incoming.map((feature) => feature.id));
+
+  const rebuiltPrefixes = incoming.map(
+    (feature) => `${feature.id}:${FEATURE_OPTION_ID_SEGMENT}:`,
+  );
+
+  return current.filter(
+    (feature) =>
+      incomingIds.has(feature.id)
+      || !rebuiltPrefixes.some((prefix) => feature.id.startsWith(prefix)),
+  );
 }
 
 /**
@@ -14775,15 +15335,18 @@ function narrowOptionPool(choice: ClassChoice, level: number): ClassChoice {
  * (`<список>` и `<список>-<уровень>`, см. `toFeatureOptionChoices`). Без этого
  * воззвание первого уровня предлагалось бы на втором заново.
  *
+ * Взятое считается итоговым набором — с заменами: убранное заменой прошлого
+ * уровня снова доступно, взятое заменой — занято. Выбор самой замены
+ * (идентификатор `<список>-replace-<уровень>`) не предлагает и убранный им же
+ * вариант: вернуть его можно только не в этой замене.
+ *
  * @param choice выбор, для которого собирается пул.
- * @param choices все выборы мастера.
  * @param selections ответы игрока по идентификаторам выборов; у мастера
  *   повышения уровня — вместе с ответами прошлых уровней с записей листа.
  * @returns взятые варианты; пусто — выбор не из списка вариантов.
  */
 export function getTakenOptionValues(
   choice: ClassChoice,
-  choices: ClassChoice[],
   selections: Record<string, string[]>,
 ): string[] {
   const poolKey = choice.poolKey;
@@ -14792,18 +15355,16 @@ export function getTakenOptionValues(
     return [];
   }
 
-  const stepIds = new Set<string>([
-    ...choices
-      .filter((other) => other.poolKey === poolKey)
-      .map((other) => other.id),
-    ...Object.keys(selections).filter(
-      (id) => id === poolKey || id.startsWith(`${poolKey}-`),
-    ),
-  ]);
+  const taken = resolveOptionPicks(poolKey, selections)
+    .filter((pick) => pick.sourceId !== choice.id)
+    .map((pick) => pick.value);
 
-  stepIds.delete(choice.id);
+  const removed =
+    getOptionReplacementLevel(choice.id, poolKey) === null
+      ? ''
+      : (selections[choice.id]?.[0] ?? '');
 
-  return [...stepIds].flatMap((id) => selections[id] ?? []);
+  return removed ? [...taken, removed] : taken;
 }
 
 /**
@@ -15903,15 +16464,6 @@ export interface ChoiceControlInput extends ChoicePickerOptionsInput {
 }
 
 /**
- * Выбор записи, готовый к показу единым пикером. Одна сборка на все мастера
- * листа: у каждого был свой набор помощников для подписи, счёта и опций, и они
- * расходились при каждой правке.
- *
- * @param choice распознанный выбор.
- * @param input названия, готовность пула, дополнения и источник выбора.
- * @returns выбор для пикера.
- */
-/**
  * Предупреждение под полем выбора о повторе: и владение навыком, и знание
  * заклинания второй раз ничего персонажу не добавляют. Показывает его поле —
  * и только когда игрок отметил помеченный вариант.
@@ -15927,6 +16479,15 @@ function getChoiceDuplicateWarning(choice: ClassChoice): string {
   return choice.kind === 'skill-proficiency' ? SKILL_DUPLICATE_WARNING : '';
 }
 
+/**
+ * Выбор записи, готовый к показу единым пикером. Одна сборка на все мастера
+ * листа: у каждого был свой набор помощников для подписи, счёта и опций, и они
+ * расходились при каждой правке.
+ *
+ * @param choice распознанный выбор.
+ * @param input названия, готовность пула, дополнения и источник выбора.
+ * @returns выбор для пикера.
+ */
 export function buildChoiceControl(
   choice: ClassChoice,
   input: ChoiceControlInput,

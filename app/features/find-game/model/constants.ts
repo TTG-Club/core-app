@@ -1,5 +1,7 @@
 import { FIND_GAME_API_PREFIX } from '#shared/consts';
 
+import { GAMES_MY_NAVIGATION_LABEL } from './navigation';
+
 export const GAME_LEAVE_LABEL = 'Выйти из игры';
 export const GAME_LEAVE_DESCRIPTION =
   'Вы покинете состав игры и незавершённые сессии. История сыгранных встреч сохранится.';
@@ -108,34 +110,6 @@ export const GAME_REPORT_DELETION_REASON =
 export const SESSION_START_IN_PAST_ERROR =
   'Дата и время начала сессии должны быть в будущем';
 export const SESSION_VALIDATION_CLOCK_INTERVAL = 1000;
-
-/* ------------------------------------------------------------------ */
-/* Маршруты сайта                                                      */
-/* ------------------------------------------------------------------ */
-
-/** Каталог игр. */
-export const GAMES_ROUTE = '/games';
-
-/** Создание игры мастером. */
-export const GAMES_CREATE_ROUTE = '/games/create';
-
-/** Свои игры мастера. */
-export const GAMES_MY_ROUTE = '/games/my';
-
-/** Профиль поиска игр во вкладках профиля пользователя. */
-export const FIND_GAME_PROFILE_ROUTE = '/user/profile/find-game';
-
-/** Раздел, под которым каталог живёт в навигации. */
-export const GAMES_NAVIGATION_LABEL = 'Поиск игр';
-
-/** Пункт каталога внутри раздела навигации. */
-export const GAMES_CATALOG_NAVIGATION_LABEL = 'Каталог игр';
-
-export const GAMES_CREATE_NAVIGATION_LABEL = 'Создать игру';
-
-export const GAMES_MY_NAVIGATION_LABEL = 'Мои игры';
-
-export const FIND_GAME_PROFILE_NAVIGATION_LABEL = 'Игровой профиль';
 
 /* ------------------------------------------------------------------ */
 /* Пути API                                                            */

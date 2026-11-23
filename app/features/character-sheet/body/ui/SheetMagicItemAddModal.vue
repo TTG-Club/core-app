@@ -29,9 +29,14 @@
   import { useCharacterSheet, useSheetOverlay } from '../../composables';
   import {
     buildMagicItemInventoryItem,
-    fetchMagicItemSummary,
+    fetchItemCatalogEntries,
+    fetchMagicItemRawDetail,
     getInventoryItemId,
+    getMagicItemBaseChoiceSubtitle,
+    getMagicItemBaseOptions,
     getMagicItemCatalogGroups,
+    hasMagicItemBaseChoice,
+    MAGIC_ITEM_BASE_CHOICE_COUNT,
     MAGIC_ITEM_CATALOG_PRESENTATION_CONFIG,
     MAGIC_ITEM_VARIES_RARITY,
     MAGIC_ITEMS_FILTERS_PATH,
@@ -39,10 +44,13 @@
     MAGIC_ITEMS_SEARCH_SHEET_QUERY,
     parseMagicItemCatalog,
     PURCHASE_QUANTITY_MIN,
+    resolveMagicItemSummary,
     SHEET_CATALOG_MODAL_LABELS,
     SHEET_ITEM_PURCHASE_LABELS,
     SHEET_MAGIC_ITEM_ADD_MODAL_LABELS,
+    SHEET_MAGIC_ITEM_BASE_LABELS,
   } from '../../model';
+  import SheetChoicePickerModal from './SheetChoicePickerModal.vue';
   import SheetItemPurchaseModal from './SheetItemPurchaseModal.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
 
@@ -76,6 +84,11 @@
   }
 
   const purchaseModal = overlay.create(SheetItemPurchaseModal);
+
+  // Окно выбора основы: «Меч мести» бывает шестью мечами, и чем он будет на
+  // листе, решает игрок. Без destroyOnClose — окно открывается по разу на
+  // каждый такой предмет выбора.
+  const baseItemPicker = overlay.create(SheetChoicePickerModal);
 
   // Полный набор групп фильтров раздела «Магические предметы».
   const { data: filterDefaults } = await useAsyncData(
@@ -377,26 +390,103 @@
   }
 
   /**
+   * Спрашивает, чем будет предмет с несколькими основами. Названия основ
+   * берутся из каталога раздела «Предметы»; не загрузился он — предмет
+   * добавится без основы, как раньше, а игрок узнает об этом из сообщения.
+   *
+   * @param catalogItem магический предмет каталога.
+   * @param baseItemUrls слаги немагических предметов, которыми он может быть.
+   * @returns выбранный слаг; null — выбрать не из чего; undefined — окно
+   *   закрыли без выбора.
+   */
+  async function chooseBaseItem(
+    catalogItem: MagicItemCatalogItem,
+    baseItemUrls: string[],
+  ): Promise<string | null | undefined> {
+    const baseItems = await fetchItemCatalogEntries(baseItemUrls).catch(
+      () => [],
+    );
+
+    if (!baseItems.length) {
+      toast.add({
+        color: 'warning',
+        icon: 'tabler:alert-triangle',
+        title: SHEET_MAGIC_ITEM_BASE_LABELS.failed,
+        description: SHEET_MAGIC_ITEM_BASE_LABELS.failedDescription,
+      });
+
+      return null;
+    }
+
+    const values = await baseItemPicker.open({
+      title: SHEET_MAGIC_ITEM_BASE_LABELS.title,
+      subtitle: getMagicItemBaseChoiceSubtitle(catalogItem.name),
+      options: getMagicItemBaseOptions(baseItems),
+      count: MAGIC_ITEM_BASE_CHOICE_COUNT,
+      selected: [],
+      hideDetailPane: true,
+    }).result;
+
+    return values === undefined ? undefined : (values[0] ?? null);
+  }
+
+  /**
+   * Запись инвентаря одного магического предмета. У предмета с несколькими
+   * основами сперва спрашивается, чем он будет: боевые параметры, вес и цену
+   * запись берёт у выбранной основы.
+   *
+   * @param catalogItem магический предмет каталога.
+   * @returns запись инвентаря; undefined — игрок закрыл окно выбора основы.
+   */
+  async function loadMagicInventoryItem(
+    catalogItem: MagicItemCatalogItem,
+  ): Promise<CharacterInventoryItem | undefined> {
+    const rawDetail = await fetchMagicItemRawDetail(catalogItem.url);
+
+    if (!rawDetail) {
+      return buildMagicItemInventoryItem(catalogItem, null);
+    }
+
+    const chosenBaseItemUrl = hasMagicItemBaseChoice(rawDetail.baseItemUrls)
+      ? await chooseBaseItem(catalogItem, rawDetail.baseItemUrls)
+      : null;
+
+    if (chosenBaseItemUrl === undefined) {
+      return undefined;
+    }
+
+    return buildMagicItemInventoryItem(
+      catalogItem,
+      await resolveMagicItemSummary(rawDetail, chosenBaseItemUrl),
+    );
+  }
+
+  /**
    * Сборка записей инвентаря выбранных магических предметов. Категория и
    * подпись редкости есть прямо в ответе поиска, а вот её значение (по нему
-   * цена) и немагическая основа — только в «сыром» ответе детали.
+   * цена) и немагическая основа — только в «сыром» ответе детали. Предметы
+   * идут по очереди: окна выбора основы открываются одно за другим.
    *
    * @param catalogItems выбранные предметы каталога.
-   * @returns записи инвентаря по URL предмета каталога.
+   * @returns записи инвентаря по URL предмета каталога; null — игрок закрыл
+   *   окно выбора основы, добавлять ничего не нужно.
    */
   async function loadMagicInventoryItems(
     catalogItems: MagicItemCatalogItem[],
-  ): Promise<Map<string, CharacterInventoryItem>> {
-    const summaries = await Promise.all(
-      catalogItems.map((catalogItem) => fetchMagicItemSummary(catalogItem.url)),
-    );
+  ): Promise<Map<string, CharacterInventoryItem> | null> {
+    const inventoryItemsByUrl = new Map<string, CharacterInventoryItem>();
 
-    return new Map(
-      catalogItems.map((catalogItem, index) => [
-        catalogItem.url,
-        buildMagicItemInventoryItem(catalogItem, summaries[index] ?? null),
-      ]),
-    );
+    for (const catalogItem of catalogItems) {
+      const inventoryItem = await loadMagicInventoryItem(catalogItem);
+
+      if (!inventoryItem) {
+        return null;
+      }
+
+      inventoryItemsByUrl.set(catalogItem.url, inventoryItem);
+    }
+
+    return inventoryItemsByUrl;
   }
 
   async function handleApply() {
@@ -410,6 +500,11 @@
 
     try {
       const inventoryItemsByUrl = await loadMagicInventoryItems(catalogItems);
+
+      // Окно выбора основы закрыли — выбор предметов остаётся, как был.
+      if (!inventoryItemsByUrl) {
+        return;
+      }
 
       addInventoryItems([...inventoryItemsByUrl.values()]);
 
@@ -488,13 +583,20 @@
 
     isApplying.value = true;
 
-    let inventoryItemsByUrl: Map<string, CharacterInventoryItem>;
+    let loadedItemsByUrl: Map<string, CharacterInventoryItem> | null;
 
     try {
-      inventoryItemsByUrl = await loadMagicInventoryItems(catalogItems);
+      loadedItemsByUrl = await loadMagicInventoryItems(catalogItems);
     } finally {
       isApplying.value = false;
     }
+
+    // Окно выбора основы закрыли — до покупки дело не дошло.
+    if (!loadedItemsByUrl) {
+      return;
+    }
+
+    const inventoryItemsByUrl = loadedItemsByUrl;
 
     const purchase = await purchaseModal.open({
       sheetKey,

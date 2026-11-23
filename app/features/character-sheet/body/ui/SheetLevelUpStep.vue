@@ -34,6 +34,7 @@
   } from '../../model';
   import SheetChoicePickerField from './SheetChoicePickerField.vue';
   import SheetFeatChoiceField from './SheetFeatChoiceField.vue';
+  import SheetOptionReplacementField from './SheetOptionReplacementField.vue';
   import SheetPickedFeatChoices from './SheetPickedFeatChoices.vue';
 
   /** Выбор черты внутри умения с пулом и ответом игрока. */
@@ -308,13 +309,18 @@
         return {
           ...feature,
           badgeLabel: `${feature.originLabel} · ${feature.level} ${LEVEL_UP_WIZARD_LABELS.levelWord}`,
+          origin,
           controls,
           featPickers,
           pending,
           isExpanded,
           chevronIcon: isExpanded ? 'tabler:chevron-up' : 'tabler:chevron-down',
-          // Свободный текст остаётся только умению без единого пикера
-          hasNote: controls.length === 0 && featPickers.length === 0,
+          // Свободный текст остаётся только умению без единого пикера и без
+          // замены варианта
+          hasNote:
+            controls.length === 0
+            && featPickers.length === 0
+            && !feature.optionReplacement,
         };
       }),
   );
@@ -353,6 +359,19 @@
         ? values.slice(0, control.requiredCount)
         : values,
     );
+  }
+
+  /**
+   * Замена варианта умения: пара «убрано, взято» лежит среди ответов шага под
+   * ключом замены уровня.
+   *
+   * @param row строка умения с заменой.
+   * @param values пара «убрано, взято»; пусто — замены нет.
+   */
+  function handleOptionReplacement(row: ClassFeatureRow, values: string[]) {
+    if (row.optionReplacement) {
+      emit('update:selection', row.optionReplacement.id, values);
+    }
   }
 
   function handleSpellPoolRetry(choice: ClassChoice) {
@@ -596,6 +615,15 @@
             :model-value="draft.selections[control.choice.id] ?? []"
             @update:model-value="handleSelection(control, $event)"
             @retry="handleSpellPoolRetry(control.choice)"
+          />
+
+          <SheetOptionReplacementField
+            v-if="feature.optionReplacement"
+            :replacement="feature.optionReplacement"
+            :origin="feature.origin"
+            :choice-control="choiceControl"
+            :model-value="draft.selections[feature.optionReplacement.id] ?? []"
+            @update:model-value="handleOptionReplacement(feature, $event)"
           />
 
           <template

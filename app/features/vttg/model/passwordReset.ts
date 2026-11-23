@@ -2,23 +2,11 @@ import type { VttgGuideVariant } from './types';
 
 import { SOCIAL_LINKS } from '~home/social-links/model';
 
-/** Путь страницы инструкции — на него ведёт ссылка из окна входа VTTG. */
-export const VTTG_PASSWORD_RESET_PATH = '/vttg/reset-password';
-
-/** Путь лендинга VTTG — кнопка «назад» на странице инструкции. */
-export const VTTG_LANDING_PATH = '/vttg';
-
 /** Заголовок и описание страницы для поисковиков и вкладки браузера. */
 export const VTTG_PASSWORD_RESET_SEO = {
   title: 'Сброс мастер-пароля — Virtual TTG Club',
   description:
     'Как сбросить забытый мастер-пароль VTTG: в приложении на компьютере и на выделенном сервере.',
-} as const;
-
-/** Заголовок и подзаголовок страницы; заголовок — он же пункт меню. */
-export const VTTG_PASSWORD_RESET_PAGE = {
-  title: 'Сброс мастер-пароля',
-  subtitle: 'Virtual TTG Club',
 } as const;
 
 /** Вводные абзацы перед вкладками. */

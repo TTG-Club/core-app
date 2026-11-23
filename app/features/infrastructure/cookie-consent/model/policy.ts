@@ -6,9 +6,6 @@ import {
   SUPPORT_EMAIL_ICON,
 } from '~/shared/consts';
 
-/** Название страницы о cookie */
-export const COOKIE_POLICY_PAGE_TITLE = 'Файлы cookie';
-
 /** Подзаголовок страницы */
 export const COOKIE_POLICY_PAGE_SUBTITLE =
   'Что мы сохраняем в вашем браузере и зачем';

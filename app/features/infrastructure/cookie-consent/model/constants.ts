@@ -31,3 +31,9 @@ export const COOKIE_NOTICE_ICON = 'tabler:cookie';
 
 /** Адрес страницы о cookie. */
 export const COOKIE_POLICY_ROUTE = '/cookies';
+
+/**
+ * Название страницы о cookie. Лежит рядом с адресом, а не с текстом страницы:
+ * ссылку на неё показывают меню и подвал на каждой странице сайта.
+ */
+export const COOKIE_POLICY_PAGE_TITLE = 'Файлы cookie';

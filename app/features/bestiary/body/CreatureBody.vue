@@ -227,7 +227,11 @@
         default-open
       >
         <template #default>
-          {{ creature.section.name.rus }} [{{ creature.section.name.eng }}]
+          {{ creature.section.name.rus }}
+
+          <template v-if="creature.section.name.eng">
+            [{{ creature.section.name.eng }}]
+          </template>
         </template>
 
         <template

@@ -53,7 +53,7 @@ import { clamp, uniq, uniqBy } from 'es-toolkit';
 
 import { z } from '~/utils/zod';
 import { normalizeLoadedActiveEffects } from '~active-effects/model';
-import { CasterType } from '~classes/model';
+import { CasterType, CLASS_OPTIONS_REPLACEMENT_VALUES } from '~classes/model';
 import {
   EMPTY_MAGIC_ITEM_BONUSES,
   MAGIC_ITEM_BONUS_NONE,
@@ -2679,6 +2679,8 @@ const classFeatureOptionsChoiceSchema = z
         }),
       )
       .nullish(),
+    // Незнакомое значение замены не роняет весь выбор: замены просто нет
+    replacement: z.enum(CLASS_OPTIONS_REPLACEMENT_VALUES).nullish().catch(null),
   })
   .nullable()
   .catch(null);
@@ -2934,6 +2936,20 @@ function toFeatureOptionChoices(
 
   const optionDetails = options.map((option) => option.detail);
 
+  // Замена ранее взятого варианта: «на каждом уровне» — любой новый уровень
+  // класса, «на уровнях ступеней» — уровень умения и уровни роста количества
+  const optionReplacement = choice.replacement
+    ? {
+        everyLevel: choice.replacement === 'EVERY_LEVEL',
+        levels: uniq([
+          feature.level,
+          ...(choice.scaling ?? []).flatMap((step) =>
+            step.level > 0 && step.count > 0 ? [step.level] : [],
+          ),
+        ]).sort((left, right) => left - right),
+      }
+    : undefined;
+
   return toChoiceSteps(choice).flatMap((step) => {
     const count = step.count ?? OPTION_CHOICE_DEFAULT_COUNT;
 
@@ -2956,6 +2972,7 @@ function toFeatureOptionChoices(
         optionRequiredLevels,
         repeatableOptions,
         optionDetails,
+        optionReplacement,
         poolKey,
         requiredLevel: step.level,
       },

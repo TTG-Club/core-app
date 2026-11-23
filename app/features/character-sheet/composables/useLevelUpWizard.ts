@@ -227,6 +227,29 @@ function getTargetsKey(targets: LevelUpTarget[]): string {
 }
 
 /**
+ * Незаконченная замена варианта умения: замена необязательна, но выбранное
+ * «что убрать» без «на что заменить» (и наоборот) ничего не меняет на листе, и
+ * игрок должен это увидеть до применения.
+ *
+ * @param row строка умения шага.
+ * @param draft черновик шага.
+ * @returns 1 — замена начата и не закончена; 0 — её нет или она полная.
+ */
+function getPendingReplacementCount(
+  row: ClassFeatureRow,
+  draft: LevelUpStepDraft,
+): number {
+  if (!row.optionReplacement) {
+    return 0;
+  }
+
+  const [removed = '', taken = ''] =
+    draft.selections[row.optionReplacement.id] ?? [];
+
+  return Boolean(removed) === Boolean(taken) ? 0 : 1;
+}
+
+/**
  * Строки умений уровня с повышением характеристик: их выборы спрашиваются
  * отдельным шагом, а не карточкой умения среди остальных.
  *
@@ -1345,6 +1368,10 @@ export function useLevelUpWizard(sheetKey: string): LevelUpWizard {
     // значится — без него смена подкласса стирала бы и добор
     const knownChoiceIds = new Set([
       ...rows.flatMap((row) => row.choices.map((choice) => choice.id)),
+      // Замена варианта выбором умения не значится, а ответ у неё свой
+      ...rows.flatMap((row) =>
+        row.optionReplacement ? [row.optionReplacement.id] : [],
+      ),
       // Ответы на выборы взятых черт лежат там же, а выбором умения не значатся
       ...Object.values(pickedFeatChoices.value)
         .flat()
@@ -1394,11 +1421,7 @@ export function useLevelUpWizard(sheetKey: string): LevelUpWizard {
         .map((savingThrow) => ABILITY_LABELS[savingThrow.key]),
       // Варианты, взятые на прошлых уровнях и на других ступенях этого мастера:
       // одно и то же воззвание по правилам дважды не берут
-      takenOptionValues: getTakenOptionValues(
-        choice,
-        allChoices.value,
-        allAnswers.value,
-      ),
+      takenOptionValues: getTakenOptionValues(choice, allAnswers.value),
     });
   }
 
@@ -1625,9 +1648,11 @@ export function useLevelUpWizard(sheetKey: string): LevelUpWizard {
     row: ClassFeatureRow,
     draft: LevelUpStepDraft,
   ): number {
-    return getPendingControlCount(
-      row.choices.map((choice) => choiceControl(choice)),
-      draft,
+    return (
+      getPendingControlCount(
+        row.choices.map((choice) => choiceControl(choice)),
+        draft,
+      ) + getPendingReplacementCount(row, draft)
     );
   }
 

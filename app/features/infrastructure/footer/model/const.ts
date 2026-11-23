@@ -7,22 +7,22 @@ import {
   COOKIE_NOTICE_ICON,
   COOKIE_POLICY_PAGE_TITLE,
   COOKIE_POLICY_ROUTE,
-} from '~infrastructure/cookie-consent/model';
+} from '~infrastructure/cookie-consent/model/constants';
 import {
   PRIVACY_POLICY_ICON,
   PRIVACY_POLICY_LINK_LABEL,
   PRIVACY_POLICY_ROUTE,
-} from '~infrastructure/privacy-policy/model';
+} from '~infrastructure/privacy-policy/model/navigation';
 import {
   PUBLIC_OFFER_ICON,
   PUBLIC_OFFER_PAGE_TITLE,
   PUBLIC_OFFER_ROUTE,
-} from '~infrastructure/public-offer/model';
+} from '~infrastructure/public-offer/model/navigation';
 import {
   USER_AGREEMENT_ICON,
   USER_AGREEMENT_PAGE_TITLE,
   USER_AGREEMENT_ROUTE,
-} from '~infrastructure/user-agreement/model';
+} from '~infrastructure/user-agreement/model/navigation';
 
 import { MENU_LINKS, MENU_SUPPORT } from '../../sidebar/menu/model';
 

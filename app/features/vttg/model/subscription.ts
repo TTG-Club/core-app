@@ -17,13 +17,11 @@ import {
   GAME_RAISES_SUBSCRIBER_MAX,
 } from '~find-game/model';
 
-import { VTTG_LANDING_PATH } from './passwordReset';
-
-/** Адрес страницы подписки. */
-export const VTTG_SUBSCRIPTION_PATH = '/subscription';
-
-/** Подпись пункта меню. */
-export const VTTG_SUBSCRIPTION_NAVIGATION_LABEL = 'Подписка';
+import {
+  VTTG_LANDING_PATH,
+  VTTG_SUBSCRIPTION_NAVIGATION_LABEL,
+  VTTG_SUBSCRIPTION_PATH,
+} from './navigation';
 
 /** Заголовок и описание страницы для поисковиков и вкладки браузера. */
 export const VTTG_SUBSCRIPTION_SEO = {

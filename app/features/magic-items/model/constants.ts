@@ -17,6 +17,28 @@ export const MAGIC_ITEM_FILTER_RANGE_ORDERS = {
 /** Категория магического оружия (`MagicItemCategory.WEAPON` бэкенда). */
 export const MAGIC_ITEM_WEAPON_CATEGORY = 'WEAPON';
 
+/**
+ * Сколько связанных предметов подзаголовок перечисляет по названиям. Больше —
+ * не перечисляет вовсе: у «Убийцы великанов» их полсотни. То же число держит
+ * core-api (`MagicItemMapper.SUBTITLE_ITEMS_LIMIT`), который собирает
+ * подзаголовок страницы.
+ */
+export const MAGIC_ITEM_SUBTITLE_BASE_ITEMS_LIMIT = 10;
+
+/** Между названиями связанных предметов в уточнении категории. */
+export const MAGIC_ITEM_BASE_ITEMS_JOINER = ', ';
+
+/** Локаль сортировки названий связанных предметов: каталог русскоязычный. */
+export const MAGIC_ITEM_BASE_ITEMS_SORT_LOCALE = 'ru';
+
+/** Вкладки формы магического предмета: значения для переключения из кода. */
+export const MAGIC_ITEM_EDITOR_TAB_VALUES = {
+  main: 'main',
+  properties: 'properties',
+  usage: 'usage',
+  effects: 'effects',
+} as const;
+
 /** Бонус магического предмета отсутствует: поле не заполнено. */
 export const MAGIC_ITEM_BONUS_NONE = 0;
 
@@ -78,8 +100,19 @@ export const MAGIC_ITEM_EDITOR_SECTIONS = {
 /** Подписи полей формы магического предмета. */
 export const MAGIC_ITEM_FORM_LABELS = {
   category: 'Категория',
-  categoryClarification: 'Уточнение категории',
-  categoryClarificationPlaceholder: 'Введи уточнение категории',
+  categoryBaseItems: 'Уточнение категории',
+  categoryBaseItemsHint:
+    'Сюда сами попадают предметы, выбранные на вкладке «Свойства» в поле «Связанные предметы». Вписывать их руками не нужно',
+  categoryBaseItemsEmpty: 'Связанные предметы не выбраны',
+  categoryBaseItemsPick: 'Выбрать предметы',
+  categoryBaseItemsChange: 'Изменить выбор',
+  categoryBaseItemsCount: 'Выбрано предметов',
+  categoryBaseItemsOverLimit:
+    'на странице не перечисляются, их слишком много. Опиши их текстом ниже',
+  categoryClarification: 'Дополнение вручную',
+  categoryClarificationHint:
+    'То, чего предметами не выбрать: «любой меч», «любое со свойством „лёгкое“». На странице встаёт после выбранных предметов',
+  categoryClarificationPlaceholder: 'Введи дополнение к уточнению',
   theme: 'Тематика',
   themePlaceholder: 'Выбери тематику',
   rarity: 'Редкость',
@@ -103,7 +136,7 @@ export const MAGIC_ITEM_FORM_LABELS = {
     'Эта картинка отображается при просмотре страницы магического предмета',
   baseItems: 'Связанные предметы',
   baseItemsHint:
-    'Выбери обычные предметы, на основе которых создан магический. Их вес и стоимость используются при экспорте в VTTG и для фильтра. Можно выбрать несколько.',
+    'Выбери обычные предметы, на основе которых создан магический. Их вес и стоимость используются при экспорте в VTTG и для фильтра. Можно выбрать несколько. Выбранное само встаёт в «Уточнение категории» на вкладке «Основное» и на странице предмета.',
   bonusAttack: 'Бонус к атаке',
   bonusAttackHint:
     'Например, 1 у оружия +1. Отрицательный — у проклятых предметов',

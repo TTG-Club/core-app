@@ -27,7 +27,6 @@ import {
   GAME_STATUS_LABELS,
   GAME_TITLE_MAX_LENGTH,
   GAME_TYPE_LABELS,
-  GAMES_ROUTE,
   GENRES_SEPARATOR,
   INVITE_CODE_QUERY_KEY,
   MINUTES_IN_HOUR,
@@ -45,6 +44,7 @@ import {
   SESSION_PAYMENT_TYPE_LABELS,
   TABLETOP_EXPERIENCE_LABEL,
 } from './constants';
+import { GAMES_ROUTE } from './navigation';
 import { findNearestMoment } from './timeline';
 
 /** Часов в сутках — верхняя граница длительности встречи. */

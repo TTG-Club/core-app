@@ -205,6 +205,10 @@ export function useSheetActiveEffects(sheetKey: string) {
         conditionImmunities: template.conditionImmunities
           ? [...template.conditionImmunities]
           : undefined,
+        // «В засаде» снимается атакой и заклинанием, «Застигнутый врасплох» —
+        // в начале хода: без этого состояние на листе висело бы вечно
+        consumeOn: template.consumeOn,
+        triggers: template.triggers?.map((trigger) => structuredClone(trigger)),
         duration: { type: 'special', value: undefined },
       },
     ]);

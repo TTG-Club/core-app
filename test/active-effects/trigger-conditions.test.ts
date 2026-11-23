@@ -278,4 +278,58 @@ describe('словарь условий срабатываний', () => {
         + 'урон не меньше 10',
     );
   });
+
+  it('видимость и свет: разбор, сборка, фразы и события', () => {
+    const condition =
+      'self.canSee === true && self.canSee === false && target.canSee === true && target.canSee === false'
+      + ' && self.light === "dark" && self.light !== "dark" && target.light === "dark" && target.light !== "dark"';
+
+    const parts = readTriggerConditionParts(condition);
+
+    expect(parts).toEqual([
+      { kind: 'selfSeesOther' },
+      { kind: 'selfSeesOtherNot' },
+      { kind: 'otherSeesSelf' },
+      { kind: 'otherSeesSelfNot' },
+      { kind: 'selfInDarkness' },
+      { kind: 'selfInLight' },
+      { kind: 'otherInDarkness' },
+      { kind: 'otherInLight' },
+    ]);
+
+    expect(writeTriggerCondition(parts)).toBe(condition);
+
+    expect(
+      describeTriggerCondition(
+        'target.canSee === false && self.light === "dark"',
+      ),
+    ).toBe('другая сторона не видит носителя и носитель в темноте');
+
+    // Свет носителя известен на любом событии, остальное — только с другой
+    // стороной: на начале хода её нет
+    const turnKinds = listTriggerConditionKinds('turnStart');
+
+    expect(turnKinds).toContain('selfInDarkness');
+    expect(turnKinds).toContain('selfInLight');
+    expect(turnKinds).not.toContain('selfSeesOther');
+    expect(turnKinds).not.toContain('otherInLight');
+
+    for (const event of ['allyHurt', 'damageTaken', 'damageDealt'] as const) {
+      const kinds = listTriggerConditionKinds(event);
+
+      expect(kinds, event).toContain('selfSeesOther');
+      expect(kinds, event).toContain('otherSeesSelfNot');
+      expect(kinds, event).toContain('otherInDarkness');
+    }
+  });
+
+  it('«на глазах ранили союзника» несёт урон и другую сторону', () => {
+    const kinds = listTriggerConditionKinds('allyHurt');
+
+    expect(kinds).toContain('damageType');
+    expect(kinds).toContain('damageAtLeast');
+    expect(kinds).toContain('otherCreatureType');
+    expect(kinds).toContain('otherBloodied');
+    expect(kinds).not.toContain('attackKind');
+  });
 });

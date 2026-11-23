@@ -26,6 +26,7 @@ import {
   toFeatEditorRows,
 } from '~feats/model';
 
+import { CLASS_OPTIONS_REPLACEMENT_VALUES } from './constants';
 import { getLegacyFeatureFlags, withLegacyFeatureRows } from './features';
 
 /**
@@ -69,6 +70,11 @@ const optionsChoiceSchema = z.object({
       }),
     )
     .nullish(),
+  // Незнакомое значение не роняет всю настройку: замена просто пропадает
+  replacement: z
+    .enum(CLASS_OPTIONS_REPLACEMENT_VALUES)
+    .nullish()
+    .catch(undefined),
 });
 
 /**
@@ -93,6 +99,7 @@ function parseOptionsChoice(
       level: step.level,
       count: step.count,
     })),
+    replacement: parsed.data.replacement ?? undefined,
   };
 }
 
@@ -115,6 +122,7 @@ function transformOptionsChoice(
     label: choice.label?.trim() || undefined,
     count: choice.count,
     scaling: choice.scaling.filter((step) => step.level > 0 && step.count > 0),
+    replacement: choice.replacement,
   };
 }
 

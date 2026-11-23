@@ -2,7 +2,9 @@ export * from './env';
 export * from './faker';
 export * from './getErrorResponse';
 export * from './getPlural';
-export * from './getSlug';
+// `getSlug` здесь намеренно нет: он тянет библиотеку транслитерации (185 КБ),
+// и вместе с barrel она попадала в стартовый скрипт каждой страницы. Берите
+// его авто-импортом или напрямую из `#shared/utils/getSlug`.
 export * from './getStatusMessage';
 export * from './home-hero';
 export * from './mailing';

@@ -3,6 +3,7 @@
     ActiveEffect,
     EffectFormContext,
     EffectFormStep,
+    InertEffectField,
   } from '../../model';
 
   import {
@@ -13,6 +14,7 @@
     EFFECT_MODIFIERS_STEP_TITLES,
     listEffectFormSteps,
     listInertEffectFields,
+    removeEffectTrigger,
     resolveEffectFormLayout,
   } from '../../model';
   import EffectAdvancedSection from './EffectAdvancedSection.vue';
@@ -109,13 +111,22 @@
     },
   });
 
-  /** Убирает настройки, которые в этом месте не работают. */
-  function clearInertFields(): void {
-    effect.value = clearInertEffectFields(
-      effect.value,
-      inertFields.value,
-      context,
-    );
+  /**
+   * Убирает настройки, которые в этом месте не работают.
+   *
+   * @param fields поля, которые убрать: одно из строки плашки или все разом.
+   */
+  function clearInertFields(fields: InertEffectField[]): void {
+    effect.value = clearInertEffectFields(effect.value, fields, context);
+  }
+
+  /**
+   * Убирает одно неработающее срабатывание, не трогая остальные.
+   *
+   * @param triggerId id срабатывания.
+   */
+  function removeInertTrigger(triggerId: string): void {
+    effect.value = removeEffectTrigger(effect.value, triggerId);
   }
 </script>
 
@@ -123,7 +134,6 @@
   <div class="flex flex-col gap-3">
     <EffectHeaderFields
       v-model:effect="effect"
-      :show-condition-preset="layout.showConditionPreset"
       :show-status-toggle="layout.showStatusToggle"
     />
 
@@ -136,7 +146,10 @@
     <EffectInertFieldsNotice
       v-if="hasInertFields"
       :fields="inertFields"
+      :effect="effect"
+      :layout="layout"
       @clear="clearInertFields"
+      @remove-trigger="removeInertTrigger"
     />
 
     <EffectFormStepSection

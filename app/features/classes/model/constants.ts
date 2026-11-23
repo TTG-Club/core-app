@@ -1,6 +1,9 @@
 import type { FeatEditorLabelOverrides } from '~feats/model';
 
-import type { ClassTableColumnPurpose } from './create';
+import type {
+  ClassFeatureOptionsReplacement,
+  ClassTableColumnPurpose,
+} from './create';
 
 /**
  * Минимальное значение ключевой характеристики, необходимое для взятия уровня
@@ -180,6 +183,7 @@ export const CLASS_FEATURES_EDITOR = {
   optionsBadge: 'вариантов: ',
   optionsChoiceBadge: 'выбор: ',
   optionsChoiceBadgeOf: 'из',
+  optionsChoiceBadgeReplacement: ', с заменой',
 
   level: 'Уровень',
   name: 'Название',
@@ -262,7 +266,32 @@ export const CLASS_FEATURE_OPTIONS_CHOICE_EDITOR = {
   scalingCount: 'Всего',
   addScaling: 'Добавить ступень',
   removeScaling: 'Убрать ступень',
+  replacement: 'Замена при повышении уровня',
+  replacementHint:
+    'Можно ли при повышении уровня класса заменить один ранее выбранный вариант на другой доступный. Замена всегда одна и необязательна.',
 } as const;
+
+/** Значения замены варианта, которые знает core-api. */
+export const CLASS_OPTIONS_REPLACEMENT_VALUES = [
+  'EVERY_LEVEL',
+  'CHOICE_LEVELS',
+] as const satisfies ReadonlyArray<ClassFeatureOptionsReplacement>;
+
+/**
+ * Служебное значение пункта «нет замены» в списке формы: пустое значение
+ * пункта список Nuxt UI не принимает, а в данных «нет» — отсутствие поля.
+ */
+export const CLASS_OPTIONS_REPLACEMENT_NONE = 'NONE';
+
+/** Пункты списка замены варианта при повышении уровня. */
+export const CLASS_OPTIONS_REPLACEMENT_ITEMS: Array<{
+  label: string;
+  value: ClassFeatureOptionsReplacement | typeof CLASS_OPTIONS_REPLACEMENT_NONE;
+}> = [
+  { label: 'Нет', value: CLASS_OPTIONS_REPLACEMENT_NONE },
+  { label: 'На каждом уровне класса', value: 'EVERY_LEVEL' },
+  { label: 'Только на уровнях новой ступени', value: 'CHOICE_LEVELS' },
+];
 
 /** Границы количества выбираемых вариантов умения. */
 export const CLASS_OPTIONS_CHOICE_COUNT_BOUNDS = {

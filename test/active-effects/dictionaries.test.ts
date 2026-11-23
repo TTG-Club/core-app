@@ -2,12 +2,16 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ADJACENT_ALLY_CONDITION_OPTIONS,
+  buildConditionActiveEffect,
   EFFECT_CONDITION_EXPR_SUGGESTIONS,
+  EFFECT_CONDITION_TEMPLATES,
   EFFECT_FLAG_LABELS,
+  EFFECT_MODIFIER_MENU,
   EFFECT_SYSTEM_VERSION,
   EFFECT_TARGET_KEY_SUGGESTIONS,
   EFFECT_VALUE_SUGGESTIONS,
   isAdjacentAllyCondition,
+  isEffectModifierSubmenu,
   parseWeaponBaseTypeCondition,
 } from '~active-effects/model';
 
@@ -17,25 +21,11 @@ import {
  * порт отстал), либо на сайте завелась своя запись, которой VTTG не знает.
  * Меняются числа только вместе с `EFFECT_SYSTEM_VERSION`; какие именно записи
  * разошлись, показывает `node scripts/compare-effect-dictionaries.mjs`.
- *
  */
 const SYSTEM_DICTIONARY_SIZES = {
-  version: '0.8.157',
-  // +1 сверх 0.8.157: флаг «засада бонусным действием» (`hide.bonusAction`)
-  // перенесён вместе со скрытностью, раньше остального порта
-  flags: 229,
-  // +2 сверх 0.8.157: ключи Скрытой атаки (`sneakAttack.damage`,
-  // `sneakAttack.dice`) перенесены раньше остального порта; +4 — ключи
-  // Хитрого удара и Скрытой атаки этапа 3 (`sneakAttack.cunningStrike`,
-  // `.cunningStrikeCount`, `.rider`, `.minDie`); +1 — «Смертельный удар»
-  // (`sneakAttack.saveDouble`)
-  changeKeys: 75,
-  // +1 сверх 0.8.157: условие «метательным оружием» (`weapon.property`)
-  // перенесено вместе с системой 0.8.308, раньше остального порта; +5 —
-  // условия Скрытой атаки: «без помехи», фехтовальное и дальнобойное оружие,
-  // «идёт Скрытая атака» и готовое условие по правилам; +4 — союзник рядом
-  // с целью «в засаде» / «застигнут врасплох» и без них; +3 — «первый раунд
-  // боя», «цель ещё не ходила» и «с набором отравителя» (этап 3)
+  version: '0.10.3',
+  flags: 234,
+  changeKeys: 78,
   conditions: 121,
   values: 51,
 };
@@ -191,5 +181,77 @@ describe('словари эффектов', () => {
     );
 
     expect(isAdjacentAllyCondition('target.markedBySelf')).toBe(false);
+  });
+
+  it('левитация, падение, «убран со сцены», провал и прыжок 0.10 на месте', () => {
+    for (const flag of [
+      'movement.levitate',
+      'movement.hover',
+      'fall.featherFall',
+      'scene.offScene',
+      'terrain.impassable',
+    ]) {
+      expect(EFFECT_FLAG_LABELS[flag], flag).toBeDefined();
+    }
+
+    const changeKeys = EFFECT_TARGET_KEY_SUGGESTIONS.map(
+      (suggestion) => suggestion.value,
+    );
+
+    expect(changeKeys).toContain('jump.long');
+    expect(changeKeys).toContain('jump.high');
+    expect(changeKeys).toContain('jump.cost');
+  });
+
+  it('прыжок — среди скоростей, местность — своим разделом и «заменить»', () => {
+    const findPreset = (key: string) =>
+      EFFECT_MODIFIER_MENU.flatMap((group) =>
+        group.items
+          .filter((menuItem) => !isEffectModifierSubmenu(menuItem))
+          .map((menuItem) => ({ group: group.label, ...menuItem })),
+      ).find((menuItem) => menuItem.key === key && !menuItem.condition);
+
+    expect(findPreset('jump.long')).toMatchObject({
+      group: 'Скорости',
+      mode: 'add',
+    });
+
+    expect(findPreset('jump.cost')).toMatchObject({
+      group: 'Скорости',
+      mode: 'override',
+    });
+
+    // Прибавка к цене клетки у VTTG дала бы «+2 к обычной», то есть ×3
+    expect(findPreset('terrain.movementCost')).toMatchObject({
+      group: 'Местность (только для зоны сцены)',
+      mode: 'override',
+      value: '2',
+    });
+  });
+
+  it('шаблоны «В засаде» и «Застигнутый врасплох» несут свои срабатывания', () => {
+    const hidden = buildConditionActiveEffect('hidden');
+
+    expect(hidden?.name).toBe('В засаде');
+    expect(hidden?.consumeOn).toBe('carrierAttack');
+    expect(hidden?.flags).not.toContain('vision.invisible');
+
+    expect(hidden?.triggers).toEqual([
+      {
+        id: 'hidden.verbalSpell',
+        event: 'spellCast',
+        condition: 'spell.verbal === true',
+        actions: [{ type: 'removeSelf' }],
+      },
+    ]);
+
+    const surprised = buildConditionActiveEffect('surprised');
+
+    expect(surprised?.flags).toEqual(['initiative.disadvantage']);
+    expect(surprised?.triggers?.[0]?.event).toBe('turnStart');
+
+    expect(EFFECT_CONDITION_TEMPLATES.map((template) => template.key)).toEqual(
+      expect.arrayContaining(['hidden', 'surprised']),
+    );
   });
 });

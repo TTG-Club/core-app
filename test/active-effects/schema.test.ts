@@ -861,4 +861,28 @@ describe('поля эффекта 0.8.66', () => {
       dc: FIXED_MIN_SAVE_DC,
     });
   });
+
+  it('срабатывание «на глазах ранили союзника» с условием видимости переживает круг', () => {
+    const storedEffect = createRawEffect({
+      triggers: [
+        {
+          id: 'witness',
+          event: 'allyHurt',
+          recipient: 'other',
+          condition: 'self.canSee === true && target.light !== "dark"',
+          actions: [{ type: 'tempHp', amount: '@damage' }],
+        },
+      ],
+    });
+
+    const loadedEffects = normalizeLoadedActiveEffects([storedEffect]);
+
+    expect(loadedEffects[0]?.triggers?.map((trigger) => trigger.event)).toEqual(
+      ['allyHurt'],
+    );
+
+    const savedEffects = normalizeActiveEffects(loadedEffects, 'ownEffects');
+
+    expect(stripUndefinedKeys(savedEffects)).toEqual([storedEffect]);
+  });
 });

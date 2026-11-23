@@ -1022,11 +1022,7 @@
         .map((savingThrow) => ABILITY_LABELS[savingThrow.key]),
       // Варианты, взятые на других ступенях того же списка: одно и то же
       // воззвание по правилам дважды не берут
-      takenOptionValues: getTakenOptionValues(
-        choice,
-        allChoices.value,
-        selections.value,
-      ),
+      takenOptionValues: getTakenOptionValues(choice, selections.value),
     });
   }
 

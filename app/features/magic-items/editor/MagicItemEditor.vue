@@ -20,6 +20,7 @@
     isUsedMagicItemActivation,
     MAGIC_ITEM_CONSUMED_ACTIVATION,
     MAGIC_ITEM_EDITOR_SECTIONS,
+    MAGIC_ITEM_EDITOR_TAB_VALUES,
     MAGIC_ITEM_EDITOR_TABS,
     MAGIC_ITEM_FORM_HINTS,
     MAGIC_ITEM_FORM_LABELS,
@@ -133,11 +134,63 @@
   );
 
   const tabItems: Array<TabsItem> = [
-    { label: MAGIC_ITEM_EDITOR_TABS.main, slot: 'main' },
-    { label: MAGIC_ITEM_EDITOR_TABS.properties, slot: 'properties' },
-    { label: MAGIC_ITEM_EDITOR_TABS.usage, slot: 'usage' },
-    { label: MAGIC_ITEM_EDITOR_TABS.effects, slot: 'effects' },
+    {
+      label: MAGIC_ITEM_EDITOR_TABS.main,
+      slot: 'main',
+      value: MAGIC_ITEM_EDITOR_TAB_VALUES.main,
+    },
+    {
+      label: MAGIC_ITEM_EDITOR_TABS.properties,
+      slot: 'properties',
+      value: MAGIC_ITEM_EDITOR_TAB_VALUES.properties,
+    },
+    {
+      label: MAGIC_ITEM_EDITOR_TABS.usage,
+      slot: 'usage',
+      value: MAGIC_ITEM_EDITOR_TAB_VALUES.usage,
+    },
+    {
+      label: MAGIC_ITEM_EDITOR_TABS.effects,
+      slot: 'effects',
+      value: MAGIC_ITEM_EDITOR_TAB_VALUES.effects,
+    },
   ];
+
+  /** Открытая вкладка: уточнение категории переводит на «Свойства» само. */
+  const activeTab = ref<string | number>(MAGIC_ITEM_EDITOR_TAB_VALUES.main);
+
+  /**
+   * Названия связанных предметов по слагу. Их знает поле выбора на вкладке
+   * «Свойства»; уточнение категории показывает ими перечень на «Основном».
+   */
+  const baseItemNames = ref<Record<string, string>>({});
+
+  /** Блок с полем выбора связанных предметов: к нему подводит прокрутка. */
+  const baseItemsField = useTemplateRef<HTMLElement>('baseItemsField');
+
+  /**
+   * Запоминает названия, которые узнало поле выбора связанных предметов.
+   *
+   * @param names названия предметов по слагу.
+   */
+  function updateBaseItemNames(names: Record<string, string>) {
+    baseItemNames.value = names;
+  }
+
+  /**
+   * Ведёт к выбору связанных предметов: открывает вкладку и подводит к полю,
+   * чтобы было видно, где именно выбирать.
+   */
+  async function showBaseItemsField() {
+    activeTab.value = MAGIC_ITEM_EDITOR_TAB_VALUES.properties;
+
+    await nextTick();
+
+    baseItemsField.value?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    });
+  }
 </script>
 
 <template>
@@ -158,6 +211,7 @@
     <!-- Вкладки не размонтируются: поля скрытых вкладок остаются в форме, и
       сохранение видит их наравне с открытой -->
     <UTabs
+      v-model="activeTab"
       :items="tabItems"
       variant="pill"
       :unmount-on-hide="false"
@@ -174,7 +228,12 @@
             </template>
 
             <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
-              <MagicItemCategory v-model="state.category" />
+              <MagicItemCategory
+                v-model="state.category"
+                :base-item-urls="state.items"
+                :base-item-names="baseItemNames"
+                @pick-base-items="showBaseItemsField"
+              />
 
               <UFormField
                 class="col-span-full md:col-span-8"
@@ -307,7 +366,10 @@
               </div>
             </template>
 
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
+            <div
+              ref="baseItemsField"
+              class="grid grid-cols-1 gap-4 md:grid-cols-24"
+            >
               <UFormField
                 class="col-span-full"
                 :label="MAGIC_ITEM_FORM_LABELS.baseItems"
@@ -317,6 +379,7 @@
                 <SelectItem
                   v-model="state.items"
                   multiple
+                  @resolve="updateBaseItemNames"
                 />
               </UFormField>
             </div>

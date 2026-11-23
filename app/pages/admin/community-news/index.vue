@@ -16,7 +16,6 @@
     COMMUNITY_NEWS_ADMIN_TABS,
     COMMUNITY_NEWS_ADMIN_TEXT,
     COMMUNITY_NEWS_ADMIN_TITLE,
-    COMMUNITY_NEWS_EDITOR_ROLES,
     COMMUNITY_NEWS_ROUTE,
     COMMUNITY_NEWS_SEARCH_DEBOUNCE,
     COMMUNITY_NEWS_SEARCH_PATH,
@@ -25,6 +24,10 @@
     getCommunityNewsSearchEmptyText,
     parseCommunityNewsList,
   } from '~community-news/model';
+  // Сам файл, а не barrel модели: роли нужны настройкам маршрута, а они у
+  // всех страниц лежат в стартовом скрипте сайта — barrel положил бы туда
+  // разбор разметки новостей
+  import { COMMUNITY_NEWS_EDITOR_ROLES } from '~community-news/model/constants';
 
   // Инструмент открыт не только админу: мета дочерней страницы перекрывает
   // роли родителя (admin.vue).

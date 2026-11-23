@@ -12,13 +12,16 @@
     PUBLICATION_DATE_FORMAT,
     PUBLICATION_DEFAULT_TAB,
     PUBLICATION_ICONS,
-    PUBLICATION_LEGACY_ROUTE,
     PUBLICATION_PLATFORMS,
     PUBLICATION_STATUS_LABELS,
     PUBLICATION_SUMMARY_SEPARATOR,
     PUBLICATION_TABS,
     PUBLICATION_TEXT,
   } from '~admin/game-publications/model';
+  // Сам файл, а не barrel модели: адрес нужен настройкам маршрута, а они у
+  // всех страниц лежат в стартовом скрипте сайта — barrel положил бы туда
+  // модель публикаций и поиска игр целиком
+  import { PUBLICATION_LEGACY_ROUTE } from '~admin/game-publications/model/constants';
   import {
     PublicationChannelEditor,
     PublicationSettingsForm,

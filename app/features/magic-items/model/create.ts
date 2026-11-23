@@ -14,7 +14,13 @@ import {
   parseLoadedDamageFormulaParts,
 } from '~ui/damage-formula';
 
-import { MAGIC_ITEM_WEAPON_CATEGORY } from './constants';
+import {
+  MAGIC_ITEM_BASE_ITEMS_JOINER,
+  MAGIC_ITEM_BASE_ITEMS_SORT_LOCALE,
+  MAGIC_ITEM_FORM_LABELS,
+  MAGIC_ITEM_SUBTITLE_BASE_ITEMS_LIMIT,
+  MAGIC_ITEM_WEAPON_CATEGORY,
+} from './constants';
 
 export interface MagicItemCreate extends EditorBaseInfoState {
   description: string; // описание маркап
@@ -196,6 +202,46 @@ export function getMagicItemEffectContext(
   category: MagicItemCategory,
 ): ItemEffectContext {
   return resolveItemEffectContext(category.type === MAGIC_ITEM_WEAPON_CATEGORY);
+}
+
+/**
+ * Связанные предметы так, как их покажет подзаголовок страницы: названия по
+ * алфавиту через запятую. Правило то же, что у core-api, собирающего
+ * подзаголовок: больше предела — не перечисляются вовсе.
+ *
+ * @param itemUrls слаги связанных предметов.
+ * @param itemNames названия предметов по слагу; неизвестный показывается слагом.
+ * @returns строка названий; пусто — предметов нет или их больше предела.
+ */
+export function getMagicItemBaseItemsText(
+  itemUrls: Array<string>,
+  itemNames: Record<string, string>,
+): string {
+  if (itemUrls.length > MAGIC_ITEM_SUBTITLE_BASE_ITEMS_LIMIT) {
+    return '';
+  }
+
+  return itemUrls
+    .map((itemUrl) => itemNames[itemUrl] ?? itemUrl)
+    .toSorted((first, second) =>
+      first.localeCompare(second, MAGIC_ITEM_BASE_ITEMS_SORT_LOCALE),
+    )
+    .join(MAGIC_ITEM_BASE_ITEMS_JOINER);
+}
+
+/**
+ * Что форма показывает на месте перечня, когда перечислять нечего: предметов
+ * больше предела или они не выбраны.
+ *
+ * @param itemCount сколько связанных предметов выбрано.
+ * @returns подпись пустого перечня.
+ */
+export function getMagicItemBaseItemsPlaceholder(itemCount: number): string {
+  if (itemCount > MAGIC_ITEM_SUBTITLE_BASE_ITEMS_LIMIT) {
+    return `${MAGIC_ITEM_FORM_LABELS.categoryBaseItemsCount}: ${itemCount} — ${MAGIC_ITEM_FORM_LABELS.categoryBaseItemsOverLimit}`;
+  }
+
+  return MAGIC_ITEM_FORM_LABELS.categoryBaseItemsEmpty;
 }
 
 /**
