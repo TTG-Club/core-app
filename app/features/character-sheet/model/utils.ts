@@ -1097,6 +1097,37 @@ function getSavingThrowBonusTargets(
 }
 
 /**
+ * Цели проверки характеристики: адресные бонусы и общие «ко всем проверкам».
+ * Проверка навыка — тоже проверка своей характеристики, поэтому навык берёт
+ * эти цели вслед за своей.
+ *
+ * @param ability характеристика проверки.
+ * @returns цели подсчёта проверки.
+ */
+function getAbilityCheckBonusTargets(
+  ability: AbilityKey,
+): InventoryBonusTarget[] {
+  return [
+    { kind: 'ability-check', key: ability },
+    { kind: 'all-ability-checks' },
+  ];
+}
+
+/**
+ * Цели проверки навыка: бонусы самого навыка и всё, что усиливает проверки его
+ * характеристики (камень удачи прибавляет и к Скрытности).
+ *
+ * @param skill навык персонажа.
+ * @returns цели подсчёта навыка.
+ */
+function getSkillBonusTargets(skill: CharacterSkill): InventoryBonusTarget[] {
+  return [
+    { kind: 'skill', key: skill.name },
+    ...getAbilityCheckBonusTargets(skill.ability),
+  ];
+}
+
+/**
  * Спасбросок после прибавок снаряжения: плащ защиты и подобные предметы.
  *
  * @param character персонаж.
@@ -1419,10 +1450,10 @@ export function getSkillValue(
   skill: CharacterSkill,
 ): number {
   return (
-    // Перчатки вора и подобные предметы прибавляют к проверкам своего навыка.
+    // Перчатки вора прибавляют к своему навыку, камень удачи — ко всем проверкам.
     getInventoryBonusTotal(
       character,
-      [{ kind: 'skill', key: skill.name }],
+      getSkillBonusTargets(skill),
       getBaseSkillValue(character, skill),
     )
     // Проверка навыка — бросок к20; пассивное значение считается от неё же,
@@ -1886,7 +1917,7 @@ export function getSkillBreakdown(
     })),
     ...getInventoryBonusSources(
       character,
-      [{ kind: 'skill', key: skill.name }],
+      getSkillBonusTargets(skill),
       getBaseSkillValue(character, skill),
     ).map((source) => ({
       id: source.id,
@@ -3531,9 +3562,12 @@ export function getInventoryBonusTargetGroups(
     },
     {
       label: INVENTORY_BONUS_GROUP_LABELS.checks,
-      items: ABILITY_ORDER.map((ability) =>
-        toInventoryBonusTargetOption('ability-check', ability),
-      ),
+      items: [
+        toInventoryBonusTargetOption('all-ability-checks', ''),
+        ...ABILITY_ORDER.map((ability) =>
+          toInventoryBonusTargetOption('ability-check', ability),
+        ),
+      ],
     },
     {
       label: INVENTORY_BONUS_GROUP_LABELS.savingThrows,
@@ -6881,7 +6915,7 @@ export function getAbilityCheckValue(
     // Предмет может усиливать сами проверки, не трогая значение характеристики.
     getInventoryBonusTotal(
       character,
-      [{ kind: 'ability-check', key: ability }],
+      getAbilityCheckBonusTargets(ability),
       getAbilityModifier(character, ability),
     ) - getExhaustionD20Penalty(character)
   );

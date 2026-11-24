@@ -4881,6 +4881,7 @@ export const INVENTORY_BONUS_TARGET_PREFIXES: Record<
 
 /** Подписи целей бонуса, которые говорят сами за себя. */
 export const INVENTORY_BONUS_TARGET_LABELS: Record<
+  | 'all-ability-checks'
   | 'all-saving-throws'
   | 'all-speeds'
   | 'armor-class'
@@ -4893,6 +4894,7 @@ export const INVENTORY_BONUS_TARGET_LABELS: Record<
   | 'hit-points-max',
   string
 > = {
+  'all-ability-checks': 'Все проверки',
   'all-saving-throws': 'Все спасброски',
   'all-speeds': 'Все скорости',
   'armor-class': 'Класс доспеха',

@@ -411,6 +411,7 @@ const inventoryBonusSchema = z
     kind: z.enum([
       'ability',
       'ability-check',
+      'all-ability-checks',
       'skill',
       'saving-throw',
       'all-saving-throws',
