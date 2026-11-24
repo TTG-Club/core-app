@@ -237,9 +237,14 @@
     },
   );
 
+  // Номер «поколения» списка: растёт при каждой замене первой страницы.
+  // Догрузка, начатая для прежнего списка, по нему отбрасывается.
+  let listGeneration = 0;
+
   watch(
     firstCreaturePage,
     (page) => {
+      listGeneration += 1;
       currentPage.value = 0;
       bestiary.value = page?.value ?? [];
 
@@ -263,9 +268,15 @@
 
     isLoadingMore.value = true;
 
+    const generation = listGeneration;
+
     try {
       const nextPage = currentPage.value + 1;
       const page = await fetchCreaturePage(nextPage);
+
+      if (generation !== listGeneration) {
+        return;
+      }
 
       currentPage.value = nextPage;
       bestiary.value = [...bestiary.value, ...page.value];
@@ -306,15 +317,23 @@
     }
   }
 
-  useInfiniteScroll(windowScrollTarget, loadNextCreaturePage, {
-    distance: BESTIARY_LIST_LOAD_MORE_DISTANCE,
-    canLoadMore: () => hasNextPage.value && !isLoadingMore.value,
-  });
+  const { reset: recheckWindowScroll } = useInfiniteScroll(
+    windowScrollTarget,
+    loadNextCreaturePage,
+    {
+      distance: BESTIARY_LIST_LOAD_MORE_DISTANCE,
+      canLoadMore: () => hasNextPage.value && !isLoadingMore.value,
+    },
+  );
 
-  useInfiniteScroll(splitScrollTarget, loadNextCreaturePage, {
-    distance: BESTIARY_LIST_LOAD_MORE_DISTANCE,
-    canLoadMore: () => hasNextPage.value && !isLoadingMore.value,
-  });
+  const { reset: recheckSplitScroll } = useInfiniteScroll(
+    splitScrollTarget,
+    loadNextCreaturePage,
+    {
+      distance: BESTIARY_LIST_LOAD_MORE_DISTANCE,
+      canLoadMore: () => hasNextPage.value && !isLoadingMore.value,
+    },
+  );
 
   /**
    * Запоминание текущей страницы для сохранения позиции.
@@ -364,6 +383,21 @@
       || isTargetCreatureRestorePending.value
     );
   });
+
+  /**
+   * Перепроверяет догрузку после перерисовки списка.
+   * Бесконечный скролл сам срабатывает только на прокрутку: если после смены
+   * сортировки или фильтра первая страница целиком помещается на экране,
+   * прокрутить нечего и следующие страницы без этой проверки не придут.
+   */
+  function handleListEntered(): void {
+    if (isLoading.value) {
+      return;
+    }
+
+    recheckWindowScroll();
+    recheckSplitScroll();
+  }
 </script>
 
 <template>
@@ -386,6 +420,7 @@
       <Transition
         name="fade"
         mode="out-in"
+        @after-enter="handleListEntered"
       >
         <PageGrid
           v-if="isLoading"
