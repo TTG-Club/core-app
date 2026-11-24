@@ -9,15 +9,31 @@ import {
 describe('getCatalogCacheKey', () => {
   it('кэширует чтение записи, списка и фильтров раздела', () => {
     expect(getCatalogCacheKey('GET', '/api/v2/bestiary/goblin')).toBe(
-      '/api/v2/bestiary/goblin',
+      encodeURIComponent('/api/v2/bestiary/goblin'),
     );
 
     expect(getCatalogCacheKey('GET', '/api/v2/spells/search')).toBe(
-      '/api/v2/spells/search',
+      encodeURIComponent('/api/v2/spells/search'),
     );
 
     expect(getCatalogCacheKey('GET', '/api/v2/dictionaries/sizes')).toBe(
-      '/api/v2/dictionaries/sizes',
+      encodeURIComponent('/api/v2/dictionaries/sizes'),
+    );
+  });
+
+  it('не содержит символов, которые хранилище Nitro отрезает или заменяет', () => {
+    // unstorage отбрасывает всё после `?` и меняет `/` и `\` на `:` — с такими
+    // символами разные запросы к одному адресу делили бы одну запись кэша.
+    const cacheKey = getCatalogCacheKey(
+      'GET',
+      '/api/v2/bestiary/search?page=1&size=60&search=дракон&source=MM,PHB',
+    );
+
+    expect(cacheKey).toBeDefined();
+    expect(cacheKey).not.toMatch(/[?/\\:]/);
+
+    expect(decodeURIComponent(cacheKey ?? '')).toBe(
+      '/api/v2/bestiary/search?page=1&search=%D0%B4%D1%80%D0%B0%D0%BA%D0%BE%D0%BD&size=60&source=MM%2CPHB',
     );
   });
 

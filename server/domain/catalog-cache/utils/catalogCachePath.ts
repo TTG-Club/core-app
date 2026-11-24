@@ -63,6 +63,11 @@ function parseCatalogPath(path: string): CatalogPath | undefined {
  * кэшируется. В кэш идёт только чтение разделов каталога; форма редактора
  * (`/raw`) всегда запрашивается заново.
  *
+ * Ключ закодирован целиком (`encodeURIComponent`): хранилище Nitro (unstorage)
+ * нормализует ключ, отрезая всё после `?` и заменяя `/` на `:`. Без кодирования
+ * все запросы к одному адресу с разными параметрами (страница, поиск,
+ * фильтры) попадали бы в одну запись, и гость получал ответ на чужой запрос.
+ *
  * @param method Метод запроса.
  * @param path Адрес запроса вместе с параметрами.
  */
@@ -84,11 +89,11 @@ export function getCatalogCacheKey(
     return undefined;
   }
 
-  if (!catalogPath.search) {
-    return catalogPath.pathname;
-  }
+  const requestPath = catalogPath.search
+    ? `${catalogPath.pathname}?${catalogPath.search}`
+    : catalogPath.pathname;
 
-  return `${catalogPath.pathname}?${catalogPath.search}`;
+  return encodeURIComponent(requestPath);
 }
 
 /**
