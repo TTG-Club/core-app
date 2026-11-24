@@ -1,4 +1,4 @@
-import type { ActiveEffect } from '~active-effects/model';
+import type { ActiveEffect, EffectHealKind } from '~active-effects/model';
 
 import type {
   AbilityKey,
@@ -65,6 +65,7 @@ import {
   applyLevelHitPoints,
   applyProficiencyGrants,
   applySkillProficiencies,
+  applySpellHealing,
   applyStartingEquipmentChange,
   ARMOR_CLASS_BASE_MAX,
   ARMOR_CLASS_BASE_MIN,
@@ -129,6 +130,7 @@ import {
   getSpellSlotRows,
   getSpellSlotsEmptyDescription,
   getStoredAttunement,
+  getTemporaryHitPointsKeptDescription,
   getTotalClassLevel,
   INNATE_SPELL_COPY_TOAST_DESCRIPTION,
   INVENTORY_COPY_TOAST_TITLE,
@@ -176,6 +178,7 @@ import {
   sortAbilityKeys,
   SPELL_COPY_TOAST_TITLE,
   SPELL_SLOTS_EMPTY_TOAST_TITLE,
+  SPELL_TEMPORARY_HIT_POINTS_KEPT_TOAST_TITLE,
   spendCurrency,
   syncClassHitDice,
   toCopiedInventoryItem,
@@ -826,14 +829,16 @@ export function useCharacterSheet(sheetKey: string) {
    * кубов зрителю никто не запрещает, а документ ему всё равно не сохранить.
    *
    * @param level круг заклинания.
+   * @returns `false` — ячейки круга кончились и заклинание не сотворено;
+   * `true` — ячейка потрачена либо тратить было нечего.
    */
-  function spendSpellSlot(level: number): void {
+  function spendSpellSlot(level: number): boolean {
     const rows = spellSlotRows.value.filter(
       (slotRow) => slotRow.level === level,
     );
 
     if (!rows.length || isReadonly.value) {
-      return;
+      return true;
     }
 
     // У мультикласса колдуна круг бывает и обычным, и договорным: тратится
@@ -851,7 +856,7 @@ export function useCharacterSheet(sheetKey: string) {
         description: getSpellSlotsEmptyDescription(level),
       });
 
-      return;
+      return false;
     }
 
     // Хранится только трата, поэтому круг переписывается целиком.
@@ -866,6 +871,8 @@ export function useCharacterSheet(sheetKey: string) {
         { level, used: row.used + 1, kind: row.kind },
       ].sort((left, right) => left.level - right.level),
     };
+
+    return true;
   }
 
   /**
@@ -1424,6 +1431,46 @@ export function useCharacterSheet(sheetKey: string) {
         temporary: Math.max(0, Math.trunc(temporary)),
       },
     };
+  }
+
+  /**
+   * Лечение заклинанием, выпавшее в окне броска: хиты поднимаются не выше
+   * максимума, временные хиты не складываются — остаётся большее. Если новые
+   * временные хиты не больше имеющихся, лист о том говорит: иначе бросок
+   * выглядел бы потерянным. Игровое действие — как и быстрая правка хитов.
+   *
+   * @param healKind вид лечения.
+   * @param amount выпавшее число.
+   */
+  function receiveSpellHealing(healKind: EffectHealKind, amount: number): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    const { health } = character.value;
+
+    const outcome = applySpellHealing(
+      health,
+      healKind,
+      amount,
+      maxHitPoints.value,
+    );
+
+    if (outcome.isTemporaryKept) {
+      toast.add({
+        color: 'neutral',
+        icon: 'tabler:shield-half',
+        title: SPELL_TEMPORARY_HIT_POINTS_KEPT_TOAST_TITLE,
+        description: getTemporaryHitPointsKeptDescription(
+          outcome.amount,
+          health.temporary,
+        ),
+      });
+
+      return;
+    }
+
+    setHitPoints(outcome.health.current, outcome.health.temporary);
   }
 
   /**
@@ -4104,6 +4151,7 @@ export function useCharacterSheet(sheetKey: string) {
     setSpeed,
     setHealth,
     setHitPoints,
+    receiveSpellHealing,
     setExhaustion,
     setHitDice,
     spendHitDice,

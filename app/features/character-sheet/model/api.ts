@@ -1,3 +1,5 @@
+import type { LocationQuery } from 'vue-router';
+
 import type {
   CatalogSpellDetail,
   Character,
@@ -45,6 +47,7 @@ import {
   CHARACTER_SHEET_SAVED_API_PATH,
   CHARACTER_SHEET_SHARED_API_PATH,
   CHOICE_SPELL_POOL_SIZE,
+  EMPTY_SPELL_DAMAGE_FORMULAS,
   FEATS_DETAIL_BASE_PATH,
   ITEMS_DETAIL_BASE_PATH,
   ITEMS_SEARCH_PATH,
@@ -615,7 +618,7 @@ export async function fetchSpellCatalogMechanics(
     return parseSpellCatalogMechanics(response);
   } catch {
     return {
-      damage: { base: [], cantripTiers: [] },
+      damage: EMPTY_SPELL_DAMAGE_FORMULAS,
       hasAttackRoll: false,
       castingKinds: [],
     };
@@ -780,6 +783,8 @@ export async function deleteSavedCharacterSheet(
  *
  * @param filter ограничения пула из механики черты.
  * @param classUrls классы, из списков которых идёт выбор; пусто — без сужения.
+ * @param sourceQuery источники из профиля (`{ source: 'PHB,XGE' }`): без них в
+ *   пул попадали книги, отключённые игроком, например 3rd party.
  * @returns заклинания пула; null — запрос не удался. Сбой отличается от пустого
  *   пула нарочно: пустой пул снимает требование выбора, а сбой — нет, иначе
  *   игрок прошёл бы шаг без заклинания, которое ему положено.
@@ -787,8 +792,10 @@ export async function deleteSavedCharacterSheet(
 export async function fetchChoiceSpells(
   filter: FeatSpellChoiceFilter,
   classUrls: string[],
+  sourceQuery: LocationQuery = {},
 ): Promise<SpellCatalogItem[] | null> {
   const query: Record<string, unknown> = {
+    ...sourceQuery,
     page: 0,
     size: CHOICE_SPELL_POOL_SIZE,
   };

@@ -11,7 +11,10 @@ import {
   fetchChoiceSpells,
   fetchSpellsByUrls,
   getChoiceSpellClassUrls,
+  SPELL_SOURCES_ASYNC_DATA_KEY,
+  SPELLS_FILTERS_PATH,
 } from '../model';
+import { useLazyCatalogSourceQuery } from './useCatalogSourceQuery';
 
 /**
  * Запись, чьи выборы спрашивают заклинания: черта, дары предыстории, умение
@@ -135,6 +138,14 @@ export function useChoiceSpellPools(
 ): ChoiceSpellPools {
   const { sources, answers, resolveClassUrls } = options;
 
+  // Источники из профиля: пул поиском по каталогу иначе показывал бы книги,
+  // отключённые игроком. Грузятся лениво перед первым запросом пула и
+  // кешируются общим ключом между мастерами.
+  const { sourceQuery, load: loadSources } = useLazyCatalogSourceQuery(
+    SPELL_SOURCES_ASYNC_DATA_KEY,
+    SPELLS_FILTERS_PATH,
+  );
+
   const pools = ref<Record<string, SpellCatalogItem[]>>({});
 
   /**
@@ -175,11 +186,13 @@ export function useChoiceSpellPools(
    * @param request выбор и его запись.
    * @returns заклинания пула; null — запрос не удался, пусто — брать неоткуда.
    */
-  function fetchPoolSpells(
+  async function fetchPoolSpells(
     request: PoolRequest,
   ): Promise<SpellCatalogItem[] | null> {
     const { source, choice } = request;
 
+    // Перечисленные записью заклинания показываются как есть: их назвал автор
+    // записи, и отключённая книга не должна оставить выбор пустым.
     const listedUrls = choice.listedSpells?.map((spell) => spell.url) ?? [];
 
     if (listedUrls.length) {
@@ -188,9 +201,18 @@ export function useChoiceSpellPools(
 
     const filter = choice.spellFilter;
 
-    return filter
-      ? fetchChoiceSpells(filter, getClassUrls(choice, source))
-      : Promise.resolve([]);
+    if (!filter) {
+      return [];
+    }
+
+    // Сбой загрузки источников пул не блокирует: поиск уйдёт без ограничения.
+    await loadSources();
+
+    return fetchChoiceSpells(
+      filter,
+      getClassUrls(choice, source),
+      sourceQuery.value,
+    );
   }
 
   /**

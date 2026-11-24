@@ -1,7 +1,11 @@
 import type { DropdownMenuItem } from '@nuxt/ui';
 
 import type { AbilityKey as ApiAbilityKey, Level } from '~/shared/types';
-import type { ActiveEffect, EffectChange } from '~active-effects/model';
+import type {
+  ActiveEffect,
+  EffectChange,
+  EffectHealKind,
+} from '~active-effects/model';
 import type { FeatureOptionEntry } from '~classes/model';
 import type { MagicItemBonuses } from '~magic-items/model';
 import type { RenderNode } from '~ui/markup';
@@ -169,10 +173,12 @@ import type {
   SpellDamage,
   SpellDamageFormulas,
   SpellDamageRoll,
+  SpellHealingOutcome,
   SpellSlotCircle,
   SpellSlotKind,
   SpellSlotRow,
   SpellTabFilter,
+  SpellUpcastBonus,
   StartingEquipmentGrant,
   StartingEquipmentItem,
   StartingEquipmentOption,
@@ -203,6 +209,7 @@ import {
 import { LEVELS } from '~/shared/consts';
 import {
   DEFAULT_EFFECT_CHANGE_PRIORITY,
+  detectFormulaHealKind,
   EFFECT_ACTIVATION_MODE,
   evaluateFormula,
 } from '~active-effects/model';
@@ -341,6 +348,7 @@ import {
   DEFAULT_WEAPON_ATTACK_ABILITY,
   DEXTERITY_WEAPON_ABILITY,
   DICE_NOTATION_LETTER,
+  EMPTY_SPELL_UPCAST_BONUS,
   EXHAUSTION_D20_PENALTY_PER_LEVEL,
   EXHAUSTION_LABELS,
   EXHAUSTION_LEVEL_MAX,
@@ -461,6 +469,7 @@ import {
   SHEET_CHOICE_SKILL_PROFICIENCY_EXPERTISE_EXPLANATION,
   SHEET_CHOICE_SPELL_EXPLANATION,
   SHEET_COPY_LIMIT_HINT,
+  SHEET_DAMAGE_MODAL_LABELS,
   SHEET_DOWNLOAD_JSON_LABEL,
   SHEET_DOWNLOAD_PDF_HINT,
   SHEET_DOWNLOAD_PDF_LABEL,
@@ -509,7 +518,7 @@ import {
   SPELL_DAMAGE_TYPE_TAG_PREFIX,
   SPELL_DELIVERY_TYPES,
   SPELL_DUPLICATE_WARNING,
-  SPELL_HEALING_FORMULA_TAG,
+  SPELL_HEAL_STAT_LABELS,
   SPELL_LEVELS,
   SPELL_NAME_SORT_LOCALE,
   SPELL_OWNED_HINTS,
@@ -518,6 +527,7 @@ import {
   SPELL_SAVE_DC_CUSTOM_MAX,
   SPELL_SAVE_DC_CUSTOM_MIN,
   SPELL_SLOT_FREE_LABEL,
+  SPELL_SLOT_LEVEL_LABELS,
   SPELL_SLOT_USED_LABEL,
   SPELLCASTING_LABEL_SEPARATOR,
   SPELLCASTING_STAT_LABELS,
@@ -1097,6 +1107,37 @@ function getSavingThrowBonusTargets(
 }
 
 /**
+ * Цели проверки характеристики: адресные бонусы и общие «ко всем проверкам».
+ * Проверка навыка — тоже проверка своей характеристики, поэтому навык берёт
+ * эти цели вслед за своей.
+ *
+ * @param ability характеристика проверки.
+ * @returns цели подсчёта проверки.
+ */
+function getAbilityCheckBonusTargets(
+  ability: AbilityKey,
+): InventoryBonusTarget[] {
+  return [
+    { kind: 'ability-check', key: ability },
+    { kind: 'all-ability-checks' },
+  ];
+}
+
+/**
+ * Цели проверки навыка: бонусы самого навыка и всё, что усиливает проверки его
+ * характеристики (камень удачи прибавляет и к Скрытности).
+ *
+ * @param skill навык персонажа.
+ * @returns цели подсчёта навыка.
+ */
+function getSkillBonusTargets(skill: CharacterSkill): InventoryBonusTarget[] {
+  return [
+    { kind: 'skill', key: skill.name },
+    ...getAbilityCheckBonusTargets(skill.ability),
+  ];
+}
+
+/**
  * Спасбросок после прибавок снаряжения: плащ защиты и подобные предметы.
  *
  * @param character персонаж.
@@ -1419,10 +1460,10 @@ export function getSkillValue(
   skill: CharacterSkill,
 ): number {
   return (
-    // Перчатки вора и подобные предметы прибавляют к проверкам своего навыка.
+    // Перчатки вора прибавляют к своему навыку, камень удачи — ко всем проверкам.
     getInventoryBonusTotal(
       character,
-      [{ kind: 'skill', key: skill.name }],
+      getSkillBonusTargets(skill),
       getBaseSkillValue(character, skill),
     )
     // Проверка навыка — бросок к20; пассивное значение считается от неё же,
@@ -1886,7 +1927,7 @@ export function getSkillBreakdown(
     })),
     ...getInventoryBonusSources(
       character,
-      [{ kind: 'skill', key: skill.name }],
+      getSkillBonusTargets(skill),
       getBaseSkillValue(character, skill),
     ).map((source) => ({
       id: source.id,
@@ -3531,9 +3572,12 @@ export function getInventoryBonusTargetGroups(
     },
     {
       label: INVENTORY_BONUS_GROUP_LABELS.checks,
-      items: ABILITY_ORDER.map((ability) =>
-        toInventoryBonusTargetOption('ability-check', ability),
-      ),
+      items: [
+        toInventoryBonusTargetOption('all-ability-checks', ''),
+        ...ABILITY_ORDER.map((ability) =>
+          toInventoryBonusTargetOption('ability-check', ability),
+        ),
+      ],
     },
     {
       label: INVENTORY_BONUS_GROUP_LABELS.savingThrows,
@@ -6648,6 +6692,43 @@ export function applyHitPointsDelta<
 }
 
 /**
+ * Хиты после лечения заклинанием (PHB 2024). Лечение поднимает текущие хиты,
+ * но не выше максимума. Временные хиты не складываются: из новых и уже
+ * имеющихся остаётся большее — правила дают выбор, и лист берёт выгодный.
+ *
+ * @param state текущие и временные хиты.
+ * @param healKind вид лечения.
+ * @param amount выпавшее число (дробь отбрасывается, отрицательное — ноль).
+ * @param max максимум хитов; `0` — неизвестен.
+ * @returns хиты после лечения, приведённое число и то, остались ли прежние
+ * временные хиты.
+ */
+export function applySpellHealing<
+  State extends Pick<CharacterHealth, 'current' | 'temporary'>,
+>(
+  state: State,
+  healKind: EffectHealKind,
+  amount: number,
+  max: number,
+): SpellHealingOutcome<State> {
+  const healed = Math.max(0, Math.trunc(amount));
+
+  if (healKind === 'temp') {
+    return {
+      health: { ...state, temporary: Math.max(state.temporary, healed) },
+      amount: healed,
+      isTemporaryKept: healed <= state.temporary,
+    };
+  }
+
+  return {
+    health: applyHitPointsDelta(state, healed, max),
+    amount: healed,
+    isTemporaryKept: false,
+  };
+}
+
+/**
  * Доведение текущих хитов до итогового максимума после изменения листа.
  *
  * Записанный максимум двигают сами операции (уровень, черта, правка
@@ -6881,7 +6962,7 @@ export function getAbilityCheckValue(
     // Предмет может усиливать сами проверки, не трогая значение характеристики.
     getInventoryBonusTotal(
       character,
-      [{ kind: 'ability-check', key: ability }],
+      getAbilityCheckBonusTargets(ability),
       getAbilityModifier(character, ability),
     ) - getExhaustionD20Penalty(character)
   );
@@ -8085,6 +8166,21 @@ export function getSpellSlotsEmptyDescription(level: number): string {
 }
 
 /**
+ * Пояснение к уведомлению, что новые временные хиты не больше имеющихся:
+ * бросок сделан, но по правилам временные хиты не складываются.
+ *
+ * @param rolled выпавшие временные хиты.
+ * @param current временные хиты, которые уже были у персонажа.
+ * @returns описание для тоста.
+ */
+export function getTemporaryHitPointsKeptDescription(
+  rolled: number,
+  current: number,
+): string {
+  return `Выпало ${rolled}, а у персонажа уже ${current}: временные хиты не складываются, остаётся большее.`;
+}
+
+/**
  * Круги, которые список заклинаний уже показывает: круги самих заклинаний и
  * круги с ячейками. Ячейки идут отдельно — их тратят и на повышение круга уже
  * известного заклинания, поэтому круг с ячейками виден и без своих заклинаний.
@@ -8772,6 +8868,155 @@ const SPELL_DAMAGE_EXPRESSION_PATTERN = new RegExp(
   `^\\d+(?:${DICE_NOTATION_LETTER}\\d+)?(?:[+-]\\d+(?:${DICE_NOTATION_LETTER}\\d+)?)*$`,
 );
 
+/**
+ * Усиление заклинания из справочника в нотации дайс-роллера: обозначение кости
+ * приводится к русскому, пробелы убираются. Справочник пишет его и костями
+ * («2к8»), и числом («5» временных хитов).
+ *
+ * @param notation поле `scaling.additionalDice` справочника.
+ * @returns нотация прибавки за круг; null — пусто либо не формула броска.
+ */
+export function normalizeSpellUpcastNotation(
+  notation: string | null,
+): string | null {
+  if (!notation) {
+    return null;
+  }
+
+  const normalized = notation
+    .replace(SPELL_FORMULA_SPACE_PATTERN, '')
+    .replace(SPELL_FORMULA_DICE_LETTER_PATTERN, `$1${DICE_NOTATION_LETTER}$2`);
+
+  return SPELL_DAMAGE_EXPRESSION_PATTERN.test(normalized) ? normalized : null;
+}
+
+/**
+ * Прибавка к броску от ячейки выше круга заклинания: прибавка за круг
+ * умножается на число кругов сверху — «Лечение ран» ячейкой 3 круга получает
+ * 2к8 дважды.
+ *
+ * @param upcastNotation прибавка за круг («2к8», «5»); null — усиления нет.
+ * @param steps на сколько кругов ячейка выше круга заклинания.
+ * @returns кости и плоская прибавка; пусто — ячейка своего круга.
+ */
+export function getSpellUpcastBonus(
+  upcastNotation: string | null,
+  steps: number,
+): SpellUpcastBonus {
+  if (!upcastNotation || steps <= 0) {
+    return EMPTY_SPELL_UPCAST_BONUS;
+  }
+
+  const perLevel = parseDamageNotation(upcastNotation);
+
+  return {
+    dice: perLevel.dice.map((group) => ({
+      count: group.count * steps,
+      faces: group.faces,
+    })),
+    flatBonus: perLevel.flatBonus * steps,
+  };
+}
+
+/**
+ * Кости броска с добавленными: кость того же номинала складывается с уже
+ * имеющейся («2к8» и «2к8» — «4к8»), новый номинал встаёт в конец.
+ *
+ * @param dice кости броска.
+ * @param extraDice добавляемые кости.
+ * @returns новый список костей; исходные не меняются.
+ */
+export function addDamageDice(
+  dice: DamageDiceGroup[],
+  extraDice: DamageDiceGroup[],
+): DamageDiceGroup[] {
+  return extraDice.reduce<DamageDiceGroup[]>(
+    (mergedDice, extraGroup) => {
+      const sameFacesIndex = mergedDice.findIndex(
+        (group) => group.faces === extraGroup.faces,
+      );
+
+      if (sameFacesIndex === -1) {
+        return [...mergedDice, { ...extraGroup }];
+      }
+
+      return mergedDice.map((group, groupIndex) =>
+        groupIndex === sameFacesIndex
+          ? { count: group.count + extraGroup.count, faces: group.faces }
+          : group,
+      );
+    },
+    dice.map((group) => ({ ...group })),
+  );
+}
+
+/**
+ * Круги, ячейкой которых можно сотворить заклинание: не ниже его круга и со
+ * свободной ячейкой. Обычные ячейки и договор одного круга дают один вариант —
+ * какую из них тратить, решает трата ячейки.
+ *
+ * @param slotRows ячейки листа по кругам.
+ * @param spellLevel круг заклинания.
+ * @returns круги по возрастанию без повторов; пусто — свободных ячеек нет.
+ */
+export function getSpellUpcastSlotLevels(
+  slotRows: SpellSlotRow[],
+  spellLevel: number,
+): number[] {
+  const levels = slotRows
+    .filter((row) => row.level >= spellLevel && row.used < row.max)
+    .map((row) => row.level);
+
+  return uniq(levels).sort((left, right) => left - right);
+}
+
+/**
+ * Подпись прибавки от высокой ячейки под формулой окна броска.
+ *
+ * @param slotLevel круг выбранной ячейки.
+ * @param bonus прибавка от ячейки.
+ * @returns подпись («ячейка 3 круга +4к8»); '' — прибавки нет.
+ */
+export function getSpellUpcastHint(
+  slotLevel: number,
+  bonus: SpellUpcastBonus,
+): string {
+  const notation = getDamageFormula(bonus.dice, bonus.flatBonus);
+
+  if (!notation) {
+    return '';
+  }
+
+  return `${getSpellSlotLevelLabel(slotLevel).toLowerCase()} +${notation}`;
+}
+
+/**
+ * Название ячейки круга в выборе окна броска.
+ *
+ * @param slotLevel круг ячейки.
+ * @returns подпись («Ячейка 3 круга»).
+ */
+export function getSpellSlotLevelLabel(slotLevel: number): string {
+  return `${SPELL_SLOT_LEVEL_LABELS.prefix} ${slotLevel} ${SPELL_SLOT_LEVEL_LABELS.suffix}`;
+}
+
+/**
+ * Подсказка под выбором ячейки: сколько даёт каждый круг сверху.
+ *
+ * @param upcastNotation прибавка за круг («2к8»); null — усиления нет.
+ * @param spellLevel круг заклинания.
+ * @returns подсказка («+2к8 за каждый круг выше 1») либо пояснение, что
+ * усиления костями нет.
+ */
+export function getSpellUpcastHelp(
+  upcastNotation: string | null,
+  spellLevel: number,
+): string {
+  return upcastNotation
+    ? `+${upcastNotation} ${SHEET_DAMAGE_MODAL_LABELS.upcastPerLevel} ${spellLevel}`
+    : SHEET_DAMAGE_MODAL_LABELS.noUpcastHelp;
+}
+
 /** Разобранные теги одной формулы урона. */
 interface SpellDamageTags {
   /** Названия типов урона в порядке появления; пусто — тип не распознан. */
@@ -8782,6 +9027,9 @@ interface SpellDamageTags {
 
   /** Формула помечена тегом типа урона (а не лечения). */
   hasDamageType: boolean;
+
+  /** Вид лечения формулы (`@heal`, `@heal.temp`); null — формула не лечит. */
+  healKind: EffectHealKind | null;
 
   /** Название условия применения формулы; '' — условия нет. */
   conditionLabel: string;
@@ -8841,9 +9089,11 @@ function getSpellDamageTypeChoiceLabel(token: string): string {
 }
 
 /**
- * Разбор тегов одной формулы справочника. Незнакомый тег (лечение, чужой
- * модификатор) делает формулу непригодной: подставить его нечем, а выкинуть —
- * значит соврать в броске.
+ * Разбор тегов одной формулы справочника. Формула годится, если в ней есть тип
+ * урона либо лечение; лечение важнее типа урона — так часть читает и VTTG
+ * (`damagePartIsHealing`). Незнакомый тег (чужой модификатор, `@heal.spell`)
+ * делает формулу непригодной: подставить его нечем, а выкинуть — значит
+ * соврать в броске.
  *
  * @param formula формула урона из справочника.
  * @returns разобранные теги; null — встретился неподдерживаемый тег.
@@ -8853,6 +9103,7 @@ function parseSpellDamageTags(formula: string): SpellDamageTags | null {
     typeLabels: [],
     typeChoiceLabels: [],
     hasDamageType: false,
+    healKind: null,
     conditionLabel: '',
     abilityModifierCount: 0,
   };
@@ -8902,10 +9153,21 @@ function parseSpellDamageTags(formula: string): SpellDamageTags | null {
       continue;
     }
 
+    // Правило тега лечения общее с эффектами и VTTG: `@heal`, `@heal.temp`,
+    // а `@heal.spell` лечением не считается
+    const healKind = detectFormulaHealKind(match[0]);
+
+    if (healKind) {
+      // Вид лечения задаёт первый тег — как и в описании эффекта
+      tags.healKind ??= healKind;
+
+      continue;
+    }
+
     return null;
   }
 
-  return tags.hasDamageType ? tags : null;
+  return tags.hasDamageType || tags.healKind ? tags : null;
 }
 
 /**
@@ -8945,33 +9207,57 @@ function getSpellDamageExpression(
   return SPELL_DAMAGE_EXPRESSION_PATTERN.test(expression) ? expression : '';
 }
 
+/** Формула урона справочника вместе с её адресатом. */
+interface SpellTargetedFormula {
+  /** Формула справочника (`2к4@heal.temp+4`). */
+  formula: string;
+
+  /** Формула адресована самому заклинателю. */
+  isSelfTargeted: boolean;
+}
+
 /**
  * Формулы урона заклинания на уровне персонажа: у заговора набор формул с
  * порогового уровня заменяется целиком (5, 11 и 17 в правилах), поэтому берётся
- * наибольший подходящий тир, а не базовые формулы.
+ * наибольший подходящий тир, а не базовые формулы. Адресат базовой формулы —
+ * её собственный, у тира своего адресата нет, и решает цель заклинания.
  *
  * @param damage урон заклинания из справочника.
  * @param characterLevel общий уровень персонажа.
- * @returns формулы урона, действующие на этом уровне.
+ * @returns формулы урона с адресатами, действующие на этом уровне.
  */
 function getSpellDamageFormulasByLevel(
   damage: SpellDamageFormulas,
   characterLevel: number,
-): string[] {
+): SpellTargetedFormula[] {
   // Тиры отсортированы по возрастанию уровня: последний подходящий и есть
   // действующий.
   const tier = damage.cantripTiers.findLast(
     (cantripTier) => cantripTier.level <= characterLevel,
   );
 
-  return tier?.formulas ?? damage.base;
+  if (tier) {
+    return tier.formulas.map((formula) => ({
+      formula,
+      isSelfTargeted: damage.isSelfTargeted,
+    }));
+  }
+
+  return damage.base.map((formula, formulaIndex) => ({
+    formula,
+    // Разбор ответа держит адресатов той же длины, что формулы; запасной
+    // адресат — для урона, собранного в обход разбора
+    isSelfTargeted:
+      damage.baseSelfTargets[formulaIndex] ?? damage.isSelfTargeted,
+  }));
 }
 
 /**
  * Броски урона заклинания из формул справочника. Одна запись справочника может
  * описывать несколько взаимоисключающих бросков (кость зависит от состояния
- * цели) — каждый становится отдельной плиткой. Лечение и формулы с
- * неподдерживаемыми тегами пропускаются: плитка урона о них не говорит.
+ * цели) — каждый становится отдельной плиткой. Лечение (`@heal`, `@heal.temp`)
+ * тоже становится плиткой — со своим видом лечения и адресатом; формулы с
+ * неподдерживаемыми тегами пропускаются: бросок по ним врал бы.
  *
  * @param spellDamage урон заклинания из справочника (с тирами заговора).
  * @param spellAbilityModifier модификатор заклинательной характеристики.
@@ -8983,11 +9269,20 @@ export function getSpellDamage(
   spellAbilityModifier: number,
   characterLevel: number,
 ): SpellDamage[] {
+  // Заговор с тирами растёт от уровня персонажа, а не от ячейки
+  const upcastNotation = spellDamage.cantripTiers.some(
+    (tier) => tier.level <= characterLevel,
+  )
+    ? null
+    : spellDamage.upcastNotation;
+
   return getSpellDamageFormulasByLevel(spellDamage, characterLevel)
-    .flatMap((damageFormula) =>
-      damageFormula.split(SPELL_DAMAGE_VARIANT_SEPARATOR),
+    .flatMap(({ formula: damageFormula, isSelfTargeted }) =>
+      damageFormula
+        .split(SPELL_DAMAGE_VARIANT_SEPARATOR)
+        .map((formula) => ({ formula, isSelfTargeted })),
     )
-    .map((formula) => {
+    .map(({ formula, isSelfTargeted }) => {
       const tags = parseSpellDamageTags(formula);
 
       if (!tags) {
@@ -9009,9 +9304,15 @@ export function getSpellDamage(
         formula: expression,
         diceNotation,
         abilityModifierCount: tags.abilityModifierCount,
-        typeLabel: tags.typeLabels.join(SPELL_DAMAGE_TYPE_SEPARATOR),
-        typeChoiceLabels: tags.typeChoiceLabels,
+        // У лечения подпись — вид лечения: тип урона ему ни к чему
+        typeLabel: tags.healKind
+          ? SPELL_HEAL_STAT_LABELS[tags.healKind]
+          : tags.typeLabels.join(SPELL_DAMAGE_TYPE_SEPARATOR),
+        typeChoiceLabels: tags.healKind ? [] : tags.typeChoiceLabels,
         conditionLabel: tags.conditionLabel,
+        healKind: tags.healKind,
+        isSelfTargeted,
+        upcastNotation,
       };
     })
     .filter((damage): damage is SpellDamage => damage !== null);
@@ -10222,7 +10523,7 @@ export function isSpellAttackEffect(effect: SpellAttackEffectFields): boolean {
 
   const [firstFormula] = effect.damageFormulas;
 
-  if (firstFormula?.includes(SPELL_HEALING_FORMULA_TAG)) {
+  if (firstFormula && detectFormulaHealKind(firstFormula)) {
     return false;
   }
 
@@ -10286,12 +10587,13 @@ export function getSpellAttackRoll(
 /**
  * Кнопка «Сотворить» строки заклинания: что сделает нажатие и всё, что для
  * этого нужно. Атакующее заклинание сперва катит атаку, урон — следом, и уже
- * окно урона тратит ячейку, как плитка урона. Без урона ячейка тратится сразу.
+ * окно урона тратит ячейку, как плитка урона. Лечащее заклинание открывает то
+ * же окно с броском лечения. Без урона ячейка тратится сразу.
  * Заговору без атаки и урона сотворение ничего не даёт — кнопки нет.
  *
  * @param spell заклинание вкладки.
  * @param attack бросок атаки; null — заклинание не атакует.
- * @param damage бросок урона (первая плитка урона строки); null — урона нет.
+ * @param damage бросок урона или лечения (первая плитка строки); null — их нет.
  * @returns кнопка сотворения; null — делать по нажатию нечего.
  */
 export function getSpellCastAction(
@@ -10311,6 +10613,8 @@ export function getSpellCastAction(
     steps.push(
       damage ? SPELL_CAST_LABELS.attackAndDamage : SPELL_CAST_LABELS.attack,
     );
+  } else if (damage?.healing) {
+    steps.push(SPELL_CAST_LABELS[damage.healing.kind]);
   } else if (damage) {
     steps.push(SPELL_CAST_LABELS.damage);
   }

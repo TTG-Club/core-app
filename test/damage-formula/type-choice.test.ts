@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { getSpellDamage } from '~character-sheet/model';
+import {
+  EMPTY_SPELL_DAMAGE_FORMULAS,
+  getSpellDamage,
+} from '~character-sheet/model';
 import {
   buildDamageFormulaTypeChoiceToken,
   getDamageFormulaTypes,
@@ -58,7 +61,7 @@ describe('тип урона на выбор в формуле', () => {
 
   it('лист показывает урон заклинания с типом на выбор', () => {
     const [chromaticOrbDamage] = getSpellDamage(
-      { base: [CHROMATIC_ORB_FORMULA], cantripTiers: [] },
+      { ...EMPTY_SPELL_DAMAGE_FORMULAS, base: [CHROMATIC_ORB_FORMULA] },
       0,
       1,
     );
@@ -69,7 +72,7 @@ describe('тип урона на выбор в формуле', () => {
 
   it('лист подставляет модификатор к формуле со случайным типом', () => {
     const [holyStarDamage] = getSpellDamage(
-      { base: [RANDOM_TYPE_FORMULA], cantripTiers: [] },
+      { ...EMPTY_SPELL_DAMAGE_FORMULAS, base: [RANDOM_TYPE_FORMULA] },
       4,
       1,
     );
@@ -80,19 +83,19 @@ describe('тип урона на выбор в формуле', () => {
 
   it('подсказка листа называет тип на выбор, как лист VTTG', () => {
     const [chromaticOrbDamage] = getSpellDamage(
-      { base: [CHROMATIC_ORB_FORMULA], cantripTiers: [] },
+      { ...EMPTY_SPELL_DAMAGE_FORMULAS, base: [CHROMATIC_ORB_FORMULA] },
       0,
       1,
     );
 
     const [holyStarDamage] = getSpellDamage(
-      { base: [RANDOM_TYPE_FORMULA], cantripTiers: [] },
+      { ...EMPTY_SPELL_DAMAGE_FORMULAS, base: [RANDOM_TYPE_FORMULA] },
       0,
       1,
     );
 
     const [fireDamage] = getSpellDamage(
-      { base: ['8к6@dmg.fire'], cantripTiers: [] },
+      { ...EMPTY_SPELL_DAMAGE_FORMULAS, base: ['8к6@dmg.fire'] },
       0,
       1,
     );

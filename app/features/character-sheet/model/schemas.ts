@@ -100,6 +100,8 @@ import {
   SPELL_CASTING_BEYOND_TURN_KIND,
   SPELL_CASTING_UNIT_KINDS,
   SPELL_COMPONENT_LABELS,
+  SPELL_SELF_FORMULA_TARGET,
+  SPELL_SELF_TARGET_TYPE,
   STARTING_EQUIPMENT_DEFAULT_COIN_KEY,
   STARTING_EQUIPMENT_LABELS,
   WEAPON_GROUP_BY_API_CATEGORY,
@@ -117,6 +119,7 @@ import {
   isAbilityImprovementFeatChoice,
   isAbilityImprovementFeature,
   isSpellAttackEffect,
+  normalizeSpellUpcastNotation,
   parseAbilityKeys,
   parseApiAbilityKey,
   parseFeatMarker,
@@ -3839,9 +3842,23 @@ const spellRawDamageSchema = z
     effect: z
       .object({
         damageFormulas: z.array(z.string()).catch([]),
+        // Адресат формулы по её порядку (`self`, `selected`); у старых записей
+        // массива нет либо он короче формул
+        damageFormulaTargets: z
+          .array(z.string().nullable().catch(null))
+          .catch([]),
+        targetType: z.string().nullable().catch(null),
         cantripScalingTiers: z
           .array(spellRawCantripScalingTierSchema)
           .catch([]),
+        // Усиление высокой ячейкой: кости («2к8») либо число («5»); у
+        // заклинаний с дополнительными целями или длительностью костей нет
+        scaling: z
+          .object({
+            additionalDice: z.string().nullable().catch(null),
+          })
+          .nullable()
+          .catch(null),
       })
       .nullable()
       .catch(null),
@@ -3857,8 +3874,17 @@ const spellRawDamageSchema = z
  * уровню: потребитель берёт наибольший подходящий и на несортированном списке
  * ошибётся.
  *
+ * Адресат формулы берётся из `damageFormulaTargets` по её порядку, а без него
+ * — из цели заклинания: по нему лист решает, прибавлять ли лечение к своим
+ * хитам.
+ *
+ * Усиление за круг ячейки берётся из `scaling.additionalDice`; то, что не
+ * читается формулой броска, отбрасывается — высокая ячейка тогда тратится
+ * без прибавки.
+ *
  * @param input сырой ответ заклинания.
- * @returns формулы урона из справочника с тирами заговора.
+ * @returns формулы урона из справочника с тирами заговора, адресатами и
+ * усилением за круг.
  */
 function parseSpellDamageFormulas(input: unknown): SpellDamageFormulas {
   const effect = spellRawDamageSchema.parse(input).effect;
@@ -3873,7 +3899,29 @@ function parseSpellDamageFormulas(input: unknown): SpellDamageFormulas {
     .filter((tier) => tier.level > 0 && tier.formulas.length > 0)
     .sort((left, right) => left.level - right.level);
 
-  return { base: effect?.damageFormulas ?? [], cantripTiers };
+  const base = effect?.damageFormulas ?? [];
+
+  // Цель «на себя» у заклинания целиком — адресат формул, у которых своего
+  // адресата справочник не записал
+  const isSelfTargeted = effect?.targetType === SPELL_SELF_TARGET_TYPE;
+
+  const baseSelfTargets = base.map((_, formulaIndex) => {
+    const formulaTarget = effect?.damageFormulaTargets[formulaIndex];
+
+    return formulaTarget
+      ? formulaTarget === SPELL_SELF_FORMULA_TARGET
+      : isSelfTargeted;
+  });
+
+  return {
+    base,
+    baseSelfTargets,
+    isSelfTargeted,
+    cantripTiers,
+    upcastNotation: normalizeSpellUpcastNotation(
+      effect?.scaling?.additionalDice ?? null,
+    ),
+  };
 }
 
 /**

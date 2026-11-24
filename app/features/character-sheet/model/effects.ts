@@ -41,6 +41,7 @@ const EFFECT_FIXED_TARGETS: Record<string, InventoryBonusTarget> = {
   'armorClass': { kind: 'armor-class' },
   'initiative': { kind: 'initiative' },
   'spellSaveDC': { kind: 'spell-save-dc' },
+  'abilityCheck': { kind: 'all-ability-checks' },
   'attack.spell': { kind: 'spell-attack' },
   'attack.melee': { kind: 'melee-attack' },
   'attack.ranged': { kind: 'ranged-attack' },

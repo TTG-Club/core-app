@@ -2,7 +2,9 @@
   import type {
     AbilityKey,
     DamageDiceGroup,
+    DamageRollResult,
     DamageRollSource,
+    SpellHealing,
   } from '../../model';
 
   import { useDiceRollHandler } from '~dice-roller/composables';
@@ -10,13 +12,21 @@
   import { useCharacterSheet } from '../../composables';
   import {
     ABILITY_LABELS,
+    addDamageDice,
+    CANTRIP_SPELL_LEVEL,
     DAMAGE_DICE_COUNT_MAX,
     DAMAGE_DICE_GROUPS_MAX,
     DAMAGE_ROLL_ACTION_LABEL,
     DAMAGE_ROLL_DICE_COUNT_MIN,
     DEFAULT_DAMAGE_DICE_FACES,
+    EMPTY_SPELL_UPCAST_BONUS,
     getAbilityModifier,
     getDamageFormula,
+    getSpellSlotLevelLabel,
+    getSpellUpcastBonus,
+    getSpellUpcastHelp,
+    getSpellUpcastHint,
+    getSpellUpcastSlotLevels,
     INVENTORY_STAT_HINT_LABELS,
     parseDamageNotation,
     ROLL_ABILITY_AUTO,
@@ -25,6 +35,7 @@
     ROLL_BONUS_MIN,
     ROLL_DICE_FACES_OPTIONS,
     SHEET_DAMAGE_MODAL_LABELS,
+    SHEET_HEAL_MODAL_LABELS,
   } from '../../model';
 
   const props = withDefaults(
@@ -40,22 +51,133 @@
 
       /** Надпись на кнопке броска. */
       actionLabel?: string;
+
+      /**
+       * Бросок лечит, а не ранит: окно подписано лечением и предлагает
+       * прибавить выпавшее к хитам листа; null — бросок урона.
+       */
+      healing?: SpellHealing | null;
+
+      /**
+       * Круг заклинания: окно даёт выбрать свободную ячейку этого круга или
+       * выше; null — бросок не тратит ячеек (оружие).
+       */
+      spellLevel?: number | null;
+
+      /** Прибавка за каждый круг ячейки выше круга заклинания («2к8»). */
+      upcastNotation?: string | null;
     }>(),
     {
       actionLabel: DAMAGE_ROLL_ACTION_LABEL,
+      healing: null,
+      spellLevel: null,
+      upcastNotation: null,
     },
   );
 
   const emit = defineEmits<{
-    /** Закрытие модалки; `true` — бросок сделан, а не отменён. */
-    close: [rolled?: boolean];
+    /** Закрытие модалки; итог есть — бросок сделан, а не отменён. */
+    close: [result?: DamageRollResult];
   }>();
 
   const { handleRoll } = useDiceRollHandler();
 
   // Модификатор характеристики считается по листу: в справочнике и в оружии
   // лежит только то, сколько раз он входит в урон.
-  const { character } = useCharacterSheet(props.sheetKey);
+  const { character, isReadonly, spellSlotRows } = useCharacterSheet(
+    props.sheetKey,
+  );
+
+  // Ячейку тратит только заклинание с кругом: заговор и оружие — нет
+  const castSpellLevel = computed(() =>
+    props.spellLevel !== null && props.spellLevel > CANTRIP_SPELL_LEVEL
+      ? props.spellLevel
+      : null,
+  );
+
+  // Круги со свободной ячейкой не ниже круга заклинания; пусто — ячеек нет
+  // или класс их не даёт: тогда выбирать нечего, и трата решится как раньше
+  const slotLevelOptions = computed(() =>
+    castSpellLevel.value === null
+      ? []
+      : getSpellUpcastSlotLevels(spellSlotRows.value, castSpellLevel.value).map(
+          (level) => ({
+            label: getSpellSlotLevelLabel(level),
+            value: level,
+          }),
+        ),
+  );
+
+  const hasSlotLevelChoice = computed(() => slotLevelOptions.value.length > 0);
+
+  /**
+   * Ячейка, выбранная при открытии окна: круг заклинания, а если он исчерпан —
+   * первая свободная выше, чтобы бросок не упёрся в пустой круг. Дальше выбор
+   * за игроком: окно живёт до закрытия.
+   *
+   * @returns круг ячейки; undefined — бросок без ячейки (оружие, заговор).
+   */
+  function getInitialSlotLevel(): number | undefined {
+    const spellLevel = castSpellLevel.value;
+
+    if (spellLevel === null) {
+      return undefined;
+    }
+
+    const levels = slotLevelOptions.value.map((option) => option.value);
+
+    return levels.includes(spellLevel) ? spellLevel : (levels[0] ?? spellLevel);
+  }
+
+  const draftSlotLevel = ref(getInitialSlotLevel());
+
+  const upcastBonus = computed(() =>
+    castSpellLevel.value === null || draftSlotLevel.value === undefined
+      ? EMPTY_SPELL_UPCAST_BONUS
+      : getSpellUpcastBonus(
+          props.upcastNotation,
+          draftSlotLevel.value - castSpellLevel.value,
+        ),
+  );
+
+  const slotLevelHelp = computed(() =>
+    castSpellLevel.value === null
+      ? ''
+      : getSpellUpcastHelp(props.upcastNotation, castSpellLevel.value),
+  );
+
+  const healLabels = computed(() =>
+    props.healing ? SHEET_HEAL_MODAL_LABELS[props.healing.kind] : null,
+  );
+
+  const rollActionLabel = computed(
+    () => healLabels.value?.action ?? props.actionLabel,
+  );
+
+  const diceLabel = computed(() =>
+    props.healing
+      ? SHEET_DAMAGE_MODAL_LABELS.healDice
+      : SHEET_DAMAGE_MODAL_LABELS.dice,
+  );
+
+  // Чужой лист открыт на просмотр: хиты в нём не меняются, и галочка ни к чему
+  const applyToSelfLabels = computed(() =>
+    isReadonly.value ? null : healLabels.value,
+  );
+
+  // Лечение «на себя» прибавляется сразу; лечение другого существа — только
+  // если игрок сам отметит, что лечит себя
+  const isAppliedToSelf = ref(props.healing?.isSelfTargeted ?? false);
+
+  /**
+   * Смена галочки «прибавить к своим хитам»: неопределённого состояния у неё
+   * не бывает, поэтому всё, кроме `true`, — снятая галочка.
+   *
+   * @param value новое значение галочки.
+   */
+  function handleApplyToSelfChange(value: boolean | 'indeterminate') {
+    isAppliedToSelf.value = value === true;
+  }
 
   const baseNotation = parseDamageNotation(props.damage.diceNotation);
 
@@ -121,8 +243,13 @@
       + props.damage.abilityModifierCount * abilityModifier.value,
   );
 
+  // Усиление ячейки складывается с костями игрока только в формуле: поля
+  // костей остаются его правкой, а прибавка меняется вместе с выбором ячейки
   const formula = computed(() =>
-    getDamageFormula(diceGroups.value, baseBonus.value + draftBonus.value),
+    getDamageFormula(
+      addDamageDice(diceGroups.value, upcastBonus.value.dice),
+      baseBonus.value + draftBonus.value + upcastBonus.value.flatBonus,
+    ),
   );
 
   /** Слагаемые базового броска для подписи под формулой. */
@@ -152,6 +279,15 @@
 
     for (const rider of enabledRiders.value) {
       baseParts.push(`${rider.name} ${getFormattedBonus(rider.bonus)}`);
+    }
+
+    const upcastHint =
+      draftSlotLevel.value === undefined
+        ? ''
+        : getSpellUpcastHint(draftSlotLevel.value, upcastBonus.value);
+
+    if (upcastHint) {
+      baseParts.push(upcastHint);
     }
 
     const typePart = props.damage.typeLabel
@@ -197,8 +333,14 @@
   }
 
   function handleRollClick() {
-    handleRoll(formula.value);
-    emit('close', true);
+    const total = handleRoll(formula.value);
+
+    emit('close', {
+      total,
+      isAppliedToSelf:
+        applyToSelfLabels.value !== null && isAppliedToSelf.value,
+      slotLevel: draftSlotLevel.value ?? null,
+    });
   }
 </script>
 
@@ -228,7 +370,7 @@
           <span
             class="text-[10px] font-bold tracking-wider text-muted uppercase"
           >
-            {{ SHEET_DAMAGE_MODAL_LABELS.dice }}
+            {{ diceLabel }}
           </span>
 
           <div
@@ -287,6 +429,26 @@
           />
         </div>
 
+        <UFormField
+          v-if="hasSlotLevelChoice"
+          :label="SHEET_DAMAGE_MODAL_LABELS.slotLevel"
+          :help="slotLevelHelp"
+        >
+          <USelect
+            v-model="draftSlotLevel"
+            :items="slotLevelOptions"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UCheckbox
+          v-if="applyToSelfLabels"
+          :model-value="isAppliedToSelf"
+          :label="applyToSelfLabels.applyToSelf"
+          :description="applyToSelfLabels.applyHint"
+          @update:model-value="handleApplyToSelfChange"
+        />
+
         <!-- Настройки броска идут одним рядом; без селекта характеристики
           «Доп. бонус» занимает ряд целиком -->
         <div class="flex flex-col gap-4 sm:flex-row">
@@ -321,7 +483,7 @@
 
     <template #footer>
       <UButton
-        :label="actionLabel"
+        :label="rollActionLabel"
         icon="ttg:dice-outline-d20"
         color="primary"
         size="lg"
