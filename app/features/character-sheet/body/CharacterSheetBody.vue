@@ -171,6 +171,7 @@
     setAbilityScore,
     setSpellSpellcastingAbility,
     spendSpellSlot,
+    receiveSpellHealing,
     toggleSavingThrowProficiency,
     toggleInnateSpellPrepared,
     toggleSpellPrepared,
@@ -1096,23 +1097,37 @@
   }
 
   /**
-   * Бросок урона заклинанием: кроме кубов тратится ячейка его круга — бросок и
-   * есть накладывание. Ячейка уходит только после подтверждённого броска: окно
-   * настройки можно и закрыть, ничего не бросив. Заговорам и кругам, которых
-   * класс не даёт, тратить нечего.
+   * Бросок урона заклинанием: кроме кубов тратится ячейка — бросок и есть
+   * накладывание. Круг ячейки игрок выбирает в окне: ячейка выше круга
+   * заклинания прибавляет к броску усиление справочника. Ячейка уходит только
+   * после подтверждённого броска: окно настройки можно и закрыть, ничего не
+   * бросив. Заговорам и кругам, которых класс не даёт, тратить нечего.
    */
   async function handleSpellDamageRoll(roll: SpellDamageRoll) {
-    const isRolled = await damageModal.open({
+    const rollResult = await damageModal.open({
       sheetKey,
       title: roll.title,
       damage: roll.damage,
+      healing: roll.healing,
+      spellLevel: roll.level,
+      upcastNotation: roll.upcastNotation,
     }).result;
 
-    if (!isRolled) {
+    // Ячейки круга кончились — заклинание не сотворено, и лечить нечем: лист
+    // уже предупредил, что тратить нечего
+    if (!rollResult || !spendSpellSlot(rollResult.slotLevel ?? roll.level)) {
       return;
     }
 
-    spendSpellSlot(roll.level);
+    // Лечение себя прибавляется к хитам листа: окно отдаёт выпавшее число и
+    // то, оставил ли игрок галочку «себе»
+    if (
+      roll.healing
+      && rollResult.isAppliedToSelf
+      && rollResult.total !== null
+    ) {
+      receiveSpellHealing(roll.healing.kind, rollResult.total);
+    }
   }
 
   function handleVisionEdit() {

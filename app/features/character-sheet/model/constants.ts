@@ -1,3 +1,4 @@
+import type { EffectHealKind } from '~active-effects/model';
 import type { ListPresentationConfig } from '~infrastructure/list-presentation/model';
 
 import type {
@@ -58,6 +59,9 @@ import type {
   SpellCastingKind,
   SpellCastingKindMeta,
   SpellCastingTextPattern,
+  SpellDamageFormulas,
+  SpellHealModalLabels,
+  SpellUpcastBonus,
   ToolProficiencyGroupKey,
   VisionKey,
   WeaponCategory,
@@ -3111,8 +3115,41 @@ export const SPELL_ATTACK_TYPES: string[] = [
   'MELEE_OR_RANGE',
 ];
 
-/** Тег лечения в формуле воздействия: лечащее заклинание не атакует. */
-export const SPELL_HEALING_FORMULA_TAG = '@heal';
+/**
+ * Урон заклинания, которого справочник не дал: ни формул, ни тиров заговора —
+ * плиток урона у такого заклинания нет.
+ */
+export const EMPTY_SPELL_DAMAGE_FORMULAS: SpellDamageFormulas = {
+  base: [],
+  baseSelfTargets: [],
+  isSelfTargeted: false,
+  cantripTiers: [],
+  upcastNotation: null,
+};
+
+/** Прибавки от ячейки нет: ячейка круга самого заклинания либо бросок без ячейки. */
+export const EMPTY_SPELL_UPCAST_BONUS: SpellUpcastBonus = {
+  dice: [],
+  flatBonus: 0,
+};
+
+/** Адресат формулы воздействия «сам заклинатель» (`damageFormulaTargets`). */
+export const SPELL_SELF_FORMULA_TARGET = 'self';
+
+/** Цель воздействия «на себя» (`effect.targetType`). */
+export const SPELL_SELF_TARGET_TYPE = 'SELF';
+
+/** Подписи плитки и подсказки лечения заклинанием по виду лечения. */
+export const SPELL_HEAL_STAT_LABELS: Record<EffectHealKind, string> = {
+  hp: 'Лечение',
+  temp: 'Временные хиты',
+};
+
+/** Подписи кнопки броска лечения для скринридера по виду лечения. */
+export const SPELL_HEAL_ROLL_LABELS: Record<EffectHealKind, string> = {
+  hp: 'Бросок лечения заклинанием',
+  temp: 'Бросок временных хитов заклинанием',
+};
 
 /**
  * Префикс URL своего заклинания. Каталожные ссылки — обычные слаги раздела,
@@ -4428,6 +4465,12 @@ export const SHEET_ROLL_HINT_LABEL = 'нажмите, чтобы бросить'
 
 /** Заголовок предупреждения о том, что тратить ячейки круга уже нечего. */
 export const SPELL_SLOTS_EMPTY_TOAST_TITLE = 'Ячейки закончились';
+
+/** Части подписи ячейки круга в окне броска («Ячейка 3 круга»). */
+export const SPELL_SLOT_LEVEL_LABELS = {
+  prefix: 'Ячейка',
+  suffix: 'круга',
+} as const;
 
 /**
  * Названия состояний справочника (`/api/v2/dictionaries/conditions`) — для
@@ -6443,12 +6486,40 @@ export const SHEET_WEAPON_PROFICIENCIES_LABELS = {
 export const SHEET_DAMAGE_MODAL_LABELS = {
   formula: 'Формула',
   dice: 'Кости урона',
-  removeDie: 'Убрать кость урона',
+  removeDie: 'Убрать кость',
   addDie: 'Добавить кость',
   ability: 'Характеристика',
   bonus: 'Доп. бонус',
   riders: 'Прибавки по применению',
+  healDice: 'Кости',
+  slotLevel: 'Ячейка',
+  upcastPerLevel: 'за каждый круг выше',
+  noUpcastHelp: 'Усиления костями в справочнике нет',
 } as const;
+
+/** Подписи окна броска лечения заклинанием по виду лечения. */
+export const SHEET_HEAL_MODAL_LABELS: Record<
+  EffectHealKind,
+  SpellHealModalLabels
+> = {
+  hp: {
+    action: 'Бросить лечение',
+    applyToSelf: 'Прибавить к своим хитам',
+    applyHint: 'Хиты не поднимутся выше максимума',
+  },
+  temp: {
+    action: 'Бросить временные хиты',
+    applyToSelf: 'Получить временные хиты',
+    applyHint: 'Временные хиты не складываются: останется большее значение',
+  },
+};
+
+/**
+ * Заголовок уведомления, что новые временные хиты не больше уже имеющихся: по
+ * правилам они не складываются, и лист оставляет прежние.
+ */
+export const SPELL_TEMPORARY_HIT_POINTS_KEPT_TOAST_TITLE =
+  'Временные хиты не изменились';
 
 /**
  * Токен «урон того же типа, что у оружия» в части урона эффекта: тип на выбор
@@ -6618,6 +6689,8 @@ export const SPELL_CAST_LABELS = {
   attackAndDamage: 'бросок атаки, затем урон',
   attack: 'бросок атаки',
   damage: 'бросок урона',
+  hp: 'бросок лечения',
+  temp: 'бросок временных хитов',
   slotPrefix: 'тратит ячейку ',
   slotSuffix: ' круга',
   cantrip: 'заговор ячейку не тратит',

@@ -671,7 +671,7 @@ export function describeEffectChange(change: EffectChange): string {
  * @param formula формула части.
  * @returns вид лечения либо `null`, если токена нет.
  */
-function detectFormulaHealKind(formula: string): EffectHealKind | null {
+export function detectFormulaHealKind(formula: string): EffectHealKind | null {
   const match = HEAL_TOKEN_PATTERN.exec(formula);
 
   if (!match) {

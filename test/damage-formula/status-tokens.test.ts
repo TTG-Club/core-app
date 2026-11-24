@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { describeEffectDamageParts } from '~active-effects/model';
-import { getSpellDamage } from '~character-sheet/model';
+import {
+  EMPTY_SPELL_DAMAGE_FORMULAS,
+  getSpellDamage,
+} from '~character-sheet/model';
 import {
   buildDamageFormulaTools,
   DAMAGE_FORMULA_LABELS,
@@ -154,8 +157,8 @@ describe('разбор формулы с состояниями', () => {
   it('лист персонажа не выбрасывает формулу с состоянием', () => {
     const spellDamage = getSpellDamage(
       {
+        ...EMPTY_SPELL_DAMAGE_FORMULAS,
         base: [`8к6@dmg.fire + 2к6@dmg.fire${TARGET_PRONE_TOKEN}`],
-        cantripTiers: [],
       },
       0,
       1,

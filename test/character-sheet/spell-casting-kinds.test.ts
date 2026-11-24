@@ -3,6 +3,7 @@ import type { CharacterSpell, SpellTabFilter } from '~character-sheet/model';
 import { describe, expect, it } from 'vitest';
 
 import {
+  EMPTY_SPELL_DAMAGE_FORMULAS,
   getCustomSpellCastingKinds,
   getOrderedSpellCastingKinds,
   matchesSpellFilter,
@@ -80,7 +81,7 @@ describe('parseSpellCatalogMechanics', () => {
 
   it('неожиданный ответ даёт пустые урон и время', () => {
     expect(parseSpellCatalogMechanics(null)).toEqual({
-      damage: { base: [], cantripTiers: [] },
+      damage: EMPTY_SPELL_DAMAGE_FORMULAS,
       hasAttackRoll: false,
       castingKinds: [],
     });

@@ -47,6 +47,7 @@ import {
   CHARACTER_SHEET_SAVED_API_PATH,
   CHARACTER_SHEET_SHARED_API_PATH,
   CHOICE_SPELL_POOL_SIZE,
+  EMPTY_SPELL_DAMAGE_FORMULAS,
   FEATS_DETAIL_BASE_PATH,
   ITEMS_DETAIL_BASE_PATH,
   ITEMS_SEARCH_PATH,
@@ -617,7 +618,7 @@ export async function fetchSpellCatalogMechanics(
     return parseSpellCatalogMechanics(response);
   } catch {
     return {
-      damage: { base: [], cantripTiers: [] },
+      damage: EMPTY_SPELL_DAMAGE_FORMULAS,
       hasAttackRoll: false,
       castingKinds: [],
     };

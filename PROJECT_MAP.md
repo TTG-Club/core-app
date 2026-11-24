@@ -264,6 +264,16 @@ modals), so its capabilities are listed here rather than squeezed into the table
   `/raw` effect, the same rule as the VTTG export; bonus from
   `getSpellAttackRoll`; advantage/disadvantage from `attack.spell.*` effects),
   then the damage modal that spends the slot — or the slot alone.
+  Healing formulas (`@heal`, `@heal.temp`, detected by the shared
+  `detectFormulaHealKind` from `~active-effects/model`) are tiles too: the same
+  modal gets `healing` and a «себе» checkbox (pre-checked when the formula or
+  spell targets the caster), and `receiveSpellHealing` applies the roll via
+  `applySpellHealing` — healing capped at max, temporary hit points keep the
+  larger value. No free slot of the circle — nothing is applied.
+  The modal also picks the slot circle (`getSpellUpcastSlotLevels`: free
+  slots not below the spell's circle), spends that slot and adds the upcast
+  bonus from `/raw` `effect.scaling.additionalDice` (`2к8`, `5`) once per circle
+  above — `getSpellUpcastBonus`; cantrips with tiers get none.
 - Both hit point modals share `SheetHitPointsCalculator` (amount + «Урон» /
   «Лечение»; Enter takes `-7` / `+3` / `20`, parsed by
   `parseHitPointsExpression`). The math is `applyHitPointsDelta` /

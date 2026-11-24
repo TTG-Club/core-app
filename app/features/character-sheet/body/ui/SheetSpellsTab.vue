@@ -70,6 +70,8 @@
     SPELL_DAMAGE_ROLL_LABEL,
     SPELL_DAMAGE_STAT_LABEL,
     SPELL_FILTER_LABELS,
+    SPELL_HEAL_ROLL_LABELS,
+    SPELL_HEAL_STAT_LABELS,
     SPELL_SLOTS_LABEL,
     SPELL_SUBTITLE_SEPARATOR,
     SPELLCASTING_LABEL_SEPARATOR,
@@ -574,6 +576,7 @@
   /**
    * Плитки урона заклинания: у одного заклинания их бывает несколько —
    * справочник описывает броски по состоянию цели отдельными формулами.
+   * Лечение и временные хиты — такие же плитки, только со своей подписью.
    *
    * @param spell заклинание вкладки.
    * @returns плитки урона с подписями; пусто — урона в справочнике нет.
@@ -582,10 +585,11 @@
     return getDamage(spell.url).map((damage, damageIndex) => {
       const tooltipParts = [damage.formula];
 
-      // Тип на выбор в плитке не пишется: там значок, а список — в подсказке
+      // Тип на выбор в плитке не пишется: там значок, а список — в подсказке.
+      // Вид лечения уже стоит подписью плитки — в подсказке он повторился бы
       if (damage.typeChoiceLabels.length) {
         tooltipParts.push(...damage.typeChoiceLabels);
-      } else if (damage.typeLabel) {
+      } else if (damage.typeLabel && !damage.healKind) {
         tooltipParts.push(damage.typeLabel);
       }
 
@@ -599,6 +603,14 @@
           : SHEET_ROLL_HINT_LABEL,
       );
 
+      const statLabel = damage.healKind
+        ? SPELL_HEAL_STAT_LABELS[damage.healKind]
+        : SPELL_DAMAGE_STAT_LABEL;
+
+      const rollLabel = damage.healKind
+        ? SPELL_HEAL_ROLL_LABELS[damage.healKind]
+        : SPELL_DAMAGE_ROLL_LABEL;
+
       return {
         key: `${spell.url}:${damageIndex}`,
         formula: damage.formula,
@@ -609,7 +621,7 @@
         // приходят из справочника, характеристика — из листа. Круг едет здесь
         // же: бросок урона считается накладыванием и занимает ячейку.
         roll: {
-          title: `${SPELL_DAMAGE_STAT_LABEL}: ${spell.name}`,
+          title: `${statLabel}: ${spell.name}`,
           damage: {
             diceNotation: damage.diceNotation,
             // Своего плоского бонуса у заклинания нет: всё, что есть в записи
@@ -625,10 +637,20 @@
             typeLabel: damage.typeLabel,
           } satisfies DamageRollSource,
           level: spell.level,
+          // Лечение окно броска подписывает по-своему и предлагает прибавить
+          // выпавшее к хитам листа — сразу, если заклинание лечит самого
+          // заклинателя
+          healing: damage.healKind
+            ? { kind: damage.healKind, isSelfTargeted: damage.isSelfTargeted }
+            : null,
+          // Ячейка выше круга прибавляет усиление справочника; заговор ячейку
+          // не тратит, и усиливать его нечем
+          upcastNotation:
+            spell.level > CANTRIP_SPELL_LEVEL ? damage.upcastNotation : null,
         } satisfies SpellDamageRoll,
-        label: SPELL_DAMAGE_STAT_LABEL,
-        tooltip: `${SPELL_DAMAGE_STAT_LABEL} = ${tooltipParts.join(DAMAGE_TOOLTIP_SEPARATOR)}`,
-        ariaLabel: `${SPELL_DAMAGE_ROLL_LABEL}: ${spell.name}`,
+        label: statLabel,
+        tooltip: `${statLabel} = ${tooltipParts.join(DAMAGE_TOOLTIP_SEPARATOR)}`,
+        ariaLabel: `${rollLabel}: ${spell.name}`,
       };
     });
   }

@@ -32,10 +32,12 @@ export function useDiceRollHandler() {
    * Обрабатывает бросок кубов по указанной нотации.
    *
    * @param notation - Нотация броска (например, "1d20", "2d6+3")
+   * @returns выпавшее число; null — нотация пустая, неверная или бросок не дал
+   * числа.
    */
-  function handleRoll(notation: string) {
+  function handleRoll(notation: string): number | null {
     if (!notation || notation.trim().length === 0) {
-      return;
+      return null;
     }
 
     const { valid, error } = validateWithError(notation);
@@ -56,7 +58,7 @@ export function useDiceRollHandler() {
         isError: true,
       });
 
-      return;
+      return null;
     }
 
     const rollResult = roll(notation);
@@ -94,9 +96,16 @@ export function useDiceRollHandler() {
       structuredDetails: rollDetails,
     });
 
-    if (Number.isFinite(numericValue)) {
-      notifyTableRoll(Math.round(numericValue), tableId);
+    if (!Number.isFinite(numericValue)) {
+      return null;
     }
+
+    // Столу и вызывающему уходит одно и то же целое число
+    const roundedValue = Math.round(numericValue);
+
+    notifyTableRoll(roundedValue, tableId);
+
+    return roundedValue;
   }
 
   return {
