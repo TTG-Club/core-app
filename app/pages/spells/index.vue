@@ -258,9 +258,14 @@
     },
   );
 
+  // Номер «поколения» списка: растёт при каждой замене первой страницы.
+  // Догрузка, начатая для прежнего списка, по нему отбрасывается.
+  let listGeneration = 0;
+
   watch(
     firstSpellPage,
     (page) => {
+      listGeneration += 1;
       currentPage.value = 0;
       spells.value = page?.value ?? [];
 
@@ -281,9 +286,15 @@
 
     isLoadingMore.value = true;
 
+    const generation = listGeneration;
+
     try {
       const nextPage = currentPage.value + 1;
       const page = await fetchSpellPage(nextPage);
+
+      if (generation !== listGeneration) {
+        return;
+      }
 
       currentPage.value = nextPage;
       spells.value = [...spells.value, ...page.value];
@@ -320,17 +331,25 @@
     }
   }
 
-  useInfiniteScroll(windowScrollTarget, loadNextSpellPage, {
-    distance: SPELL_LIST_LOAD_MORE_DISTANCE,
-    canLoadMore: () =>
-      !isClassGrouping.value && hasNextPage.value && !isLoadingMore.value,
-  });
+  const { reset: recheckWindowScroll } = useInfiniteScroll(
+    windowScrollTarget,
+    loadNextSpellPage,
+    {
+      distance: SPELL_LIST_LOAD_MORE_DISTANCE,
+      canLoadMore: () =>
+        !isClassGrouping.value && hasNextPage.value && !isLoadingMore.value,
+    },
+  );
 
-  useInfiniteScroll(splitScrollTarget, loadNextSpellPage, {
-    distance: SPELL_LIST_LOAD_MORE_DISTANCE,
-    canLoadMore: () =>
-      !isClassGrouping.value && hasNextPage.value && !isLoadingMore.value,
-  });
+  const { reset: recheckSplitScroll } = useInfiniteScroll(
+    splitScrollTarget,
+    loadNextSpellPage,
+    {
+      distance: SPELL_LIST_LOAD_MORE_DISTANCE,
+      canLoadMore: () =>
+        !isClassGrouping.value && hasNextPage.value && !isLoadingMore.value,
+    },
+  );
 
   function rememberSavedSpellPage(): void {
     const savedSpellUrl = savedItemKey.value;
@@ -375,6 +394,21 @@
     );
   });
 
+  /**
+   * Перепроверяет догрузку после перерисовки списка.
+   * Бесконечный скролл сам срабатывает только на прокрутку: если после смены
+   * сортировки или фильтра первая страница целиком помещается на экране,
+   * прокрутить нечего и следующие страницы без этой проверки не придут.
+   */
+  function handleListEntered(): void {
+    if (isLoading.value) {
+      return;
+    }
+
+    recheckWindowScroll();
+    recheckSplitScroll();
+  }
+
   /** Повторно загружает текущий режим списка заклинаний. */
   async function handleRefresh(): Promise<void> {
     if (isClassGrouping.value) {
@@ -411,6 +445,7 @@
       <Transition
         name="fade"
         mode="out-in"
+        @after-enter="handleListEntered"
       >
         <PageGrid
           v-if="isLoading"
