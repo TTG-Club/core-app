@@ -2709,6 +2709,12 @@ export const CLASS_SKILLS_CHOICE_LABEL = 'Владение навыками';
  */
 export const BACKGROUND_TOOL_CHOICE_ID = 'background-tool';
 
+/**
+ * Идентификатор выбора черты происхождения в форме своей предыстории: под ним
+ * лежит деталь взятой черты, по которой спрашиваются её собственные выборы.
+ */
+export const CUSTOM_BACKGROUND_FEAT_CHOICE_ID = 'custom-background-feat';
+
 /** Заголовок пикера выбора инструмента предыстории. */
 export const BACKGROUND_TOOL_CHOICE_LABEL = 'Владение инструментами';
 

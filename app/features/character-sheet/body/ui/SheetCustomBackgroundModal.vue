@@ -3,7 +3,10 @@
     AbilityBonusMode,
     AbilityKey,
     CharacterFeature,
+    ClassChoice,
     FeatSelectOption,
+    SheetChoiceControl,
+    SheetChoiceOrigin,
   } from '../../model';
 
   import { ACTION_LABELS } from '~/shared/consts';
@@ -11,7 +14,10 @@
 
   import {
     useCharacterSheet,
+    useChoiceHints,
+    useChoiceSpellPools,
     useLazyCatalogSourceQuery,
+    usePickedFeatChoices,
     useSheetOverlay,
     useToolCatalog,
   } from '../../composables';
@@ -19,10 +25,13 @@
     ABILITY_LABELS,
     ABILITY_ORDER,
     BACKGROUND_ABILITY_MODE_OPTIONS,
+    buildChoiceControl,
     buildCustomBackgroundUrl,
     buildFeatFeature,
+    collectPickedFeatGrants,
     computeAbilityBonuses,
     CUSTOM_BACKGROUND_ABILITY_SLOT_LABELS,
+    CUSTOM_BACKGROUND_FEAT_CHOICE_ID,
     CUSTOM_BACKGROUND_LABELS,
     CUSTOM_BACKGROUND_NAME_MAX_LENGTH,
     CUSTOM_BACKGROUND_SKILL_COUNT,
@@ -30,15 +39,22 @@
     FEAT_SOURCES_ASYNC_DATA_KEY,
     FEATS_FILTERS_PATH,
     FEATS_SELECT_PATH,
-    fetchFeatDetail,
+    FEATURE_ORIGIN_LABELS,
     getOriginFeatOptions,
     getOwnedSkillHints,
+    getOwnedWeaponNames,
+    getSpellChoicesKey,
+    getToolNames,
+    getVisibleFeatChoices,
+    LANGUAGE_PROFICIENCY_GROUPS,
     ORIGIN_FEAT_ACQUISITION_LEVEL,
     parseFeatSelectOptions,
+    resolveChoiceOptions,
     SKILL_DUPLICATE_WARNING,
     toNamedPickerOptions,
   } from '../../model';
   import SheetChoicePickerField from './SheetChoicePickerField.vue';
+  import SheetPickedFeatChoices from './SheetPickedFeatChoices.vue';
 
   const { sheetKey } = defineProps<{
     /** Ключ открытого листа: с каким листом работает компонент. */
@@ -69,6 +85,7 @@
   // селекторы наполняются по мере ответов.
   const {
     getToolNamesForGroups,
+    catalogItems: toolCatalogItems,
     resolveTools,
     isEmpty: isToolCatalogEmpty,
     load: loadToolCatalog,
@@ -183,8 +200,174 @@
 
   const isFeatPreviewVisible = computed(() => draftFeatUrl.value !== '');
 
+  // Черта происхождения тоже может о чём-то спрашивать («Портальный странник» —
+  // тип урона, «Посвящённый в магию» — список и заклинания): спросить нужно
+  // здесь, на лист она ложится вместе с предысторией
+  const {
+    pickedFeats,
+    choicesByPick: pickedFeatChoices,
+    isLoading: isPickedFeatLoading,
+    getChoices: getPickedFeatOwnChoices,
+    load: loadPickedFeat,
+    resolve: resolvePickedFeat,
+  } = usePickedFeatChoices();
+
+  /** Ответы игрока на выборы черты по идентификатору выбора. */
+  const selections = ref<Record<string, string[]>>({});
+
+  const proficientSkillNames = computed<string[]>(() =>
+    character.value.skills
+      .filter((skill) => skill.proficiency !== 'none')
+      .map((skill) => skill.name),
+  );
+
+  const allLanguages = computed(() =>
+    LANGUAGE_PROFICIENCY_GROUPS.flatMap((group) => group.items),
+  );
+
+  /** Все выборы взятой черты, а не только показанные. */
+  const featChoices = computed<ClassChoice[]>(
+    () => pickedFeatChoices.value[CUSTOM_BACKGROUND_FEAT_CHOICE_ID] ?? [],
+  );
+
+  const {
+    getPool: getSpellPool,
+    getSpellOptions,
+    getStatus: getSpellPoolStatus,
+    collectChosenSpells,
+    load: loadSpellPools,
+    retry: retrySpellPool,
+  } = useChoiceSpellPools({
+    sources: () => [{ choices: featChoices.value }],
+    answers: selections,
+  });
+
+  /** Примета выборов заклинаний черты: пул догружается по её смене. */
+  const spellChoicesKey = computed(() => getSpellChoicesKey(featChoices.value));
+
+  // Цикла нет: обработчик правит только пулы, а примета считается по выборам
+  // черты — от загруженного пула она не меняется.
+  watch(spellChoicesKey, handleSpellChoicesChange);
+
+  /** Догружает пулы заклинаний под выборы взятой черты. */
+  function handleSpellChoicesChange(): void {
+    void loadSpellPools();
+  }
+
+  const { getHints: choiceHints } = useChoiceHints({
+    sheetKey,
+    choices: featChoices,
+    selections,
+  });
+
+  /**
+   * Варианты выбора черты в зависимости от его типа: заклинания — из
+   * загруженного пула, остальное — из листа и каталогов.
+   *
+   * @param choice выбор черты.
+   * @returns названия вариантов.
+   */
+  function choiceOptions(choice: ClassChoice): string[] {
+    if (choice.kind === 'spell') {
+      return getSpellOptions(choice);
+    }
+
+    return resolveChoiceOptions(choice, {
+      skillNames: skillNames.value,
+      proficientSkillNames: proficientSkillNames.value,
+      // Навыки самой предыстории тоже считаются владением: они лягут на лист
+      // вместе с чертой, и компетентность в них выбрать можно.
+      chosenProficientSkills: draftSkills.value,
+      knownLanguages: character.value.proficiencies.languages,
+      knownTools: getToolNames(character.value.proficiencies.tools),
+      allLanguages: allLanguages.value,
+      allTools: getToolNamesForGroups(choice.toolGroups),
+      ownedWeaponNames: getOwnedWeaponNames(character.value),
+      proficientSavingThrowNames: character.value.savingThrows
+        .filter((savingThrow) => savingThrow.proficient)
+        .map((savingThrow) => ABILITY_LABELS[savingThrow.key]),
+    });
+  }
+
+  /**
+   * Выбор для единого пикера: варианты, готовность пула, подписи поля и окна.
+   *
+   * @param choice выбор черты.
+   * @param origin черта и предыстория — для подзаголовка окна.
+   * @returns выбор для пикера.
+   */
+  function choiceControl(
+    choice: ClassChoice,
+    origin?: SheetChoiceOrigin,
+  ): SheetChoiceControl {
+    return buildChoiceControl(choice, {
+      names: choiceOptions(choice),
+      hints: choiceHints(choice),
+      spellPool: getSpellPool(choice),
+      status: choice.kind === 'spell' ? getSpellPoolStatus(choice) : 'ready',
+      toolEntries: toolCatalogItems.value,
+      origin,
+    });
+  }
+
+  /**
+   * Показанные выборы черты единым пикером. Выбор заклинаний ждёт ответа про
+   * список: иначе пул был бы собран не из того списка.
+   */
+  const featChoiceControls = computed<SheetChoiceControl[]>(() => {
+    const summary = pickedFeats.value[CUSTOM_BACKGROUND_FEAT_CHOICE_ID];
+
+    if (!summary) {
+      return [];
+    }
+
+    const origin: SheetChoiceOrigin = {
+      featureName: summary.name,
+      originLabel: `${FEATURE_ORIGIN_LABELS.feat} · ${
+        draftName.value.trim() || CUSTOM_BACKGROUND_LABELS.title
+      }`,
+      level: null,
+    };
+
+    return getVisibleFeatChoices(featChoices.value, selections.value).map(
+      (choice) => choiceControl(choice, origin),
+    );
+  });
+
+  /** Все показанные выборы черты отвечены сполна — иначе применять рано. */
+  const isFeatChoiceComplete = computed(() =>
+    featChoiceControls.value.every(
+      (control) =>
+        (selections.value[control.choice.id]?.length ?? 0)
+        >= control.requiredCount,
+    ),
+  );
+
+  /**
+   * Ответ игрока на выбор черты; лишнее сверх требуемого числа уже отсёк пикер.
+   *
+   * @param choice выбор черты.
+   * @param values выбранные варианты.
+   */
+  function updateSelection(choice: ClassChoice, values: string[]): void {
+    selections.value = { ...selections.value, [choice.id]: values };
+  }
+
+  /**
+   * Пул заклинаний выбора не загрузился — запросить его заново.
+   *
+   * @param choice выбор заклинаний.
+   */
+  function handleSpellPoolRetry(choice: ClassChoice): void {
+    void retrySpellPool(choice);
+  }
+
   const isApplyDisabled = computed(
-    () => !draftName.value.trim() || !isAbilityChoiceValid.value,
+    () =>
+      !draftName.value.trim()
+      || !isAbilityChoiceValid.value
+      || isPickedFeatLoading.value
+      || !isFeatChoiceComplete.value,
   );
 
   /**
@@ -235,8 +418,23 @@
     });
   }
 
+  /**
+   * Смена черты происхождения: деталь новой черты грузится сразу, чтобы её
+   * выборы спросить тут же, под полем черты.
+   *
+   * @param value url выбранной черты; '' — без черты.
+   */
   function handleFeat(value: unknown) {
-    draftFeatUrl.value = typeof value === 'string' ? value : '';
+    const url = typeof value === 'string' ? value : '';
+
+    if (url === draftFeatUrl.value) {
+      return;
+    }
+
+    draftFeatUrl.value = url;
+    // Ответы прежней черты к новой не относятся
+    selections.value = {};
+    void loadPickedFeat(CUSTOM_BACKGROUND_FEAT_CHOICE_ID, url);
   }
 
   function handleFeatPreview() {
@@ -246,8 +444,9 @@
   }
 
   /**
-   * Особенность выбранной черты происхождения: описание черты догружается с
-   * сайта, как и в мастере выбора каталожной предыстории.
+   * Особенность выбранной черты происхождения вместе с ответами на её выборы:
+   * деталь черты пришла ещё при выборе, а если тогда не загрузилась —
+   * запрашивается заново.
    *
    * @returns особенность черты; null — черта не выбрана или не загрузилась.
    */
@@ -256,12 +455,28 @@
       return null;
     }
 
-    const summary = await fetchFeatDetail(draftFeatUrl.value);
+    const summary = await resolvePickedFeat(
+      CUSTOM_BACKGROUND_FEAT_CHOICE_ID,
+      draftFeatUrl.value,
+    );
+
+    if (!summary) {
+      return null;
+    }
+
+    const ownChoices = getPickedFeatOwnChoices(summary);
 
     // Уровень взятия — первый, как и у каталожной предыстории.
-    return summary
-      ? buildFeatFeature(summary, { level: ORIGIN_FEAT_ACQUISITION_LEVEL })
-      : null;
+    return buildFeatFeature(summary, {
+      level: ORIGIN_FEAT_ACQUISITION_LEVEL,
+      // Владения — в снимок, заклинания — в список записи, остальное (тип
+      // урона и прочее) лист хранит ответом
+      ...collectPickedFeatGrants(summary, ownChoices, selections.value, [
+        ...proficientSkillNames.value,
+        ...draftSkills.value,
+      ]),
+      spells: collectChosenSpells({ choices: ownChoices }),
+    });
   }
 
   async function handleApply() {
@@ -467,6 +682,13 @@
               />
             </UTooltip>
           </div>
+
+          <SheetPickedFeatChoices
+            :controls="featChoiceControls"
+            :selections="selections"
+            @update:selection="updateSelection"
+            @retry="handleSpellPoolRetry"
+          />
         </div>
 
         <span class="text-xs text-muted">
