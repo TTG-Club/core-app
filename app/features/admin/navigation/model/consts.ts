@@ -59,6 +59,23 @@ import {
   COMMUNITY_NEWS_ADMIN_TITLE,
   COMMUNITY_NEWS_ICON,
 } from '~community-news/model';
+import {
+  MODERATION_BUGS_ICON,
+  MODERATION_BUGS_ROUTE,
+  MODERATION_COMMENTS_ICON,
+  MODERATION_COMMENTS_ROUTE,
+  MODERATION_DASHBOARD_BUGS_TITLE,
+  MODERATION_DASHBOARD_COMMENTS_TITLE,
+  MODERATION_DASHBOARD_GAME_REPORTS_TITLE,
+  MODERATION_GAME_REPORTS_ICON,
+  MODERATION_GAME_REPORTS_ROUTE,
+  MODERATION_PANEL_ICON,
+} from '~moderation/model';
+import {
+  VTTG_MODULES_DASHBOARD_TITLE,
+  VTTG_MODULES_ICON,
+  VTTG_MODULES_MODERATION_ROUTE,
+} from '~vttg-modules/model';
 
 /** Маршрут главной страницы админ-панели (дашборд со статистикой) */
 export const ADMIN_DASHBOARD_ROUTE = '/admin';
@@ -155,6 +172,30 @@ const ADMIN_VTTG_DOCS_ITEM: NavigationItem = {
   to: VTTG_DOCS_ADMIN_ROUTE,
 };
 
+const ADMIN_MODERATION_BUGS_ITEM: NavigationItem = {
+  label: MODERATION_DASHBOARD_BUGS_TITLE,
+  icon: MODERATION_BUGS_ICON,
+  to: MODERATION_BUGS_ROUTE,
+};
+
+const ADMIN_MODERATION_COMMENTS_ITEM: NavigationItem = {
+  label: MODERATION_DASHBOARD_COMMENTS_TITLE,
+  icon: MODERATION_COMMENTS_ICON,
+  to: MODERATION_COMMENTS_ROUTE,
+};
+
+const ADMIN_MODERATION_GAME_REPORTS_ITEM: NavigationItem = {
+  label: MODERATION_DASHBOARD_GAME_REPORTS_TITLE,
+  icon: MODERATION_GAME_REPORTS_ICON,
+  to: MODERATION_GAME_REPORTS_ROUTE,
+};
+
+const ADMIN_MODERATION_VTTG_MODULES_ITEM: NavigationItem = {
+  label: VTTG_MODULES_DASHBOARD_TITLE,
+  icon: VTTG_MODULES_ICON,
+  to: VTTG_MODULES_MODERATION_ROUTE,
+};
+
 /**
  * Элементы главной навигации админ-панели
  */
@@ -174,7 +215,23 @@ export const ADMIN_NAVIGATION_ITEMS: NavigationItem[] = [
   ADMIN_MAILING_ITEM,
   ADMIN_VTTG_COMPENDIUM_ITEM,
   ADMIN_VTTG_DOCS_ITEM,
+  ADMIN_MODERATION_BUGS_ITEM,
+  ADMIN_MODERATION_COMMENTS_ITEM,
+  ADMIN_MODERATION_GAME_REPORTS_ITEM,
+  ADMIN_MODERATION_VTTG_MODULES_ITEM,
 ];
+
+/** Группа разделов панели модератора: админ попадает в них прямо с дашборда. */
+export const ADMIN_MODERATION_SECTION_GROUP: NavigationGroup = {
+  title: 'Модерация',
+  icon: MODERATION_PANEL_ICON,
+  items: [
+    ADMIN_MODERATION_BUGS_ITEM,
+    ADMIN_MODERATION_COMMENTS_ITEM,
+    ADMIN_MODERATION_GAME_REPORTS_ITEM,
+    ADMIN_MODERATION_VTTG_MODULES_ITEM,
+  ],
+};
 
 /** Группа разделов «Пользователи»: к ней же на дашборде относится выключатель оплаты. */
 export const ADMIN_USERS_SECTION_GROUP: NavigationGroup = {

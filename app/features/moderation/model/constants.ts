@@ -37,5 +37,14 @@ export const MODERATION_DASHBOARD_GAME_REPORTS_TITLE = 'Жалобы на игр
 export const MODERATION_DASHBOARD_GAME_REPORTS_DESCRIPTION =
   'Сообщения о рекламе, спаме и непристойных изображениях в играх';
 
+/** Иконка раздела баг-репортов в навигации */
+export const MODERATION_BUGS_ICON = 'tabler:bug';
+
+/** Иконка раздела модерации комментариев в навигации */
+export const MODERATION_COMMENTS_ICON = 'tabler:message-circle';
+
+/** Иконка раздела жалоб на игры в навигации */
+export const MODERATION_GAME_REPORTS_ICON = 'tabler:flag';
+
 /** Подпись кнопки перехода в раздел с дашборда */
 export const MODERATION_DASHBOARD_OPEN_LABEL = 'Открыть';
