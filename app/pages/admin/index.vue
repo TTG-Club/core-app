@@ -31,6 +31,7 @@
   import { AdminGameStatisticsTile } from '~admin/games/ui';
   import {
     ADMIN_CONTENT_SECTION_GROUP,
+    ADMIN_MODERATION_SECTION_GROUP,
     ADMIN_TOOLS_SECTION_GROUP,
     ADMIN_USERS_SECTION_GROUP,
     ADMIN_VTTG_SECTION_GROUP,
@@ -279,13 +280,15 @@
         </h2>
 
         <div
-          class="grid items-start gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-1"
+          class="grid items-start gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-1"
         >
           <AdminSectionGroup :group="ADMIN_USERS_SECTION_GROUP">
             <SubscriptionSalesSwitch />
           </AdminSectionGroup>
 
           <AdminSectionGroup :group="ADMIN_CONTENT_SECTION_GROUP" />
+
+          <AdminSectionGroup :group="ADMIN_MODERATION_SECTION_GROUP" />
 
           <AdminSectionGroup :group="ADMIN_TOOLS_SECTION_GROUP" />
 

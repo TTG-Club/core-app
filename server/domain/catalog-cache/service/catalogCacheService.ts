@@ -2,9 +2,10 @@ import type { H3Event } from 'h3';
 
 import type { CatalogResponse, ResolvedCatalogResponse } from '../model';
 
-import { Role } from '~/shared/types';
+import { USER_TOKEN_COOKIE } from '#shared/consts';
 
 import {
+  CATALOG_AUTHORIZATION_HEADER,
   CATALOG_CACHE_STATE_HEADER,
   CATALOG_CACHE_STORAGE,
   CATALOG_CONTENT_TYPE_HEADER,
@@ -154,21 +155,21 @@ export async function clearCatalogCache(): Promise<void> {
 }
 
 /**
- * Идёт ли запрос мимо кэша. Редакторы каталога (администратор и модератор)
- * всегда получают свежие данные: они первыми смотрят на результат правок,
- * в том числе сделанных мимо сайта.
+ * Идёт ли запрос мимо кэша. В кэше лежит только то, что видит гость: вошедшему
+ * core-api отвечает с учётом его сохранённых источников (фильтры разделов,
+ * подклассы класса, происхождения вида), поэтому любой запрос с токеном идёт
+ * в core-api напрямую. Заодно редакторы всегда видят свежие данные.
+ *
+ * Действительность токена здесь не проверяется намеренно: посетитель с
+ * просроченным токеном просто получит ответ без кэша.
  *
  * @param event Событие H3.
  */
-export async function isCatalogCacheBypassed(event: H3Event): Promise<boolean> {
-  try {
-    const { roles } = await verifyJwt(getTokenFromRequest(event));
-
-    return roles.includes(Role.ADMIN) || roles.includes(Role.MODERATOR);
-  } catch {
-    // Гость или посетитель с негодным токеном — обычный читатель каталога.
-    return false;
-  }
+export function isCatalogCacheBypassed(event: H3Event): boolean {
+  return Boolean(
+    getHeader(event, CATALOG_AUTHORIZATION_HEADER)
+    || getCookie(event, USER_TOKEN_COOKIE),
+  );
 }
 
 /**

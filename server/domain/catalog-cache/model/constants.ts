@@ -9,9 +9,10 @@ export const CATALOG_CACHE_STORAGE = 'catalog-cache';
 export const CATALOG_API_PREFIX = '/api/v2/';
 
 /**
- * Разделы core-api, ответы которых на чтение одинаковы для всех посетителей и
- * меняются только правкой редактора. Проверено по контроллерам core-api: в
- * чтении этих разделов пользователь запроса не участвует.
+ * Разделы core-api, чтение которых кэшируется для гостей и меняется только
+ * правкой редактора. Вошедшим ответы этих разделов не кэшируются: core-api
+ * учитывает их сохранённые источники (`SourceSavedFilterService`) в фильтрах
+ * разделов, подклассах класса и происхождениях вида.
  */
 export const CATALOG_CACHE_SECTIONS: readonly string[] = [
   'backgrounds',
@@ -64,6 +65,9 @@ export const CATALOG_CACHE_RESET_PATH = '/api/v2/cache/evict-all';
 
 /** Заголовок ответа: взят ли ответ из кэша. Нужен для проверки и отладки. */
 export const CATALOG_CACHE_STATE_HEADER = 'x-catalog-cache';
+
+/** Заголовок с токеном посетителя. */
+export const CATALOG_AUTHORIZATION_HEADER = 'authorization';
 
 /** Заголовок типа содержимого. */
 export const CATALOG_CONTENT_TYPE_HEADER = 'content-type';
