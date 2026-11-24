@@ -2893,6 +2893,13 @@ export const SPECIES_SEARCH_PATH = '/api/v2/species/search';
 /** Эндпоинт фильтров видов — источник глобальной настройки источников. */
 export const SPECIES_FILTERS_PATH = '/api/v2/species/filters';
 
+/**
+ * Ключ `useAsyncData` для источников каталога заклинаний — им сужаются пулы
+ * выборов заклинаний во всех мастерах листа. Свой, а не ключ фильтров окна
+ * «Добавить заклинание»: под общим ключом лежал бы ответ другой формы.
+ */
+export const SPELL_SOURCES_ASYNC_DATA_KEY = 'character-sheet:spell-sources';
+
 /** Эндпоинт поиска заклинаний. */
 export const SPELLS_SEARCH_PATH = '/api/v2/spells/search';
 
