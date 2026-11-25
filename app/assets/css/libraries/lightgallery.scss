@@ -3,3 +3,14 @@
 .lg-container {
   pointer-events: auto;
 }
+
+// Кнопки и счётчик сверху белые и без подложки — на светлой картинке их
+// не видно. Затемняем верхнюю полосу градиентом, чтобы картинку не резало.
+.lg-toolbar {
+  background: linear-gradient(to bottom, rgb(0 0 0 / 60%), rgb(0 0 0 / 0%));
+}
+
+.lg-toolbar .lg-icon,
+.lg-counter {
+  text-shadow: 0 1px 2px rgb(0 0 0 / 60%);
+}
