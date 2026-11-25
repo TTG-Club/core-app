@@ -4,6 +4,7 @@
   import type { ImageFrameGeometry, ImageFrameOffset } from './utils';
 
   import {
+    IMAGE_FRAME_BUTTON_ZOOM_STEP,
     IMAGE_FRAME_KEYBOARD_MOVES,
     IMAGE_FRAME_LABELS,
     IMAGE_FRAME_MAX_ZOOM,
@@ -45,13 +46,9 @@
    */
   const frame = ref<ImageFrame>(normalizeImageFrame(null));
 
-  watch(
-    frameModel,
-    (value) => {
-      frame.value = normalizeImageFrame(value);
-    },
-    { immediate: true },
-  );
+  watchImmediate(frameModel, (value) => {
+    frame.value = normalizeImageFrame(value);
+  });
 
   const frameStyle = computed(() => getImageFrameStyle(frame.value));
 
@@ -181,6 +178,11 @@
    * @param event нажатие клавиши.
    */
   function handleKeydown(event: KeyboardEvent): void {
+    // С Ctrl, Cmd или Alt это команды браузера (например, масштаб страницы)
+    if (event.ctrlKey || event.metaKey || event.altKey) {
+      return;
+    }
+
     const move = IMAGE_FRAME_KEYBOARD_MOVES[event.key];
 
     if (move) {
@@ -218,12 +220,12 @@
 
   /** Кнопка «отдалить». */
   function handleZoomOut(): void {
-    zoomTo(frame.value.zoom - IMAGE_FRAME_ZOOM_STEP * 2);
+    zoomTo(frame.value.zoom - IMAGE_FRAME_BUTTON_ZOOM_STEP);
   }
 
   /** Кнопка «приблизить». */
   function handleZoomIn(): void {
-    zoomTo(frame.value.zoom + IMAGE_FRAME_ZOOM_STEP * 2);
+    zoomTo(frame.value.zoom + IMAGE_FRAME_BUTTON_ZOOM_STEP);
   }
 
   /** Сброс: центр без приближения. */

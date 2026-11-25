@@ -39,22 +39,32 @@
 
   const opened = useState<boolean>(GALLERY_OPENED_STATE_KEY, () => false);
 
-  const items = computed(() => {
-    if (!images.length) {
-      return [{ src: preview, thumb: preview, alt }];
-    }
-
-    return [
-      { src: preview, thumb: preview, alt },
-      ...images.map((img) => ({ src: img, thumb: img, alt })),
-    ];
-  });
-
   // Кадр имеет смысл только в квадрате: без него превью показывает картинку
   // целиком, и обрезать нечего.
   const previewFrameStyle = computed(() =>
     disableSquare ? undefined : getImageFrameStyle(previewFrame),
   );
+
+  // Кадр — только у превью: остальные картинки в превью не видны, а в самой
+  // галерее открываются целиком.
+  const items = computed(() => {
+    const previewItem = {
+      src: preview,
+      thumb: preview,
+      alt,
+      style: previewFrameStyle.value,
+    };
+
+    return [
+      previewItem,
+      ...images.map((image) => ({
+        src: image,
+        thumb: image,
+        alt,
+        style: undefined,
+      })),
+    ];
+  });
 
   /** Есть ли что листать: подсказка с числом нужна, только когда картинок больше одной. */
   const hasMultipleItems = computed(() => items.value.length > 1);
@@ -94,7 +104,7 @@
       <img
         class="block w-full rounded-lg object-cover"
         :class="!disableSquare ? 'aspect-square' : undefined"
-        :style="!index ? previewFrameStyle : undefined"
+        :style="item.style"
         :src="item.src"
         :alt="item.alt || undefined"
       />

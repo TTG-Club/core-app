@@ -9,6 +9,7 @@ import {
   IMAGE_FRAME_MAX_ZOOM,
   IMAGE_FRAME_MIN_ZOOM,
   IMAGE_FRAME_PRECISION,
+  IMAGE_FRAME_WHEEL_DELTA_LINE,
   IMAGE_FRAME_WHEEL_LINE_HEIGHT,
   IMAGE_FRAME_WHEEL_ZOOM_SPEED,
 } from './constants';
@@ -35,12 +36,22 @@ export interface ImageFrameOffset {
 }
 
 /**
- * Доля от 0 до 1; нечисловое значение — центр.
+ * Доля от 0 до 1; нечисловое значение заменяется запасным.
  *
  * @param value значение из кадра.
+ * @param fallback значение по умолчанию для этой оси.
  */
-function toRatio(value: number): number {
-  return Number.isFinite(value) ? clamp(value, 0, 1) : IMAGE_FRAME_DEFAULT.x;
+function toRatio(value: number, fallback: number): number {
+  return Number.isFinite(value) ? clamp(value, 0, 1) : fallback;
+}
+
+/**
+ * Значение кадра, округлённое для хранения: точнее глаз не различит.
+ *
+ * @param value доля или приближение.
+ */
+function roundFrameValue(value: number): number {
+  return Math.round(value * IMAGE_FRAME_PRECISION) / IMAGE_FRAME_PRECISION;
 }
 
 /**
@@ -69,8 +80,8 @@ export function normalizeImageFrame(
   }
 
   return {
-    x: toRatio(frame.x),
-    y: toRatio(frame.y),
+    x: toRatio(frame.x, IMAGE_FRAME_DEFAULT.x),
+    y: toRatio(frame.y, IMAGE_FRAME_DEFAULT.y),
     zoom: toZoom(frame.zoom),
   };
 }
@@ -185,13 +196,10 @@ export function moveImageFrame(
  * @param frame кадр из редактора.
  */
 export function toStoredImageFrame(frame: ImageFrame): ImageFrame | null {
-  const round = (value: number) =>
-    Math.round(value * IMAGE_FRAME_PRECISION) / IMAGE_FRAME_PRECISION;
-
   const rounded: ImageFrame = {
-    x: round(frame.x),
-    y: round(frame.y),
-    zoom: round(frame.zoom),
+    x: roundFrameValue(frame.x),
+    y: roundFrameValue(frame.y),
+    zoom: roundFrameValue(frame.zoom),
   };
 
   return isDefaultImageFrame(rounded) ? null : rounded;
@@ -234,7 +242,7 @@ export function getWheelZoomFactor(
   event: Pick<WheelEvent, 'deltaY' | 'deltaMode'>,
 ): number {
   const pixels =
-    event.deltaMode === WheelEvent.DOM_DELTA_LINE
+    event.deltaMode === IMAGE_FRAME_WHEEL_DELTA_LINE
       ? event.deltaY * IMAGE_FRAME_WHEEL_LINE_HEIGHT
       : event.deltaY;
 
