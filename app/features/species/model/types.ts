@@ -1,4 +1,4 @@
-import type { NameResponse, SourceResponse } from '~/shared/types';
+import type { ImageFrame, NameResponse, SourceResponse } from '~/shared/types';
 import type { ActiveEffect } from '~active-effects/model';
 import type {
   FeatEditorRows,
@@ -12,6 +12,8 @@ export interface SpeciesLinkResponse {
   name: NameResponse;
   source: SourceResponse;
   image: string;
+  /** Кадр обложки; null — не настроен, картинка стоит по центру. */
+  imageFrame?: ImageFrame | null;
   updatedAt: string;
   hasLineages?: boolean;
 }
@@ -32,6 +34,8 @@ export interface SpeciesDetailResponse {
   properties: SpeciesProperties;
   description: Array<string>;
   image: string;
+  /** Кадр обложки; null — не настроен, картинка стоит по центру. */
+  imageFrame?: ImageFrame | null;
   gallery?: Array<string>;
   features?: Array<{
     url: string;
@@ -112,6 +116,8 @@ export interface SpeciesFeatureCreate {
 export interface SpeciesCreate extends EditorBaseInfoState {
   description: string;
   image: string | undefined;
+  /** Кадр обложки; null — не настроен, картинка стоит по центру. */
+  imageFrame: ImageFrame | null;
   gallery: Array<string>;
   parent: string | undefined;
   properties: {

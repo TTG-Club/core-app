@@ -1,6 +1,8 @@
 import type { ComputedRef } from 'vue';
 
 import {
+  LIST_ROWS_MIN_COLUMNS,
+  LIST_TILE_MIN_COLUMNS,
   LIST_VIEW_DEFAULT,
   LIST_VIEW_OPTIONS,
   LIST_VIEW_STORAGE_KEY,
@@ -21,6 +23,13 @@ export interface UseListViewReturn {
   columns: ComputedRef<ListColumnCount>;
   /** Выбраны ли строки: карточки с обложкой тогда тоже рисуются строкой */
   isRows: ComputedRef<boolean>;
+  /**
+   * Колонок на самом узком экране у списка плиток с обложкой: две, а при
+   * выборе строк — одна
+   */
+  tileMinColumns: ComputedRef<
+    typeof LIST_TILE_MIN_COLUMNS | typeof LIST_ROWS_MIN_COLUMNS
+  >;
   /** Меняет вид списка */
   setView: (value: ListView) => void;
 }
@@ -64,7 +73,8 @@ export function readStoredListView(): ListView {
  * Хранилище читается после монтирования: сервер не знает выбор и рисует вид
  * по умолчанию, а без этого клиент разошёлся бы с ним при гидратации.
  *
- * @returns Выбранный вид, число колонок, признак строк и смена вида.
+ * @returns Выбранный вид, число колонок, признак строк, колонки плиток на
+ *   узком экране и смена вида.
  */
 export function useListView(): UseListViewReturn {
   const storedView = useLocalStorage<string>(
@@ -81,6 +91,10 @@ export function useListView(): UseListViewReturn {
 
   const isRows = computed(() => view.value === 'rows');
 
+  const tileMinColumns = computed(() =>
+    isRows.value ? LIST_ROWS_MIN_COLUMNS : LIST_TILE_MIN_COLUMNS,
+  );
+
   /**
    * Запоминает вид списка.
    *
@@ -90,5 +104,5 @@ export function useListView(): UseListViewReturn {
     storedView.value = value;
   }
 
-  return { view, columns, isRows, setView };
+  return { view, columns, isRows, tileMinColumns, setView };
 }

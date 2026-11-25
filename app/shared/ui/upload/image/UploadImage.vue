@@ -1,4 +1,9 @@
 <script setup lang="ts">
+  import {
+    UPLOAD_SUCCESS_DESCRIPTION,
+    UPLOAD_SUCCESS_TITLE,
+  } from '../constants';
+
   const {
     section,
     maxSize = undefined,
@@ -72,8 +77,8 @@
 
     $toast.add({
       color: 'success',
-      title: 'Успех',
-      description: 'Изображение успешно загружено',
+      title: UPLOAD_SUCCESS_TITLE,
+      description: UPLOAD_SUCCESS_DESCRIPTION,
     });
   }
 

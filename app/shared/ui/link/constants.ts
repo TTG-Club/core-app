@@ -1,7 +1,8 @@
 /**
  * Классы карточки с обложкой. Карточкой она перестраивается в строку только на
- * узком контейнере; строкой (вид списков «строками») — всегда, с обложкой
- * поменьше.
+ * узком контейнере; плиткой — остаётся с обложкой сверху на любой ширине (для
+ * разделов, где обложка — главное: виды, классы); строкой (вид списков
+ * «строками») — всегда строка, с обложкой поменьше.
  */
 export const CARD_LINK_LAYOUT_CLASSES = {
   card: {
@@ -11,6 +12,13 @@ export const CARD_LINK_LAYOUT_CLASSES = {
     gradient: '@max-md:bg-linear-to-l @md:group-hover:translate-y-full',
     content: 'gap-2 px-4 py-3 @max-md:gap-1 @max-md:px-3 @max-md:py-2',
     name: '@md:flex-1',
+  },
+  tile: {
+    link: 'block',
+    image: 'aspect-square w-full',
+    gradient: '@md:group-hover:translate-y-full',
+    content: 'gap-1 px-3 py-2 @md:gap-2 @md:px-4 @md:py-3',
+    name: 'flex-1',
   },
   row: {
     link: 'flex',

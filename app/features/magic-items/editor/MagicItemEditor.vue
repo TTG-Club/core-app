@@ -8,7 +8,7 @@
   import { EditorBaseInfo } from '~ui/editor';
   import { MARKUP_IMAGE_SECTIONS, MarkupEditor } from '~ui/markup-editor';
   import { SelectItem } from '~ui/select';
-  import { UploadImage } from '~ui/upload';
+  import { UploadCover } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
   import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
   import { WorkshopEditorFormControls } from '~workshop/revision/ui';
@@ -70,6 +70,7 @@
       curse: false,
       consumable: false,
       image: undefined,
+      imageFrame: null,
       items: [],
       // Копия, а не сама константа: форма правит бонусы на месте.
       bonuses: { ...EMPTY_MAGIC_ITEM_BONUSES },
@@ -313,37 +314,13 @@
                 :help="MAGIC_ITEM_FORM_LABELS.imageHint"
                 name="image"
               >
-                <UploadImage
+                <UploadCover
                   v-model="state.image"
+                  v-model:frame="state.imageFrame"
                   section="magic-items"
                   max-size="1024"
-                >
-                  <template #preview>
-                    <NuxtImg
-                      v-slot="{ src, isLoaded, imgAttrs }"
-                      :key="state.image"
-                      :src="state.image"
-                      custom
-                    >
-                      <!-- Show the actual image when loaded -->
-                      <img
-                        v-if="isLoaded"
-                        v-bind="imgAttrs"
-                        class="w-full rounded-lg object-contain"
-                        :src="src"
-                        :alt="state.name.rus"
-                      />
-
-                      <!-- Show a placeholder while loading -->
-                      <img
-                        v-else
-                        class="w-full rounded-lg object-contain"
-                        src="/img/no-img.webp"
-                        alt="no image"
-                      />
-                    </NuxtImg>
-                  </template>
-                </UploadImage>
+                  :alt="state.name.rus"
+                />
               </UFormField>
             </div>
           </UCard>

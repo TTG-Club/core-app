@@ -1,11 +1,15 @@
 <script setup lang="ts">
   import type { LightGallerySettings } from 'lightgallery/lg-settings';
 
+  import type { ImageFrame } from '~/shared/types';
+
   import lgFullscreen from 'lightgallery/plugins/fullscreen';
   import lgThumbnail from 'lightgallery/plugins/thumbnail';
   import lgZoom from 'lightgallery/plugins/zoom';
   import Lightgallery from 'lightgallery/vue';
   import { computed } from 'vue';
+
+  import { getImageFrameStyle } from '~ui/image-frame';
 
   import { GALLERY_LABELS, GALLERY_OPENED_STATE_KEY } from './constants';
 
@@ -14,11 +18,17 @@
     images = [],
     alt = '',
     disableSquare = false,
+    previewFrame = undefined,
   } = defineProps<{
     preview: string;
     images?: Array<string>;
     alt?: string;
     disableSquare?: boolean;
+    /**
+     * Кадр обложки в квадрате превью. В самой галерее картинка открывается
+     * целиком — кадр касается только превью.
+     */
+    previewFrame?: ImageFrame | null;
   }>();
 
   const {
@@ -29,14 +39,30 @@
 
   const opened = useState<boolean>(GALLERY_OPENED_STATE_KEY, () => false);
 
+  // Кадр имеет смысл только в квадрате: без него превью показывает картинку
+  // целиком, и обрезать нечего.
+  const previewFrameStyle = computed(() =>
+    disableSquare ? undefined : getImageFrameStyle(previewFrame),
+  );
+
+  // Кадр — только у превью: остальные картинки в превью не видны, а в самой
+  // галерее открываются целиком.
   const items = computed(() => {
-    if (!images.length) {
-      return [{ src: preview, thumb: preview, alt }];
-    }
+    const previewItem = {
+      src: preview,
+      thumb: preview,
+      alt,
+      style: previewFrameStyle.value,
+    };
 
     return [
-      { src: preview, thumb: preview, alt },
-      ...images.map((img) => ({ src: img, thumb: img, alt })),
+      previewItem,
+      ...images.map((image) => ({
+        src: image,
+        thumb: image,
+        alt,
+        style: undefined,
+      })),
     ];
   });
 
@@ -73,11 +99,12 @@
       :data-src="item.src"
       :title="GALLERY_LABELS.zoom"
       :class="!!index ? 'hidden' : undefined"
-      class="group relative cursor-zoom-in"
+      class="group relative cursor-zoom-in overflow-hidden rounded-lg"
     >
       <img
         class="block w-full rounded-lg object-cover"
         :class="!disableSquare ? 'aspect-square' : undefined"
+        :style="item.style"
         :src="item.src"
         :alt="item.alt || undefined"
       />

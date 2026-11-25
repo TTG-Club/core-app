@@ -16,7 +16,7 @@
   import { MARKUP_IMAGE_SECTIONS, MarkupEditor } from '~ui/markup-editor';
   import { SelectCreatureType, SelectSpecies } from '~ui/select';
   import { InfoTooltip } from '~ui/tooltip';
-  import { UploadGallery, UploadImage } from '~ui/upload';
+  import { UploadCover, UploadGallery } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
   import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
   import { WorkshopEditorFormControls } from '~workshop/revision/ui';
@@ -52,6 +52,7 @@
       },
       description: '',
       image: undefined,
+      imageFrame: null,
       gallery: [],
       parent: undefined,
       source: {
@@ -285,37 +286,13 @@
               help="Эта картинка отображается на странице вида и в списке видов"
               name="image"
             >
-              <UploadImage
+              <UploadCover
                 v-model="state.image"
+                v-model:frame="state.imageFrame"
                 section="species"
                 max-size="1024"
-              >
-                <template #preview>
-                  <NuxtImg
-                    v-slot="{ src, isLoaded, imgAttrs }"
-                    :key="state.image"
-                    :src="state.image"
-                    custom
-                  >
-                    <!-- Show the actual image when loaded -->
-                    <img
-                      v-if="isLoaded"
-                      v-bind="imgAttrs"
-                      class="w-full rounded-lg object-contain"
-                      :src="src"
-                      :alt="state.name.rus"
-                    />
-
-                    <!-- Show a placeholder while loading -->
-                    <img
-                      v-else
-                      class="w-full rounded-lg object-contain"
-                      src="/img/no-img.webp"
-                      alt="no image"
-                    />
-                  </NuxtImg>
-                </template>
-              </UploadImage>
+                :alt="state.name.rus"
+              />
             </UFormField>
 
             <UFormField

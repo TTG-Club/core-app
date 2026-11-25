@@ -90,6 +90,7 @@
             v-if="!hideGallery"
             :class="['min-w-25 shrink-0', galleryWidthClass]"
             :preview="species.image"
+            :preview-frame="species.imageFrame"
             :images="species.gallery"
           />
 

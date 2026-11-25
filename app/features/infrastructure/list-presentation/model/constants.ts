@@ -23,3 +23,12 @@ export const LIST_VIEW_OPTIONS = [
 
 /** Вид по умолчанию — до трёх колонок, как было до настройки. */
 export const LIST_VIEW_DEFAULT = 'columns-3';
+
+/**
+ * Колонок на самом узком экране у плиток с обложкой (виды, классы): в одну
+ * колонку обложка во всю ширину телефона выходит огромной.
+ */
+export const LIST_TILE_MIN_COLUMNS = 2;
+
+/** Колонок на самом узком экране у списка строками. */
+export const LIST_ROWS_MIN_COLUMNS = 1;

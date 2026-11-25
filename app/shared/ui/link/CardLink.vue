@@ -1,8 +1,13 @@
 <script setup lang="ts">
   import type { RouteLocationRaw } from 'vue-router';
 
-  import type { NameResponse, SourceResponse } from '~/shared/types';
+  import type {
+    ImageFrame,
+    NameResponse,
+    SourceResponse,
+  } from '~/shared/types';
 
+  import { getImageFrameStyle } from '~ui/image-frame';
   import { SourceTag } from '~ui/source-tag';
 
   import {
@@ -14,19 +19,29 @@
     to,
     name,
     image = undefined,
+    imageFrame = undefined,
     source = undefined,
     hasActions = false,
     hideImageOnMobile = false,
     isOpened = false,
+    tile = false,
     row = false,
   } = defineProps<{
     to: RouteLocationRaw;
     name: NameResponse;
     source?: SourceResponse;
     image?: string;
+    /** Кадр обложки: какая часть картинки видна в карточке. */
+    imageFrame?: ImageFrame | null;
     hasActions?: boolean;
     hideImageOnMobile?: boolean;
     isOpened?: boolean;
+    /**
+     * Плиткой: обложка сверху и на узком контейнере, без перестройки в
+     * строку. Для разделов, где обложка — главное (виды, классы); сетка
+     * списка при этом держит две колонки и на телефоне.
+     */
+    tile?: boolean;
     /**
      * Строкой: обложка маленьким квадратом слева, как на узком экране. Для
      * вида списков «строками» из шестерёнки.
@@ -43,6 +58,11 @@
 
   const img = computed(() => image || '/img/no-img.webp');
 
+  // Кадр относится к своей картинке: заглушке он не нужен.
+  const imageStyle = computed(() =>
+    image ? getImageFrameStyle(imageFrame) : undefined,
+  );
+
   const isActionsShowed = computed(
     () => slots.actions && (isDesktop || hasActions),
   );
@@ -53,7 +73,7 @@
   const isSourceInline = computed(() => row || isImageHidden.value);
 
   const contentWidthClass = computed(() => {
-    if (row) {
+    if (row || tile) {
       return undefined;
     }
 
@@ -64,10 +84,14 @@
 
   const { isSplitActive } = useLayoutWidth();
 
-  // Строкой карточка всегда выглядит так, как на узком контейнере
-  const layoutClasses = computed(() =>
-    row ? CARD_LINK_LAYOUT_CLASSES.row : CARD_LINK_LAYOUT_CLASSES.card,
-  );
+  // Вид списков «строками» сильнее плитки: его выбирает сам читатель
+  const layoutClasses = computed(() => {
+    if (row) {
+      return CARD_LINK_LAYOUT_CLASSES.row;
+    }
+
+    return tile ? CARD_LINK_LAYOUT_CLASSES.tile : CARD_LINK_LAYOUT_CLASSES.card;
+  });
 
   /**
    * Обработчик клика по карточке.
@@ -88,7 +112,7 @@
 <template>
   <NuxtLink
     v-slot="{ href }"
-    v-memo="[to, isOpened, row]"
+    v-memo="[to, isOpened, row, tile, image, imageFrame]"
     custom
     :to="to"
   >
@@ -118,6 +142,7 @@
           :src="img"
           :alt="name.rus"
           :class="['absolute h-full w-full', 'object-cover opacity-90']"
+          :style="imageStyle"
         />
 
         <!-- Градиент уезжает при наведении сдвигом, а не сменой размеров:

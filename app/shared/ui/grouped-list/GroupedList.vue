@@ -1,4 +1,6 @@
 <script setup lang="ts" generic="T extends { url: string }">
+  import type { PageGridMinColumns } from '~ui/page';
+
   import type {
     Group,
     GroupKey,
@@ -11,7 +13,12 @@
   import { get, upperFirst } from 'es-toolkit/compat';
   import { computed, ref, watch } from 'vue';
 
-  import { PageGrid } from '~ui/page';
+  import {
+    PAGE_GRID_DEFAULT_MIN_COLUMNS,
+    PAGE_GRID_NARROWEST_CLASSES,
+    PAGE_GRID_TWO_COLUMNS_MIN_WIDTH,
+    PageGrid,
+  } from '~ui/page';
 
   import {
     GROUPED_LIST_COLUMN_BREAKPOINTS,
@@ -31,6 +38,8 @@
     field?: string;
     separatorLabel?: SeparatorLabel;
     columns?: 1 | 2 | 3 | 4 | 5 | 6;
+    /** Колонок на самом узком контейнере: две — для плиток с обложкой. */
+    minColumns?: PageGridMinColumns;
     groupSort?: GroupSort<T>;
     virtual?: boolean;
     virtualThreshold?: number;
@@ -49,6 +58,7 @@
     field = undefined,
     separatorLabel = undefined,
     columns = GROUPED_LIST_DEFAULT_COLUMNS,
+    minColumns = PAGE_GRID_DEFAULT_MIN_COLUMNS,
     groupSort = { mode: 'auto' },
     virtual = false,
     virtualThreshold = GROUPED_LIST_DEFAULT_VIRTUAL_THRESHOLD,
@@ -87,13 +97,19 @@
    * Возвращает количество колонок для текущей ширины контейнера.
    */
   function getColumnCount(containerWidth: number, maxColumns: number): number {
-    return GROUPED_LIST_COLUMN_BREAKPOINTS.reduce((columnCount, breakpoint) => {
-      if (containerWidth >= breakpoint.width) {
-        return Math.min(breakpoint.columns, maxColumns);
-      }
+    return GROUPED_LIST_COLUMN_BREAKPOINTS.reduce(
+      (columnCount, breakpoint) => {
+        if (containerWidth >= breakpoint.width) {
+          return Math.min(breakpoint.columns, maxColumns);
+        }
 
-      return columnCount;
-    }, 1);
+        return columnCount;
+      },
+      // Совсем узкому контейнеру и минимум в две колонки не по силам
+      containerWidth >= PAGE_GRID_TWO_COLUMNS_MIN_WIDTH
+        ? Math.min(minColumns, maxColumns)
+        : PAGE_GRID_DEFAULT_MIN_COLUMNS,
+    );
   }
 
   function getComparableKey(rawKey: string): GroupKey {
@@ -339,7 +355,13 @@
   });
 
   const virtualGridClasses = computed(() => {
-    return GROUPED_LIST_GRID_CLASSES.slice(0, activeVirtualColumns.value);
+    // Самый узкий класс задаёт минимум колонок, остальные — по ширине
+    const widerClasses = GROUPED_LIST_GRID_CLASSES.slice(
+      1,
+      activeVirtualColumns.value,
+    );
+
+    return [PAGE_GRID_NARROWEST_CLASSES[minColumns], ...widerClasses];
   });
 
   const virtualRows = computed<Array<ListRow<T>>>(() => {
@@ -780,6 +802,7 @@
         <PageGrid
           v-else
           :columns="columns"
+          :min-columns="minColumns"
         >
           <div
             v-for="item in treeRow.items"
@@ -796,6 +819,7 @@
     <PageGrid
       v-else-if="!field"
       :columns="columns"
+      :min-columns="minColumns"
     >
       <div
         v-for="item in sortedItems"
@@ -820,7 +844,10 @@
           {{ getSeparatorText(group.key) }}
         </USeparator>
 
-        <PageGrid :columns="columns">
+        <PageGrid
+          :columns="columns"
+          :min-columns="minColumns"
+        >
           <div
             v-for="item in group.items"
             :id="getItemElementId(item)"

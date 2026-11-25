@@ -6,6 +6,7 @@
   } from '~sources/types';
 
   import { FilterControls, useFilter } from '~infrastructure/filter';
+  import { useListView } from '~infrastructure/list-presentation/composable';
   import { SourceBody } from '~sources/body';
   import { SourceLink } from '~sources/link';
   import { getSourceMarkdown } from '~sources/types';
@@ -119,6 +120,10 @@
   );
 
   const markdown = useEntityMarkdown(detailSource, getSourceMarkdown);
+
+  // Вид списков из настроек сайта: число колонок, плитки или строки
+  const { columns: listColumns, tileMinColumns: listMinColumns } =
+    useListView();
 </script>
 
 <template>
@@ -141,7 +146,11 @@
         name="fade"
         mode="out-in"
       >
-        <PageGrid v-if="status !== 'success' && status !== 'error'">
+        <PageGrid
+          v-if="status !== 'success' && status !== 'error'"
+          :columns="listColumns"
+          :min-columns="listMinColumns"
+        >
           <SkeletonLinkBig
             v-for="index in 5"
             :key="index"
@@ -159,7 +168,10 @@
           >
             <USeparator>{{ group.rus }}</USeparator>
 
-            <PageGrid>
+            <PageGrid
+              :columns="listColumns"
+              :min-columns="listMinColumns"
+            >
               <SourceLink
                 v-for="source in group.items"
                 :key="source.url"

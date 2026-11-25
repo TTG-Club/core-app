@@ -74,6 +74,7 @@
           <div :class="$style.portrait">
             <UiGallery
               :preview="creature.image || '/img/no-img.webp'"
+              :preview-frame="creature.imageFrame"
               :images="creature.gallery"
             />
           </div>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { SourceLinkResponse } from '~sources/types';
 
+  import { useListView } from '~infrastructure/list-presentation/composable';
   import { SourceDrawer } from '~sources/drawer';
   import { CardLink } from '~ui/link';
 
@@ -11,6 +12,7 @@
   }>();
 
   const { isDesktop } = useDevice();
+  const { isRows } = useListView();
   const { isSplitActive } = useLayoutWidth();
   const overlay = useOverlay();
 
@@ -34,8 +36,11 @@
     :to="url"
     :name="source.name"
     :image="source.image"
+    :image-frame="source.imageFrame"
     :source="source.source"
     :is-opened="isOpened"
+    :row="isRows"
+    tile
     @open-drawer="handleOpen"
   >
     <template #actions>

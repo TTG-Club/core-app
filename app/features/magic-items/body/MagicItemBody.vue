@@ -21,7 +21,10 @@
         <TopBar :subtitle="magicItem.subtitle" />
 
         <div class="max-w-40 overflow-hidden rounded-md border border-default">
-          <UiGallery :preview="magicItem.image || '/img/no-img.webp'" />
+          <UiGallery
+            :preview="magicItem.image || '/img/no-img.webp'"
+            :preview-frame="magicItem.imageFrame"
+          />
         </div>
 
         <PropertiesBlock

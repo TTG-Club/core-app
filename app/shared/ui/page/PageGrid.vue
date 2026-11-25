@@ -1,4 +1,11 @@
 <script setup lang="ts">
+  import type { PageGridMinColumns } from './constants';
+
+  import {
+    PAGE_GRID_DEFAULT_MIN_COLUMNS,
+    PAGE_GRID_NARROWEST_CLASSES,
+  } from './constants';
+
   /**
    * Промежутки между карточками. Плотный — для списков-строк справочника,
    * просторный — для карточек с обложками, где плотная сетка сливается в
@@ -11,6 +18,8 @@
 
   const props = defineProps<{
     columns?: 1 | 2 | 3 | 4 | 5 | 6;
+    /** Колонок на самом узком контейнере: две — для плиток с обложкой. */
+    minColumns?: PageGridMinColumns;
     gap?: keyof typeof GAP_CLASSES;
   }>();
 
@@ -20,7 +29,9 @@
     const maxCols = Math.min(props.columns ?? 6, 6);
 
     const breakpoints = [
-      'grid-cols-1',
+      PAGE_GRID_NARROWEST_CLASSES[
+        props.minColumns ?? PAGE_GRID_DEFAULT_MIN_COLUMNS
+      ],
       '@md:grid-cols-2',
       '@xl:grid-cols-3',
       '@4xl:grid-cols-4',

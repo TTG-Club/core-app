@@ -1,4 +1,4 @@
-import type { NameResponse, SourceResponse } from '~/shared/types';
+import type { ImageFrame, NameResponse, SourceResponse } from '~/shared/types';
 import type { RenderNode } from '~ui/markup';
 
 export interface SourceDetailResponse {
@@ -17,6 +17,8 @@ export interface SourceDetailResponse {
   };
   description?: RenderNode;
   image?: string;
+  /** Кадр обложки; null — не настроен, картинка стоит по центру. */
+  imageFrame?: ImageFrame | null;
   updatedAt: string;
   tags?: string;
   tagCategory?: string;

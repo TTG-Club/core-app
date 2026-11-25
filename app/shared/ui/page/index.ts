@@ -1,3 +1,4 @@
+export * from './constants';
 export * from './legend';
 export { default as PageActions } from './PageActions.vue';
 export { default as PageBackdrop } from './PageBackdrop.vue';

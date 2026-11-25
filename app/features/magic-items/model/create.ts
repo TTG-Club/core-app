@@ -1,3 +1,4 @@
+import type { ImageFrame } from '~/shared/types';
 import type { ActiveEffect, ItemEffectContext } from '~active-effects/model';
 import type { DamageFormulaPart } from '~ui/damage-formula';
 import type { EditorBaseInfoState } from '~ui/editor';
@@ -29,6 +30,8 @@ export interface MagicItemCreate extends EditorBaseInfoState {
   curse: boolean; // проклятие
   consumable: boolean; // расходуемый
   image: string | undefined;
+  /** Кадр обложки; null — не настроен, картинка стоит по центру. */
+  imageFrame: ImageFrame | null;
   rarity: MagicItemRarity;
   category: MagicItemCategory;
   theme: string | undefined; // тематика: вооружение, магия, реликвии или инструменты

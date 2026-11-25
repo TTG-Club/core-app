@@ -1,3 +1,4 @@
+import type { ImageFrame } from '~/shared/types';
 import type { EditorBaseInfoState } from '~ui/editor';
 
 export interface SourceCreate extends EditorBaseInfoState {
@@ -14,4 +15,6 @@ export interface SourceCreate extends EditorBaseInfoState {
   };
   description: string; // описание маркап
   image: string; // обложка
+  /** Кадр обложки; null — не настроен, картинка стоит по центру. */
+  imageFrame: ImageFrame | null;
 }

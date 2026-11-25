@@ -1,4 +1,9 @@
-import type { Level, NameResponse, SourceResponse } from '~/shared/types';
+import type {
+  ImageFrame,
+  Level,
+  NameResponse,
+  SourceResponse,
+} from '~/shared/types';
 import type { RenderNode } from '~ui/markup';
 import type { StartingEquipmentOptionResponse } from '~ui/starting-equipment';
 
@@ -12,6 +17,8 @@ export interface ClassDetailResponse {
   source: SourceResponse;
   description: RenderNode;
   image?: string;
+  /** Кадр обложки; null — не настроен, картинка стоит по центру. */
+  imageFrame?: ImageFrame | null;
   gallery?: Array<string>;
   casterType: CasterType;
   updatedAt: string;
