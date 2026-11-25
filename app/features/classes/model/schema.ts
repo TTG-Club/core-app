@@ -14,6 +14,7 @@ import type { ClassLinkResponse } from './link';
 
 import { z } from 'zod';
 
+import { imageFrameSchema } from '~ui/image-frame';
 import { renderNodeSchema } from '~ui/markup';
 
 import { CasterType } from './detail';
@@ -52,6 +53,7 @@ const classLinkResponseSchema: z.ZodType<ClassLinkResponse> = z.object({
   name: nameResponseSchema,
   source: sourceResponseSchema,
   image: z.string(),
+  imageFrame: imageFrameSchema.nullish(),
   updatedAt: z.string(),
   hasSubclasses: z.boolean().optional(),
 });
@@ -137,6 +139,7 @@ const multiclassDetailResponseSchema: z.ZodType<MulticlassDetailResponse> =
     source: sourceResponseSchema,
     description: renderNodeSchema,
     image: z.string().optional(),
+    imageFrame: imageFrameSchema.nullish(),
     gallery: z.array(z.string()).optional(),
     casterType: z.nativeEnum(CasterType),
     updatedAt: z.string(),

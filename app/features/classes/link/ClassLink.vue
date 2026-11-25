@@ -38,6 +38,7 @@
     :to="url"
     :name="characterClass.name"
     :image="characterClass.image"
+    :image-frame="characterClass.imageFrame"
     :source="characterClass.source"
     :has-actions="characterClass.hasSubclasses"
     :is-opened="isOpened"

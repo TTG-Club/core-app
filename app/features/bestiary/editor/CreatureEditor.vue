@@ -11,7 +11,7 @@
   import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectAlignment, SelectCreature } from '~ui/select';
-  import { UploadGallery, UploadImage } from '~ui/upload';
+  import { UploadCover, UploadGallery } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
   import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
   import { WorkshopEditorFormControls } from '~workshop/revision/ui';
@@ -424,37 +424,13 @@
                 help="Эта картинка отображается при просмотре страницы существа"
                 name="image"
               >
-                <UploadImage
+                <UploadCover
                   v-model="state.image"
+                  v-model:frame="state.imageFrame"
                   :section="CREATURE_UPLOAD_SECTION"
                   max-size="1024"
-                >
-                  <template #preview>
-                    <NuxtImg
-                      v-slot="{ src, isLoaded, imgAttrs }"
-                      :key="state.image"
-                      :src="state.image"
-                      custom
-                    >
-                      <!-- Show the actual image when loaded -->
-                      <img
-                        v-if="isLoaded"
-                        v-bind="imgAttrs"
-                        class="w-full rounded-lg object-contain"
-                        :src="src"
-                        :alt="state.name.rus"
-                      />
-
-                      <!-- Show a placeholder while loading -->
-                      <img
-                        v-else
-                        class="w-full rounded-lg object-contain"
-                        src="/img/no-img.webp"
-                        alt="no image"
-                      />
-                    </NuxtImg>
-                  </template>
-                </UploadImage>
+                  :alt="state.name.rus"
+                />
               </UFormField>
 
               <UFormField

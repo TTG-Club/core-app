@@ -1,3 +1,4 @@
+import type { ImageFrame } from '~/shared/types';
 import type { ActiveEffect } from '~active-effects/model';
 import type { EditorBaseInfoState } from '~ui/editor';
 
@@ -51,6 +52,8 @@ export function getEmptyCreatureInventoryItem(): CreatureInventoryItem {
 export interface CreatureCreate extends EditorBaseInfoState {
   description: string; // описание маркап
   image: string | undefined;
+  /** Кадр обложки; null — не настроен, картинка стоит по центру. */
+  imageFrame: ImageFrame | null;
   gallery: Array<string>;
 
   types: CreatureTypes; // типы существа
@@ -398,6 +401,7 @@ export function getInitialState(): CreatureCreate {
     srdVersion: undefined,
     description: '',
     image: undefined,
+    imageFrame: null,
     gallery: [],
     tags: [],
     types: {

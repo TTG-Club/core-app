@@ -20,6 +20,7 @@
         <UiGallery
           v-if="!hideGallery && source.image"
           :preview="source.image"
+          :preview-frame="source.imageFrame"
           class="min-w-25 overflow-hidden rounded-md border border-default @min-xl:@max-3xl:max-w-50"
         />
 

@@ -36,6 +36,7 @@
     :to="url"
     :name="species.name"
     :image="species.image"
+    :image-frame="species.imageFrame"
     :source="species.source"
     :has-actions="species.hasLineages"
     :is-opened="isOpened"

@@ -1,8 +1,13 @@
 <script setup lang="ts">
   import type { RouteLocationRaw } from 'vue-router';
 
-  import type { NameResponse, SourceResponse } from '~/shared/types';
+  import type {
+    ImageFrame,
+    NameResponse,
+    SourceResponse,
+  } from '~/shared/types';
 
+  import { getImageFrameStyle } from '~ui/image-frame';
   import { SourceTag } from '~ui/source-tag';
 
   import {
@@ -14,6 +19,7 @@
     to,
     name,
     image = undefined,
+    imageFrame = undefined,
     source = undefined,
     hasActions = false,
     hideImageOnMobile = false,
@@ -24,6 +30,8 @@
     name: NameResponse;
     source?: SourceResponse;
     image?: string;
+    /** Кадр обложки: какая часть картинки видна в карточке. */
+    imageFrame?: ImageFrame | null;
     hasActions?: boolean;
     hideImageOnMobile?: boolean;
     isOpened?: boolean;
@@ -42,6 +50,11 @@
   const { isDesktop, isMobile } = useDevice();
 
   const img = computed(() => image || '/img/no-img.webp');
+
+  // Кадр относится к своей картинке: заглушке он не нужен.
+  const imageStyle = computed(() =>
+    image ? getImageFrameStyle(imageFrame) : undefined,
+  );
 
   const isActionsShowed = computed(
     () => slots.actions && (isDesktop || hasActions),
@@ -88,7 +101,7 @@
 <template>
   <NuxtLink
     v-slot="{ href }"
-    v-memo="[to, isOpened, row]"
+    v-memo="[to, isOpened, row, image, imageFrame]"
     custom
     :to="to"
   >
@@ -118,6 +131,7 @@
           :src="img"
           :alt="name.rus"
           :class="['absolute h-full w-full', 'object-cover opacity-90']"
+          :style="imageStyle"
         />
 
         <!-- Градиент уезжает при наведении сдвигом, а не сменой размеров:

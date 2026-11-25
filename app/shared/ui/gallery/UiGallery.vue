@@ -1,11 +1,15 @@
 <script setup lang="ts">
   import type { LightGallerySettings } from 'lightgallery/lg-settings';
 
+  import type { ImageFrame } from '~/shared/types';
+
   import lgFullscreen from 'lightgallery/plugins/fullscreen';
   import lgThumbnail from 'lightgallery/plugins/thumbnail';
   import lgZoom from 'lightgallery/plugins/zoom';
   import Lightgallery from 'lightgallery/vue';
   import { computed } from 'vue';
+
+  import { getImageFrameStyle } from '~ui/image-frame';
 
   import { GALLERY_LABELS, GALLERY_OPENED_STATE_KEY } from './constants';
 
@@ -14,11 +18,17 @@
     images = [],
     alt = '',
     disableSquare = false,
+    previewFrame = undefined,
   } = defineProps<{
     preview: string;
     images?: Array<string>;
     alt?: string;
     disableSquare?: boolean;
+    /**
+     * Кадр обложки в квадрате превью. В самой галерее картинка открывается
+     * целиком — кадр касается только превью.
+     */
+    previewFrame?: ImageFrame | null;
   }>();
 
   const {
@@ -39,6 +49,12 @@
       ...images.map((img) => ({ src: img, thumb: img, alt })),
     ];
   });
+
+  // Кадр имеет смысл только в квадрате: без него превью показывает картинку
+  // целиком, и обрезать нечего.
+  const previewFrameStyle = computed(() =>
+    disableSquare ? undefined : getImageFrameStyle(previewFrame),
+  );
 
   /** Есть ли что листать: подсказка с числом нужна, только когда картинок больше одной. */
   const hasMultipleItems = computed(() => items.value.length > 1);
@@ -73,11 +89,12 @@
       :data-src="item.src"
       :title="GALLERY_LABELS.zoom"
       :class="!!index ? 'hidden' : undefined"
-      class="group relative cursor-zoom-in"
+      class="group relative cursor-zoom-in overflow-hidden rounded-lg"
     >
       <img
         class="block w-full rounded-lg object-cover"
         :class="!disableSquare ? 'aspect-square' : undefined"
+        :style="!index ? previewFrameStyle : undefined"
         :src="item.src"
         :alt="item.alt || undefined"
       />

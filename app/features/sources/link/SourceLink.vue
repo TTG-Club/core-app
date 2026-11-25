@@ -34,6 +34,7 @@
     :to="url"
     :name="source.name"
     :image="source.image"
+    :image-frame="source.imageFrame"
     :source="source.source"
     :is-opened="isOpened"
     @open-drawer="handleOpen"

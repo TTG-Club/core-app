@@ -1,4 +1,4 @@
-import type { SourceResponse } from '~/shared/types';
+import type { ImageFrame, SourceResponse } from '~/shared/types';
 import type { DamageFormulaPart } from '~ui/damage-formula';
 
 import type { MagicItemBonuses, MagicItemMechanics } from './create';
@@ -10,6 +10,8 @@ export interface MagicItemDetailResponse {
     eng: string;
   };
   image: string;
+  /** Кадр обложки; null — не настроен, картинка стоит по центру. */
+  imageFrame?: ImageFrame | null;
   subtitle: string;
   source: SourceResponse;
   description: Array<string>;

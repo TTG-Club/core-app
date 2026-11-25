@@ -21,7 +21,7 @@
   import { MARKUP_IMAGE_SECTIONS, MarkupEditor } from '~ui/markup-editor';
   import { SelectAbilities, SelectCasterType } from '~ui/select';
   import { InfoTooltip } from '~ui/tooltip';
-  import { UploadGallery, UploadImage } from '~ui/upload';
+  import { UploadCover, UploadGallery } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
   import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
   import { WorkshopEditorFormControls } from '~workshop/revision/ui';
@@ -63,6 +63,7 @@
       },
       srdVersion: undefined,
       image: undefined,
+      imageFrame: null,
       gallery: [],
       description: undefined,
       parentUrl: undefined,
@@ -522,19 +523,13 @@
               label="Основное"
               name="image"
             >
-              <UploadImage
+              <UploadCover
                 v-model="state.image"
+                v-model:frame="state.imageFrame"
                 section="classes"
                 max-size="1024"
-              >
-                <template #preview>
-                  <img
-                    :src="state.image || '/img/no-img.webp'"
-                    alt="Uploaded image"
-                    class="w-full rounded-lg object-contain"
-                  />
-                </template>
-              </UploadImage>
+                :alt="state.name.rus"
+              />
             </UFormField>
 
             <UFormField

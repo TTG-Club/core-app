@@ -1,4 +1,4 @@
-import type { AbilityKey } from '~/shared/types';
+import type { AbilityKey, ImageFrame } from '~/shared/types';
 import type { ActiveEffect } from '~active-effects/model';
 import type { FeatEditorRows, FeatMechanics } from '~feats/model';
 import type { EditorBaseInfoState, EquipmentOptionCreate } from '~ui/editor';
@@ -244,6 +244,8 @@ export interface ClassCreate
   table: Array<ClassColumnCreate>;
   casterType: string | undefined;
   image: string | undefined;
+  /** Кадр обложки; null — не настроен, картинка стоит по центру. */
+  imageFrame: ImageFrame | null;
   primaryCharacteristics: ClassPrimaryCharacteristicsCreate;
   abilityTemplate: AbilityTemplateCreate | undefined;
 

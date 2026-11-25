@@ -1,4 +1,4 @@
-import type { SourceResponse } from '~/shared/types';
+import type { ImageFrame, SourceResponse } from '~/shared/types';
 
 import type { CreatureInventorySection } from './create';
 
@@ -18,6 +18,8 @@ export interface CreatureDetailResponse {
     eng: string;
   };
   image: string;
+  /** Кадр обложки; null — не настроен, картинка стоит по центру. */
+  imageFrame?: ImageFrame | null;
   gallery?: Array<string>;
   source: SourceResponse;
   description: Array<string>;

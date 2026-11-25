@@ -14,7 +14,7 @@
   import { EditorFormControls } from '~ui/editor';
   import { InputUrl } from '~ui/input';
   import { MARKUP_IMAGE_SECTIONS, MarkupEditor } from '~ui/markup-editor';
-  import { UploadImage } from '~ui/upload';
+  import { UploadCover } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
 
   import { SourceCategory, SourceOfficiality } from './ui';
@@ -31,6 +31,7 @@
       officiality: '',
       category: '',
       image: '',
+      imageFrame: null,
       source: {
         url: undefined,
         page: undefined,
@@ -305,35 +306,13 @@
           help="Эта картинка отображается при просмотре страницы источника"
           name="image"
         >
-          <UploadImage
+          <UploadCover
             v-model="state.image"
+            v-model:frame="state.imageFrame"
             section="sources"
             max-size="1024"
-          >
-            <template #preview>
-              <NuxtImg
-                v-slot="{ src, isLoaded, imgAttrs }"
-                :key="state.image"
-                :src="state.image"
-                custom
-              >
-                <img
-                  v-if="isLoaded"
-                  v-bind="imgAttrs"
-                  class="w-full rounded-lg object-contain"
-                  :src="src"
-                  :alt="state.name.rus"
-                />
-
-                <img
-                  v-else
-                  class="w-full rounded-lg object-contain"
-                  src="/img/no-img.webp"
-                  alt="no image"
-                />
-              </NuxtImg>
-            </template>
-          </UploadImage>
+            :alt="state.name.rus"
+          />
         </UFormField>
       </div>
     </UCard>

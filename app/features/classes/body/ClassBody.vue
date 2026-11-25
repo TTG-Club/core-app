@@ -85,6 +85,7 @@
           v-if="!hideGallery && detail.image"
           :class="['min-w-25 shrink-0', galleryWidthClass]"
           :preview="detail.image"
+          :preview-frame="detail.imageFrame"
           :images="detail.gallery"
         />
 
