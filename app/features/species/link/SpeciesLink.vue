@@ -41,6 +41,7 @@
     :has-actions="species.hasLineages"
     :is-opened="isOpened"
     :row="isRows"
+    tile
     @open-drawer="handleOpen"
   >
     <template #actions>

@@ -43,6 +43,7 @@
     :has-actions="characterClass.hasSubclasses"
     :is-opened="isOpened"
     :row="isRows"
+    tile
     @open-drawer="handleOpen"
   >
     <template #actions>

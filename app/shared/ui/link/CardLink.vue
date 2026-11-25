@@ -24,6 +24,7 @@
     hasActions = false,
     hideImageOnMobile = false,
     isOpened = false,
+    tile = false,
     row = false,
   } = defineProps<{
     to: RouteLocationRaw;
@@ -35,6 +36,12 @@
     hasActions?: boolean;
     hideImageOnMobile?: boolean;
     isOpened?: boolean;
+    /**
+     * Плиткой: обложка сверху и на узком контейнере, без перестройки в
+     * строку. Для разделов, где обложка — главное (виды, классы); сетка
+     * списка при этом держит две колонки и на телефоне.
+     */
+    tile?: boolean;
     /**
      * Строкой: обложка маленьким квадратом слева, как на узком экране. Для
      * вида списков «строками» из шестерёнки.
@@ -66,7 +73,7 @@
   const isSourceInline = computed(() => row || isImageHidden.value);
 
   const contentWidthClass = computed(() => {
-    if (row) {
+    if (row || tile) {
       return undefined;
     }
 
@@ -77,10 +84,14 @@
 
   const { isSplitActive } = useLayoutWidth();
 
-  // Строкой карточка всегда выглядит так, как на узком контейнере
-  const layoutClasses = computed(() =>
-    row ? CARD_LINK_LAYOUT_CLASSES.row : CARD_LINK_LAYOUT_CLASSES.card,
-  );
+  // Вид списков «строками» сильнее плитки: его выбирает сам читатель
+  const layoutClasses = computed(() => {
+    if (row) {
+      return CARD_LINK_LAYOUT_CLASSES.row;
+    }
+
+    return tile ? CARD_LINK_LAYOUT_CLASSES.tile : CARD_LINK_LAYOUT_CLASSES.card;
+  });
 
   /**
    * Обработчик клика по карточке.
@@ -101,7 +112,7 @@
 <template>
   <NuxtLink
     v-slot="{ href }"
-    v-memo="[to, isOpened, row, image, imageFrame]"
+    v-memo="[to, isOpened, row, tile, image, imageFrame]"
     custom
     :to="to"
   >

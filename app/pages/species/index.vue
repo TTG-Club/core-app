@@ -97,7 +97,8 @@
       : undefined;
   });
 
-  const { columns: listColumns } = useListView();
+  const { columns: listColumns, tileMinColumns: listMinColumns } =
+    useListView();
 </script>
 
 <template>
@@ -125,7 +126,10 @@
         name="fade"
         mode="out-in"
       >
-        <PageGrid v-if="status !== 'success' && status !== 'error'">
+        <PageGrid
+          v-if="status !== 'success' && status !== 'error'"
+          :min-columns="listMinColumns"
+        >
           <SkeletonLinkBig
             v-for="index in 5"
             :key="index"
@@ -135,6 +139,7 @@
         <GroupedList
           v-else-if="status === 'success' && orderedSpecies?.length"
           :columns="listColumns"
+          :min-columns="listMinColumns"
           :items="orderedSpecies"
           :reset-key="listResetKey"
           :field="SPECIES_LIST_GROUP_FIELD"
