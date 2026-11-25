@@ -4,7 +4,7 @@ import bytes from 'bytes';
 import { StatusCodes } from 'http-status-codes';
 import { FetchError } from 'ofetch';
 
-import { IMAGE_UPLOAD_TYPES } from '#shared/consts';
+import { IMAGE_UPLOAD_MAX_WEIGHT, IMAGE_UPLOAD_TYPES } from '#shared/consts';
 import { getStatusMessage } from '#shared/utils';
 import { z } from '~/utils/zod';
 
@@ -20,12 +20,6 @@ const uploadResponseSchema = z.object({
 /** Строка для атрибута `accept` диалога выбора файла. */
 export const IMAGE_UPLOAD_ACCEPT = IMAGE_UPLOAD_TYPES.join(', ');
 
-/** Максимальный вес исходного файла. */
-const MAX_IMAGE_WEIGHT = bytes('5MB')!;
-
-/** Максимальная длина стороны исходного изображения в пикселях. */
-const MAX_IMAGE_SIDE = 2048;
-
 const UPLOAD_ERROR_TITLE = 'Ошибка при загрузке файла';
 const UNKNOWN_ERROR_MESSAGE = 'Неизвестная ошибка';
 
@@ -36,72 +30,6 @@ interface ImageUploadOptions {
 
   /** Максимальная длина короткой стороны, до которой сервер сожмёт картинку. */
   maxSize?: MaybeRefOrGetter<string | number | undefined>;
-}
-
-/**
- * Перевод бинарных данных файла в base64 для подстановки в `img.src`.
- *
- * @param buffer содержимое файла.
- * @returns строка base64.
- */
-function bufferToBase64(buffer: ArrayBuffer): string {
-  const chunks = [];
-  const bytesView = new Uint8Array(buffer);
-  const chunkSize = 0x8000;
-
-  for (let i = 0; i < bytesView.length; i += chunkSize) {
-    const chunk = bytesView.subarray(
-      i,
-      Math.min(i + chunkSize, bytesView.length),
-    );
-
-    chunks.push(String.fromCharCode(...chunk));
-  }
-
-  return btoa(chunks.join(''));
-}
-
-/**
- * Размеры изображения в пикселях — читаются в браузере до отправки на сервер.
- *
- * @param file выбранный файл.
- * @returns ширина и высота изображения.
- */
-function getImageSize(file: File): Promise<{ width: number; height: number }> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onerror = () => reject(new Error(UNKNOWN_ERROR_MESSAGE));
-
-    reader.onload = () => {
-      const image = new Image();
-
-      if (!reader.result) {
-        reject(new Error(UNKNOWN_ERROR_MESSAGE));
-
-        return;
-      }
-
-      image.onerror = () => reject(new Error(UNKNOWN_ERROR_MESSAGE));
-
-      image.onload = () => {
-        if (!image.width || !image.height) {
-          reject(new Error(UNKNOWN_ERROR_MESSAGE));
-
-          return;
-        }
-
-        resolve({ width: image.width, height: image.height });
-      };
-
-      image.src =
-        reader.result instanceof ArrayBuffer
-          ? bufferToBase64(reader.result)
-          : reader.result;
-    };
-
-    reader.readAsDataURL(file);
-  });
 }
 
 /**
@@ -182,12 +110,13 @@ export function useImageUpload(options: ImageUploadOptions) {
   }
 
   /**
-   * Проверка файла до отправки: тип, вес и размер сторон.
+   * Проверка файла до отправки: тип и вес. Разрешение не ограничиваем —
+   * слишком большую картинку сервер сам уменьшит с сохранением пропорций.
    *
    * @param file выбранный файл.
    * @returns true, если файл можно загружать.
    */
-  async function validateImage(file: File): Promise<boolean> {
+  function validateImage(file: File): boolean {
     if (!IMAGE_UPLOAD_TYPES.includes(file.type)) {
       $toast.add({
         color: 'error',
@@ -198,38 +127,17 @@ export function useImageUpload(options: ImageUploadOptions) {
       return false;
     }
 
-    if (file.size > MAX_IMAGE_WEIGHT) {
+    if (file.size > IMAGE_UPLOAD_MAX_WEIGHT) {
       $toast.add({
         color: 'error',
         title: UPLOAD_ERROR_TITLE,
-        description: `Размер изображения не должен превышать ${bytes(MAX_IMAGE_WEIGHT)}`,
+        description: `Размер изображения не должен превышать ${bytes(IMAGE_UPLOAD_MAX_WEIGHT)}`,
       });
 
       return false;
     }
 
-    try {
-      const imageSize = await getImageSize(file);
-
-      if (
-        imageSize.width > MAX_IMAGE_SIDE
-        || imageSize.height > MAX_IMAGE_SIDE
-      ) {
-        $toast.add({
-          color: 'error',
-          title: UPLOAD_ERROR_TITLE,
-          description: `Изображение должно быть меньше ${MAX_IMAGE_SIDE}px по длинной стороне`,
-        });
-
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      notifyError(error);
-
-      return false;
-    }
+    return true;
   }
 
   /**
@@ -246,7 +154,7 @@ export function useImageUpload(options: ImageUploadOptions) {
       return null;
     }
 
-    if (!(await validateImage(file))) {
+    if (!validateImage(file)) {
       return null;
     }
 

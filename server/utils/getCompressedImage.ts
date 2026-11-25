@@ -1,4 +1,4 @@
-import type { OutputInfo, ResizeOptions } from 'sharp';
+import type { OutputInfo } from 'sharp';
 
 import type { S3UploadFile } from '#server/domain/s3';
 
@@ -9,40 +9,39 @@ import { StatusCodes } from 'http-status-codes';
 import mime from 'mime';
 import sharp from 'sharp';
 
-type FileType =
-  | Buffer
-  | ArrayBuffer
-  | Uint8Array
-  | Uint8ClampedArray
-  | Int8Array
-  | Uint16Array
-  | Int16Array
-  | Uint32Array
-  | Int32Array
-  | Float32Array
-  | Float64Array
-  | string;
+/** Предельный вес сжатой картинки, МБ. */
+const MAX_FILE_MEGABYTES = 2;
 
-const maxFileSize = bytes('1MB')!;
+/** Предельный вес сжатой картинки, байт. */
+const MAX_FILE_SIZE = bytes(`${MAX_FILE_MEGABYTES}MB`)!;
+
+/** Предельная короткая сторона, если вызывающий не задал свою, px. */
+const DEFAULT_MAX_SHORT_SIDE = 2048;
 
 /**
- * Сжимает картинку до предельного размера файла и стороны.
+ * Предельная длинная сторона, px. С запасом: широкий фон шапки главной
+ * (3840×1080) должен пройти без уменьшения, а огромный снимок — ужаться.
+ */
+const MAX_LONG_SIDE = 4096;
+
+/**
+ * Сжимает картинку в WebP. Слишком большую уменьшает с сохранением пропорций:
+ * короткая сторона — не больше `maxSize` (по умолчанию 2048 px), длинная — не
+ * больше `MAX_LONG_SIDE`.
  *
  * @param file Загружаемая картинка.
- * @param maxSize Предельная сторона, px.
+ * @param maxSize Предельная короткая сторона, px.
  */
 export async function getCompressedImage(
   file: S3UploadFile,
   maxSize?: number,
 ): Promise<S3UploadFile> {
-  const resizeOptions = getResizeOptions(maxSize);
-  const { data, info } = await getResized(file.data, resizeOptions);
+  const { data, info } = await getResized(file.data, maxSize);
 
-  if (info.size > maxFileSize) {
+  if (info.size > MAX_FILE_SIZE) {
     throw createError(
       getErrorResponse(StatusCodes.BAD_REQUEST, {
-        message:
-          'Сжатое изображение получается слишком большим — попробуй уменьшить его и загрузить снова. Максимальный размер изображения — 1МБ.',
+        message: `Сжатое изображение получается слишком большим — попробуй уменьшить его и загрузить снова. Максимальный размер изображения — ${MAX_FILE_MEGABYTES} МБ.`,
       }),
     );
   }
@@ -50,6 +49,13 @@ export async function getCompressedImage(
   return convert(file, data, info);
 }
 
+/**
+ * Файл загрузки со сжатым содержимым: тип и расширение — по итоговому формату.
+ *
+ * @param file Исходный файл загрузки.
+ * @param data Сжатое содержимое.
+ * @param info Сведения sharp о сжатой картинке.
+ */
 function convert(
   file: S3UploadFile,
   data: Buffer,
@@ -65,35 +71,70 @@ function convert(
   };
 }
 
-function getResized(file: FileType, resizeOptions: ResizeOptions) {
-  return sharp(file)
-    .resize(resizeOptions)
-    .webp()
-    .toBuffer({ resolveWithObject: true });
-}
+/**
+ * Длинная сторона после уменьшения; undefined — уменьшать не нужно.
+ *
+ * @param width Ширина исходника.
+ * @param height Высота исходника.
+ * @param maxSize Предельная короткая сторона.
+ */
+function getTargetLongSide(
+  width: number,
+  height: number,
+  maxSize?: number,
+): number | undefined {
+  const longSide = Math.max(width, height);
+  const shortSide = Math.min(width, height);
 
-function getResizeOptions(options?: ResizeOptions | number): ResizeOptions {
-  let resizeOptions = options || {};
-
-  if (typeof resizeOptions === 'number') {
-    resizeOptions = {
-      width: resizeOptions,
-      height: resizeOptions,
-    };
-  }
-
-  return Object.assign<ResizeOptions, ResizeOptions | undefined>(
-    {
-      width: 2048,
-      height: 2048,
-      fit: 'outside',
-      withoutEnlargement: true,
-    },
-    resizeOptions,
+  const scale = Math.min(
+    1,
+    MAX_LONG_SIDE / longSide,
+    (maxSize || DEFAULT_MAX_SHORT_SIDE) / shortSide,
   );
+
+  return scale < 1 ? Math.max(1, Math.round(longSide * scale)) : undefined;
 }
 
-function replaceImageExtension(pathOrName: string, type: string) {
+/**
+ * Разворачивает картинку по EXIF, при необходимости уменьшает и переводит в
+ * WebP.
+ *
+ * @param file Содержимое исходной картинки.
+ * @param maxSize Предельная короткая сторона, px.
+ */
+async function getResized(
+  file: S3UploadFile['data'],
+  maxSize?: number,
+): Promise<{ data: Buffer; info: OutputInfo }> {
+  // rotate() без аргументов разворачивает по EXIF: WebP метаданные не
+  // сохраняет, и снимок с телефона иначе лёг бы набок.
+  const image = sharp(file).rotate();
+  const { width, height } = await image.metadata();
+
+  const targetLongSide =
+    width && height ? getTargetLongSide(width, height, maxSize) : undefined;
+
+  // Квадратная рамка с fit: 'inside' ограничивает длинную сторону при любом
+  // повороте и сохраняет пропорции.
+  const resized = targetLongSide
+    ? image.resize({
+        width: targetLongSide,
+        height: targetLongSide,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+    : image;
+
+  return resized.webp().toBuffer({ resolveWithObject: true });
+}
+
+/**
+ * Путь или имя файла с расширением, подходящим типу картинки.
+ *
+ * @param pathOrName Исходный путь или имя.
+ * @param type MIME-тип итоговой картинки.
+ */
+function replaceImageExtension(pathOrName: string, type: string): string {
   const ext = mime.getExtension(type);
 
   if (!ext) {
