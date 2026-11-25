@@ -16,6 +16,7 @@
   import {
     PAGE_GRID_DEFAULT_MIN_COLUMNS,
     PAGE_GRID_NARROWEST_CLASSES,
+    PAGE_GRID_TWO_COLUMNS_MIN_WIDTH,
     PageGrid,
   } from '~ui/page';
 
@@ -104,7 +105,10 @@
 
         return columnCount;
       },
-      Math.min(minColumns, maxColumns),
+      // Совсем узкому контейнеру и минимум в две колонки не по силам
+      containerWidth >= PAGE_GRID_TWO_COLUMNS_MIN_WIDTH
+        ? Math.min(minColumns, maxColumns)
+        : PAGE_GRID_DEFAULT_MIN_COLUMNS,
     );
   }
 
