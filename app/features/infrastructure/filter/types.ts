@@ -76,6 +76,19 @@ export interface SourceCatalog {
   byName: ReadonlyMap<string, SourceNames>;
 }
 
+/**
+ * Быстрый набор над списком источников: что он отмечает. Всё остальное
+ * снимается.
+ */
+export interface SourcePreset {
+  id: string;
+  label: string;
+  /** Группы, отмечаемые целиком, — типы источников из фильтров разделов. */
+  keys?: ReadonlyArray<string>;
+  /** Отдельные книги по акрониму, например `PHB`. */
+  acronyms?: ReadonlyArray<string>;
+}
+
 /** Строка панели выбора источников. */
 export interface SourceEntry {
   item: FilterItem;

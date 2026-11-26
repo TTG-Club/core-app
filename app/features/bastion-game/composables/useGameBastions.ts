@@ -80,15 +80,19 @@ export function useGameBastions(gameId: MaybeRefOrGetter<string>) {
     ),
     refresh,
     isSaving,
+    /** Добавляет свой бастион в игру. */
     join: (id: string) =>
       run(
         () => joinGameWithBastion(id, toValue(gameId)),
         BASTION_GAME_LABELS.added,
       ),
+    /** Убирает бастион из игры. */
     leave: (id: string) =>
       run(() => leaveGameWithBastion(id), BASTION_GAME_LABELS.leftGame),
+    /** Сохраняет название и состав бастиона. */
     update: (id: string, request: UpdatePlayerBastionRequest) =>
       run(() => updatePlayerBastion(id, request), BASTION_GAME_LABELS.updated),
+    /** Отправляет бастион в архив. */
     archive: (id: string) =>
       run(() => archivePlayerBastion(id), BASTION_GAME_LABELS.archived),
   };

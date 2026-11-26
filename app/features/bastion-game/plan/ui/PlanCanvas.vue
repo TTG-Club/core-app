@@ -1,10 +1,11 @@
 <script setup lang="ts">
   import type { Application, Container, FederatedPointerEvent } from 'pixi.js';
 
-  import type { PlanPoint, PlanPreview } from '../../composables';
   import type {
     FurnitureKind,
     PlanDocument,
+    PlanPoint,
+    PlanPreview,
     PlanSelection,
     PlanTool,
   } from '../../model';
@@ -13,10 +14,12 @@
   import { usePlanTheme } from '../../composables';
   import {
     getLevelCenter,
+    PLAN_CANVAS_TEXT,
     PLAN_CELL_PIXELS,
     PLAN_CONTEXT_MENU_TOLERANCE,
     PLAN_FACILITY_DRAG_TYPE,
     PLAN_LONG_PRESS_MS,
+    PLAN_PAN_MOUSE_BUTTONS,
     PLAN_START_FOCUS,
     PLAN_TOUCH_HOLD_MS,
     PLAN_TOUCH_TOLERANCE,
@@ -184,11 +187,11 @@
       return undefined;
     }
 
-    const rect = application.canvas.getBoundingClientRect();
+    const canvasBounds = application.canvas.getBoundingClientRect();
 
     const local = world.toLocal({
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
+      x: event.clientX - canvasBounds.left,
+      y: event.clientY - canvasBounds.top,
     });
 
     return { x: local.x / PLAN_CELL_PIXELS, y: local.y / PLAN_CELL_PIXELS };
@@ -262,8 +265,7 @@
    */
   function isPanGesture(event: FederatedPointerEvent): boolean {
     return (
-      event.button === 1
-      || event.button === 2
+      PLAN_PAN_MOUSE_BUTTONS.includes(event.button)
       || props.tool === 'pan'
       || isSpacePressed.value
     );
@@ -617,12 +619,12 @@
       return;
     }
 
-    const rect = application.canvas.getBoundingClientRect();
+    const canvasBounds = application.canvas.getBoundingClientRect();
 
     zoomAt(
       event.deltaY < 0 ? PLAN_ZOOM_STEP : 1 / PLAN_ZOOM_STEP,
-      event.clientX - rect.left,
-      event.clientY - rect.top,
+      event.clientX - canvasBounds.left,
+      event.clientY - canvasBounds.top,
     );
   }
 
@@ -711,9 +713,14 @@
         style: {
           fontFamily,
           fontSize: style.size,
-          fontWeight: style.isBold ? '700' : '400',
+          fontWeight: style.isBold
+            ? PLAN_CANVAS_TEXT.boldWeight
+            : PLAN_CANVAS_TEXT.regularWeight,
           fill: style.color,
-          stroke: { color: theme.value.background, width: 3 },
+          stroke: {
+            color: theme.value.background,
+            width: PLAN_CANVAS_TEXT.strokeWidth,
+          },
         },
       });
 

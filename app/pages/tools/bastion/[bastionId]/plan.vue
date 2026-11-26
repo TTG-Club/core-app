@@ -5,11 +5,13 @@
   import {
     BASTION_DETAIL_LABELS,
     fetchPlayerBastion,
+    getBastionDataKey,
     getBastionErrorMessage,
     getBastionRoute,
     PLAN_LABELS,
   } from '~bastion-game/model';
   import { PlanEditor } from '~bastion-game/plan';
+  import { fillTemplate } from '~bastions/model';
   import { UiResult } from '~ui/result';
 
   // Бастионы пока открыты только админам
@@ -28,7 +30,7 @@
     status,
     error,
   } = useAsyncData(
-    () => `player-bastion-${bastionId.value}`,
+    () => getBastionDataKey('bastion', bastionId.value),
     () => fetchPlayerBastion(bastionId.value),
     { server: false, lazy: true },
   );
@@ -36,12 +38,19 @@
   useSeoMeta({
     title: () =>
       bastion.value
-        ? `${PLAN_LABELS.title}: ${bastion.value.name}`
+        ? fillTemplate(PLAN_LABELS.pageTitle, {
+            title: PLAN_LABELS.title,
+            name: bastion.value.name,
+          })
         : PLAN_LABELS.title,
     robots: 'noindex',
   });
 
   const bastionRoute = computed(() => getBastionRoute(bastionId.value));
+
+  const isLoading = computed(
+    () => status.value === 'pending' || status.value === 'idle',
+  );
 
   const errorTitle = computed(() =>
     error.value?.statusCode === StatusCodes.FORBIDDEN
@@ -73,7 +82,7 @@
     </template>
 
     <USkeleton
-      v-if="status === 'pending' || status === 'idle'"
+      v-if="isLoading"
       class="h-[70vh]"
     />
 

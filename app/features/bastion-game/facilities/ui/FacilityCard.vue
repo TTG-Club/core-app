@@ -10,11 +10,15 @@
   import {
     ACTIVITY_LABELS,
     FACILITY_SETUP_LABELS,
+    formatFacilityChoices,
+    formatFacilitySpace,
     formatMenagerieSpace,
     formatStableSpace,
     getArtisanToolIcon,
+    getBastionFacilityRoute,
     getOrderSubject,
     getTurnsLeftText,
+    isArtisanToolChoice,
     STABLE_LABELS,
   } from '../../model';
 
@@ -170,10 +174,7 @@
     emit('toggle-confirmation', !facility.prerequisiteConfirmed);
   }
 
-  const spaceText = computed(
-    () =>
-      `${facility.space.name} (${facility.space.squares} ${FACILITY_SETUP_LABELS.squares})`,
-  );
+  const spaceText = computed(() => formatFacilitySpace(facility.space));
 
   /** Наёмники видны и тогда, когда событие забрало всех: число станет 0. */
   const hasHirelings = computed(
@@ -281,27 +282,13 @@
   );
 
   /**
-   * Выбор инструментов ремесленников: каждый выбранный вариант узнаётся как
-   * инструмент.
-   *
-   * @param options Выбранные варианты.
-   * @returns true, если все варианты — инструменты.
-   */
-  function isToolChoice(options: Array<string>): boolean {
-    return (
-      options.length > 0
-      && options.every((option) => !!getArtisanToolIcon(option))
-    );
-  }
-
-  /**
    * Выборы, где каждый вариант — инструмент ремесленника, показываются
    * значками в ряду с наёмниками: длинный список инструментов мастерской
    * занимал полстроки. Название — в подсказке.
    */
   const toolIcons = computed(() =>
     facility.choices
-      .filter((choice) => isToolChoice(choice.options))
+      .filter((choice) => isArtisanToolChoice(choice.options))
       .flatMap((choice) =>
         choice.options.map((option) => ({
           name: option,
@@ -310,11 +297,16 @@
       ),
   );
 
-  const choicesText = computed(() =>
-    facility.choices
-      .filter((choice) => !isToolChoice(choice.options))
-      .map((choice) => `${choice.name}: ${choice.options.join(', ')}`)
-      .join('; '),
+  const choicesText = computed(() => formatFacilityChoices(facility.choices));
+
+  /** В правом верхнем углу есть что показать: значки или счётчики. */
+  const hasCounters = computed(
+    () =>
+      toolIcons.value.length > 0
+      || hasHirelings.value
+      || !!defendersCount.value
+      || !!menagerieCount.value
+      || !!stableCount.value,
   );
 
   const prerequisiteColor = computed(() =>
@@ -342,7 +334,7 @@
     <div class="flex items-start justify-between gap-2">
       <header class="flex min-w-0 flex-col gap-0.5">
         <ULink
-          :to="`/bastions/${facility.facilityUrl}`"
+          :to="getBastionFacilityRoute(facility.facilityUrl)"
           class="font-medium text-highlighted"
           @click.left.exact.prevent="drawer.open()"
         >
@@ -355,13 +347,7 @@
       <!-- Значки сами по себе ничего не говорят вслух, поэтому число
       людей и мест идёт и подсказкой, и `aria-label` -->
       <div
-        v-if="
-          toolIcons.length
-          || hasHirelings
-          || defendersCount
-          || menagerieCount
-          || stableCount
-        "
+        v-if="hasCounters"
         class="flex shrink-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-sm"
       >
         <UTooltip

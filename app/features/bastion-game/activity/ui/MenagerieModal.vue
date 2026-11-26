@@ -11,6 +11,7 @@
   import {
     ACTIVITY_LABELS,
     formatMenagerieSpace,
+    getMenagerieCreatureIconClass,
     removeMenagerieCreature,
     setMenagerieCreatureDefender,
   } from '../../model';
@@ -137,7 +138,7 @@
         >
           <UIcon
             name="tabler:paw-filled"
-            :class="creature.defender ? 'text-info' : 'text-muted'"
+            :class="getMenagerieCreatureIconClass(creature.defender)"
             class="size-5 shrink-0"
           />
 

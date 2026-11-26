@@ -6,6 +6,7 @@ import type {
   SourceCatalogRecord,
   SourceEntry,
   SourceNames,
+  SourcePreset,
 } from '../types';
 
 import { getGroupItems } from './getGroupItems';
@@ -177,57 +178,104 @@ export function countSources(groups: FilterGroups): {
 }
 
 /**
- * Проверяет, что в панели есть все группы быстрого набора. Если какой-то нет,
- * набор не показывается: «Базовые и сеттинги» без сеттингов выбрал бы не то,
- * что написано на кнопке.
- *
- * @param groups Группы источников панели.
- * @param keys Ключи групп набора.
+ * Акроним источника: из справочника, а пока его нет — идентификатор значения,
+ * в фильтрах разделов это он и есть.
  */
-export function isSourcePresetAvailable(
-  groups: FilterGroups,
-  keys: ReadonlyArray<string>,
-): boolean {
-  return keys.every((key) => groups.some((group) => group.key === key));
+function getSourceAcronym(
+  filterItem: FilterItem,
+  catalog: SourceCatalog,
+): string {
+  return findSourceNames(filterItem, catalog)?.acronym || String(filterItem.id);
 }
 
 /**
- * Применяет быстрый набор: отмечает все источники его групп и снимает отметки
- * со всех остальных.
- *
- * @param groups Группы источников панели.
- * @param keys Ключи групп набора.
- * @returns Новые группы; исходные не меняются.
+ * Входит ли источник в быстрый набор: лежит в одной из его групп или назван
+ * в нём акронимом.
  */
-export function applySourcePreset(
-  groups: FilterGroups,
-  keys: ReadonlyArray<string>,
-): FilterGroups {
-  return groups.map((group) =>
-    setSourcesSelected(
-      group,
-      new Set(getGroupItems(group).map((filterItem) => filterItem.id)),
-      keys.includes(group.key),
-    ),
+function isInSourcePreset(
+  group: FilterGroup,
+  filterItem: FilterItem,
+  preset: SourcePreset,
+  catalog: SourceCatalog,
+): boolean {
+  return (
+    !!preset.keys?.includes(group.key)
+    || !!preset.acronyms?.includes(getSourceAcronym(filterItem, catalog))
   );
 }
 
 /**
- * Проверяет, совпадает ли текущий выбор с быстрым набором: в его группах
- * отмечено всё, в остальных — ничего.
+ * Проверяет, что набору есть что отмечать: в панели все его группы и хотя бы
+ * одна из его книг. Иначе набор не показывается — «Официальные и сеттинги»
+ * без сеттингов выбрал бы не то, что написано на кнопке.
  *
  * @param groups Группы источников панели.
- * @param keys Ключи групп набора.
+ * @param preset Быстрый набор.
+ * @param catalog Справочник названий.
+ */
+export function isSourcePresetAvailable(
+  groups: FilterGroups,
+  preset: SourcePreset,
+  catalog: SourceCatalog,
+): boolean {
+  const hasGroups = (preset.keys ?? []).every((key) =>
+    groups.some((group) => group.key === key),
+  );
+
+  const hasBooks =
+    !preset.acronyms?.length
+    || groups.some((group) =>
+      getGroupItems(group).some((filterItem) =>
+        preset.acronyms?.includes(getSourceAcronym(filterItem, catalog)),
+      ),
+    );
+
+  return hasGroups && hasBooks;
+}
+
+/**
+ * Применяет быстрый набор: отмечает его источники и снимает отметки со всех
+ * остальных.
+ *
+ * @param groups Группы источников панели.
+ * @param preset Быстрый набор.
+ * @param catalog Справочник названий.
+ * @returns Новые группы; исходные не меняются.
+ */
+export function applySourcePreset(
+  groups: FilterGroups,
+  preset: SourcePreset,
+  catalog: SourceCatalog,
+): FilterGroups {
+  return groups.map((group) => ({
+    ...group,
+    values: getGroupItems(group).map((filterItem) => ({
+      ...filterItem,
+      selected: isInSourcePreset(group, filterItem, preset, catalog)
+        ? true
+        : null,
+    })),
+  }));
+}
+
+/**
+ * Проверяет, совпадает ли текущий выбор с быстрым набором: его источники
+ * отмечены, остальные — нет.
+ *
+ * @param groups Группы источников панели.
+ * @param preset Быстрый набор.
+ * @param catalog Справочник названий.
  */
 export function isSourcePresetActive(
   groups: FilterGroups,
-  keys: ReadonlyArray<string>,
+  preset: SourcePreset,
+  catalog: SourceCatalog,
 ): boolean {
-  return groups.every((group) => {
-    const isPresetGroup = keys.includes(group.key);
-
-    return getGroupItems(group).every(
-      (filterItem) => !!filterItem.selected === isPresetGroup,
-    );
-  });
+  return groups.every((group) =>
+    getGroupItems(group).every(
+      (filterItem) =>
+        !!filterItem.selected
+        === isInSourcePreset(group, filterItem, preset, catalog),
+    ),
+  );
 }

@@ -15,14 +15,16 @@
   import { useBastionAction } from '../../composables';
   import {
     ACTIVITY_LABELS,
+    CUSTOM_CREATURE_VALUE,
     fetchFacilityOrderOptions,
     formatMenagerieSpace,
+    getMenagerieSpace,
     getOptionTermsText,
     getTurnsFor,
     giveBastionOrder,
     isBastionOrderCode,
-    MENAGERIE_LARGE_SPACE,
-    MENAGERIE_SIZES,
+    MENAGERIE_DEFAULT_SIZE,
+    MENAGERIE_SIZE_ITEMS,
   } from '../../model';
   import StableTradeFields from './StableTradeFields.vue';
 
@@ -50,16 +52,16 @@
   const itemUrl = ref<string>();
   const beastValue = ref<string>();
   const customName = ref('');
-  const customSize = ref<MenagerieSizeCode>('MEDIUM');
+  const customSize = ref<MenagerieSizeCode>(MENAGERIE_DEFAULT_SIZE);
   const customChallenge = ref<string>();
   const trade = ref<StableTrade>();
   const note = ref('');
   const options = ref<Array<FacilityOrderOptionDetail>>([]);
 
   const orderItems = computed(() =>
-    facility.orders.flatMap((item) =>
-      isBastionOrderCode(item.value)
-        ? [{ label: item.name, value: item.value }]
+    facility.orders.flatMap((facilityOrder) =>
+      isBastionOrderCode(facilityOrder.value)
+        ? [{ label: facilityOrder.name, value: facilityOrder.value }]
         : [],
     ),
   );
@@ -108,9 +110,6 @@
     );
   }
 
-  /** Значение пункта «Другое существо» в списке существ зверинца. */
-  const CUSTOM_CREATURE = 'CUSTOM';
-
   /** Вербовка в зверинце: существо из таблицы, у мастера — любое другое. */
   const isMenagerieRecruit = computed(
     () => order.value === 'RECRUIT' && !!facility.menagerie,
@@ -144,32 +143,31 @@
           ...beasts,
           {
             label: ACTIVITY_LABELS.creatureCustom,
-            value: CUSTOM_CREATURE,
+            value: CUSTOM_CREATURE_VALUE,
             disabled: false,
           },
         ]
       : beasts;
   });
 
-  const isCustomCreature = computed(() => beastValue.value === CUSTOM_CREATURE);
-
-  const sizeItems = MENAGERIE_SIZES.map((size) => ({
-    label: size.label,
-    value: size.value,
-  }));
+  const isCustomCreature = computed(
+    () => beastValue.value === CUSTOM_CREATURE_VALUE,
+  );
 
   const challengeItems = computed(() =>
-    (facility.menagerie?.challengeCosts ?? []).map((item) => ({
-      label: fillTemplate(ACTIVITY_LABELS.creatureChallengeTerms, item),
-      value: item.challenge,
+    (facility.menagerie?.challengeCosts ?? []).map((challengeCost) => ({
+      label: fillTemplate(
+        ACTIVITY_LABELS.creatureChallengeTerms,
+        challengeCost,
+      ),
+      value: challengeCost.challenge,
     })),
   );
 
   const isCustomNoRoom = computed(
     () =>
       isCustomCreature.value
-      && (customSize.value === 'LARGE' ? MENAGERIE_LARGE_SPACE : 1)
-        > menagerieFree.value,
+      && getMenagerieSpace(customSize.value) > menagerieFree.value,
   );
 
   /** Существо для запроса; undefined — ещё не выбрано или не заполнено. */
@@ -237,7 +235,10 @@
               && (option.minLevel ?? 0) <= characterLevel,
           )
           .map((option) => ({
-            label: `${option.name} — ${getTermsText(option)}`,
+            label: fillTemplate(ACTIVITY_LABELS.optionWithTerms, {
+              name: option.name ?? '',
+              terms: getTermsText(option),
+            }),
             value: option.name ?? '',
           })),
   );
@@ -253,20 +254,22 @@
 
   const craftItems = computed(() =>
     isCraftWithTools.value
-      ? (facility.craftableItems ?? []).map((item) => ({
-          label: item.days
+      ? (facility.craftableItems ?? []).map((craftableItem) => ({
+          label: craftableItem.days
             ? fillTemplate(ACTIVITY_LABELS.craftItemTerms, {
-                name: item.name ?? item.url,
-                days: item.days,
+                name: craftableItem.name ?? craftableItem.url,
+                days: craftableItem.days,
               })
-            : (item.name ?? item.url),
-          value: item.url,
+            : (craftableItem.name ?? craftableItem.url),
+          value: craftableItem.url,
         }))
       : [],
   );
 
   const selectedCraft = computed(() =>
-    facility.craftableItems?.find((item) => item.url === itemUrl.value),
+    facility.craftableItems?.find(
+      (craftableItem) => craftableItem.url === itemUrl.value,
+    ),
   );
 
   /**
@@ -275,21 +278,21 @@
    * считает сервер.
    */
   const craftDaysText = computed(() => {
-    const item = selectedCraft.value;
+    const craftableItem = selectedCraft.value;
 
-    if (!item) {
+    if (!craftableItem) {
       return '';
     }
 
-    if (!item.days || item.priceGp == null) {
+    if (!craftableItem.days || craftableItem.priceGp == null) {
       return ACTIVITY_LABELS.craftDaysUnknown;
     }
 
     return fillTemplate(ACTIVITY_LABELS.craftDays, {
-      price: item.priceGp,
+      price: craftableItem.priceGp,
       hirelings: facility.hirelings ?? 1,
-      days: item.days,
-      turns: getTurnsFor(item.days),
+      days: craftableItem.days,
+      turns: getTurnsFor(craftableItem.days),
     });
   });
 
@@ -331,7 +334,7 @@
     itemUrl.value = undefined;
     beastValue.value = undefined;
     customName.value = '';
-    customSize.value = 'MEDIUM';
+    customSize.value = MENAGERIE_DEFAULT_SIZE;
     customChallenge.value = undefined;
   }
 
@@ -463,7 +466,7 @@
             <UFormField :label="ACTIVITY_LABELS.creatureSize">
               <USelect
                 v-model="customSize"
-                :items="sizeItems"
+                :items="MENAGERIE_SIZE_ITEMS"
                 value-key="value"
                 class="w-full"
               />

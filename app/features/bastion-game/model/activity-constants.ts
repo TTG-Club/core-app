@@ -1,9 +1,26 @@
+import type { TabsItem } from '@nuxt/ui';
+
 import type {
   BastionEventType,
   BastionGuestKind,
   FacilitySpaceCode,
   LedgerReason,
 } from './schema';
+
+/** Цвет суммы в журнале казны: приход и расход. */
+export const LEDGER_AMOUNT_CLASSES = {
+  income: 'text-success',
+  expense: 'text-error',
+} as const;
+
+/** Цвет значка существа в зверинце: защитник и обычный житель. */
+export const MENAGERIE_CREATURE_ICON_CLASSES = {
+  defender: 'text-info',
+  resident: 'text-muted',
+} as const;
+
+/** Размер базового сооружения, с которого начинается стройка. */
+export const DEFAULT_BUILD_SPACE: FacilitySpaceCode = 'CRAMPED';
 
 /** Дней в ходе бастиона. */
 export const DAYS_PER_TURN = 7;
@@ -168,6 +185,8 @@ export const ACTIVITY_LABELS = {
   craftItemPlaceholder: 'Выберите предмет',
   craftItemEmpty: 'Выбранные инструменты мастерской ничего не создают',
   craftItemTerms: '{name} — {days} дн.',
+  /** Пункт списка с условиями: «Тесная — 20 дн., 500 зм». */
+  optionWithTerms: '{name} — {terms}',
   craftDays:
     'Изготовление: {price} зм / 10 зм в день, наёмников: {hirelings} — {days} дн. (ходов: {turns})',
   craftDaysUnknown:
@@ -252,6 +271,14 @@ export const ACTIVITY_LABELS = {
   cancelAction: 'Отмена',
 } as const;
 
+/** Вкладки журнала бастиона. */
+export const BASTION_JOURNAL_TABS: Array<TabsItem> = [
+  { label: ACTIVITY_LABELS.ordersTab, slot: 'orders', value: 'orders' },
+  { label: EVENT_LABELS.tab, slot: 'events', value: 'events' },
+  { label: ACTIVITY_LABELS.turnsTab, slot: 'turns', value: 'turns' },
+  { label: ACTIVITY_LABELS.ledgerTab, slot: 'ledger', value: 'ledger' },
+];
+
 export const STABLE_LABELS = {
   open: 'Стойло',
   title: 'Стойло конюшни',
@@ -284,6 +311,18 @@ export const STABLE_LABELS = {
   nothingToSell: 'В конюшне нет животных на продажу.',
 } as const;
 
+/** Сделка конюшни: купить или продать животное. */
+export type StableTradeMode = 'BUY' | 'SELL';
+
+/** Варианты сделки конюшни. */
+export const STABLE_TRADE_MODE_ITEMS: Array<{
+  label: string;
+  value: StableTradeMode;
+}> = [
+  { label: STABLE_LABELS.buy, value: 'BUY' },
+  { label: STABLE_LABELS.sell, value: 'SELL' },
+];
+
 export const LAST_TURN_LABELS = {
   title: 'Итоги хода {turn}',
   hide: 'Скрыть итоги хода',
@@ -300,6 +339,8 @@ export const TURNS_LEFT_LABELS = {
   left: 'осталось {count} {turns}',
   leftOne: 'остался {count} {turns}',
   span: '{count} {turns}',
+  /** Срок неизвестен. */
+  unknown: '—',
 } as const;
 
 /** Защитная стена: цена и срок 5-футового квадрата (`BastionRules` core-api). */

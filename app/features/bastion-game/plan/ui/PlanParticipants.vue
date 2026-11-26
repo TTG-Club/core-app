@@ -11,7 +11,7 @@
     participants: ReadonlyArray<PlanParticipant>;
   }>();
 
-  const items = computed(() =>
+  const participantBadges = computed(() =>
     participants.map((participant) => ({
       id: participant.id,
       name: participant.name,
@@ -23,12 +23,12 @@
 
 <template>
   <div
-    v-if="items.length"
+    v-if="participantBadges.length"
     class="flex items-center gap-1"
     :aria-label="PLAN_LABELS.participants"
   >
     <UTooltip
-      v-for="participant in items"
+      v-for="participant in participantBadges"
       :key="participant.id"
       :text="participant.name"
     >

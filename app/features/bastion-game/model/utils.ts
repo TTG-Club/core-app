@@ -1,3 +1,4 @@
+import type { BastionDataKind, MenagerieSizeCode } from './constants';
 import type {
   GamePlayer,
   PlayerBastion,
@@ -8,13 +9,29 @@ import type {
 import { StatusCodes } from 'http-status-codes';
 import { FetchError } from 'ofetch';
 
+import { fillTemplate } from '~bastions/model';
+
 import {
   ARTISAN_TOOL_ICONS,
+  BASTION_DATA_KEYS,
+  BASTION_FACILITIES_ROUTE,
+  BASTION_FORM_LABELS,
+  BASTION_NAME_MAX_LENGTH,
+  BASTION_PLAN_ROUTE_SUFFIX,
   BASTION_START_LEVEL,
+  BESTIARY_ROUTE,
+  FACILITY_CHOICES_SEPARATOR,
+  FACILITY_SETUP_LABELS,
+  GAMES_ROUTE,
+  LAST_TURN_HIDDEN_STORAGE_KEY,
+  MAGIC_ITEMS_ROUTE,
   MENAGERIE_LARGE_SPACE,
+  MENAGERIE_MEDIUM_SPACE,
   MY_BASTIONS_ROUTE,
+  QUARTER_FRACTIONS,
   SHARED_BASTION_ROUTE,
   STABLE_LARGE_SPACE,
+  STABLE_MEDIUM_SPACE,
 } from './constants';
 
 const SERVICE_UNAVAILABLE_STATUS = StatusCodes.SERVICE_UNAVAILABLE;
@@ -172,7 +189,7 @@ export function getBastionRoute(id: string): string {
  * @returns Путь страницы.
  */
 export function getBastionPlanRoute(id: string): string {
-  return `${getBastionRoute(id)}/plan`;
+  return `${getBastionRoute(id)}${BASTION_PLAN_ROUTE_SUFFIX}`;
 }
 
 /**
@@ -192,7 +209,7 @@ export function getSharedBastionRoute(token: string): string {
  * @returns Путь страницы.
  */
 export function getSharedBastionPlanRoute(token: string): string {
-  return `${getSharedBastionRoute(token)}/plan`;
+  return `${getSharedBastionRoute(token)}${BASTION_PLAN_ROUTE_SUFFIX}`;
 }
 
 /**
@@ -202,7 +219,59 @@ export function getSharedBastionPlanRoute(token: string): string {
  * @returns Путь страницы.
  */
 export function getGameRoute(gameId: string): string {
-  return `/games/${gameId}`;
+  return `${GAMES_ROUTE}/${gameId}`;
+}
+
+/**
+ * Ключ `useAsyncData` для данных бастиона: страницы с одинаковым ключом
+ * делят кеш.
+ *
+ * @param kind Что грузится.
+ * @param id Бастион или токен ссылки «поделиться».
+ * @returns Ключ вида `player-bastion-<id>`.
+ */
+export function getBastionDataKey(kind: BastionDataKind, id: string): string {
+  return `${BASTION_DATA_KEYS[kind]}-${id}`;
+}
+
+/**
+ * Карточка сооружения бастиона в справочнике.
+ *
+ * @param url Адрес сооружения в каталоге.
+ * @returns Путь страницы.
+ */
+export function getBastionFacilityRoute(url: string): string {
+  return `${BASTION_FACILITIES_ROUTE}/${url}`;
+}
+
+/**
+ * Карточка магического предмета в справочнике.
+ *
+ * @param url Адрес предмета в каталоге.
+ * @returns Путь страницы.
+ */
+export function getMagicItemRoute(url: string): string {
+  return `${MAGIC_ITEMS_ROUTE}/${url}`;
+}
+
+/**
+ * Карточка существа в бестиарии.
+ *
+ * @param url Адрес существа в каталоге.
+ * @returns Путь страницы.
+ */
+export function getBestiaryRoute(url: string): string {
+  return `${BESTIARY_ROUTE}/${url}`;
+}
+
+/**
+ * Ключ хранилища со скрытым ходом: свой у каждого бастиона.
+ *
+ * @param bastionId Бастион.
+ * @returns Ключ в формате `bastion-game:last-turn-hidden:<id>`.
+ */
+export function getLastTurnHiddenKey(bastionId: string): string {
+  return `${LAST_TURN_HIDDEN_STORAGE_KEY}:${bastionId}`;
 }
 
 /**
@@ -216,8 +285,6 @@ export function getArtisanToolIcon(name: string): string | undefined {
 
   return ARTISAN_TOOL_ICONS.find(([stem]) => lower.includes(stem))?.[1];
 }
-
-const QUARTER_FRACTIONS = ['', '¼', '½', '¾'];
 
 /**
  * Место в вольерах зверинца в больших существах: 9 четвертей → «2¼».
@@ -258,4 +325,129 @@ export function formatStableSpace(halves: number): string {
  */
 export function getStableSalePrice(cost: number, bonusPercent: number): number {
   return Math.floor((cost * (100 + bonusPercent)) / 100);
+}
+
+/**
+ * Сколько места в вольерах займёт существо этого размера.
+ *
+ * @param size Размер существа.
+ * @returns Место в четвертях большого существа.
+ */
+export function getMenagerieSpace(size: MenagerieSizeCode): number {
+  return size === 'LARGE' ? MENAGERIE_LARGE_SPACE : MENAGERIE_MEDIUM_SPACE;
+}
+
+/**
+ * Сколько места в конюшне займёт животное этого размера.
+ *
+ * @param size Размер животного.
+ * @returns Место в половинах большого животного.
+ */
+export function getStableSpace(size: MenagerieSizeCode): number {
+  return size === 'LARGE' ? STABLE_LARGE_SPACE : STABLE_MEDIUM_SPACE;
+}
+
+/**
+ * Выбор инструментов ремесленников: каждый выбранный вариант узнаётся как
+ * инструмент.
+ *
+ * @param options Выбранные варианты.
+ * @returns true, если все варианты — инструменты.
+ */
+export function isArtisanToolChoice(options: ReadonlyArray<string>): boolean {
+  return (
+    options.length > 0
+    && options.every((option) => !!getArtisanToolIcon(option))
+  );
+}
+
+/**
+ * Выборы сооружения, кроме инструментов, одной строкой.
+ *
+ * @param choices Выборы сооружения: название и выбранные варианты.
+ * @returns «Сад: травы; Библиотека: история».
+ */
+export function formatFacilityChoices(
+  choices: ReadonlyArray<{ name: string; options: Array<string> }>,
+): string {
+  return choices
+    .filter((choice) => !isArtisanToolChoice(choice.options))
+    .map((choice) =>
+      fillTemplate(FACILITY_SETUP_LABELS.choiceTerms, {
+        name: choice.name,
+        options: choice.options.join(', '),
+      }),
+    )
+    .join(FACILITY_CHOICES_SEPARATOR);
+}
+
+/**
+ * Пространство сооружения с площадью.
+ *
+ * @param space Пространство: название и площадь в квадратах.
+ * @param space.name Название пространства.
+ * @param space.squares Площадь, 5-футовых квадратов.
+ * @returns «Тесное (4 кв.)».
+ */
+export function formatFacilitySpace(space: {
+  name: string;
+  squares: number;
+}): string {
+  return fillTemplate(FACILITY_SETUP_LABELS.spaceTerms, {
+    name: space.name,
+    squares: space.squares,
+    unit: FACILITY_SETUP_LABELS.squares,
+  });
+}
+
+/**
+ * Название бастиона подходит: не пустое и не длиннее положенного.
+ *
+ * @param name Введённое название.
+ * @returns true, если название можно сохранить.
+ */
+export function isBastionNameValid(name: string): boolean {
+  const trimmed = name.trim();
+
+  return trimmed.length > 0 && trimmed.length <= BASTION_NAME_MAX_LENGTH;
+}
+
+/**
+ * Подсказка к уровню персонажа. Ниже 5 уровня бастиона по правилам ещё нет —
+ * форма только предупреждает.
+ *
+ * @param level Уровень персонажа.
+ * @returns Текст предупреждения или undefined.
+ */
+export function getBastionLevelHint(level: number): string | undefined {
+  return level < BASTION_START_LEVEL
+    ? BASTION_FORM_LABELS.belowStartLevel
+    : undefined;
+}
+
+/**
+ * Подсказка к уровню в строке формы доступа: только у отмеченного игрока.
+ *
+ * @param draft Строка формы доступа.
+ * @returns Текст предупреждения или undefined.
+ */
+export function getMemberLevelHint(
+  draft: BastionMemberDraft,
+): string | undefined {
+  return draft.selected ? getBastionLevelHint(draft.characterLevel) : undefined;
+}
+
+/**
+ * Можно ли распоряжаться действующим бастионом: ведущий или игрок с правом
+ * отдавать приказы.
+ *
+ * @param bastion Бастион.
+ * @returns true, если бастион действует и приказы кому-то доступны.
+ */
+export function canGiveBastionOrders(bastion: PlayerBastion): boolean {
+  return (
+    bastion.status === 'ACTIVE'
+    && (bastion.canManage
+      || bastion.members.some((member) => member.canGiveOrders))
+  );
 }

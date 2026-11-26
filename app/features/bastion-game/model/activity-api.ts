@@ -8,14 +8,23 @@ import type {
   SelectedChoice,
 } from './schema';
 
-import { PLAYER_BASTIONS_API_PATH } from './constants';
+import {
+  BASTION_FACILITY_API_PATH,
+  PLAYER_BASTIONS_API_PATH,
+} from './constants';
 import {
   bastionActivitySchema,
   facilityDetailSchema,
   playerBastionSchema,
 } from './schema';
 
-/** Адрес ручки бастиона. */
+/**
+ * Адрес ручки бастиона.
+ *
+ * @param bastionId Бастион.
+ * @param suffix Хвост пути ручки: `/activity`, `/orders` и т. п.
+ * @returns Путь запроса к core-api.
+ */
 function bastionPath(bastionId: string, suffix: string): string {
   return `${PLAYER_BASTIONS_API_PATH}/${bastionId}${suffix}`;
 }
@@ -84,10 +93,13 @@ export async function fetchBastionActivity(
 export async function fetchFacilityOrderOptions(
   facilityUrl: string,
 ): Promise<Array<FacilityOrderOptionDetail>> {
-  const response = await $fetch<unknown>(`/api/v2/bastions/${facilityUrl}`, {
-    method: 'GET',
-    retry: 0,
-  });
+  const response = await $fetch<unknown>(
+    `${BASTION_FACILITY_API_PATH}/${facilityUrl}`,
+    {
+      method: 'GET',
+      retry: 0,
+    },
+  );
 
   return facilityDetailSchema.parse(response).orderOptions ?? [];
 }

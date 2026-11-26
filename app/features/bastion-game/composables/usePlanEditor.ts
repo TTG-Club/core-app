@@ -8,6 +8,7 @@ import type {
   PlanPresencePointer,
   PlanState,
 } from '../model';
+import type * as PlanSync from '../model/plan-sync';
 
 import { isEqual } from 'es-toolkit';
 
@@ -15,6 +16,7 @@ import {
   createEmptyPlan,
   fetchBastionPlan,
   fetchSharedBastionPlan,
+  getBastionDataKey,
   getBastionErrorMessage,
   getPresenceColor,
   isBastionConflictError,
@@ -22,13 +24,19 @@ import {
   PLAN_HISTORY_LIMIT,
   PLAN_LABELS,
   PLAN_POINTER_THROTTLE_MS,
+  PLAN_PRESENCE_FIELDS,
+  PLAN_SYNC_PATH,
   PLAN_SYNC_TIMEOUT_MS,
   readPlanParticipants,
   saveBastionPlan,
 } from '../model';
 
-/** Путь веб-сокета совместного рисования на сервере Nuxt. */
-const PLAN_SYNC_PATH = '/bastion-plan-sync';
+/** Модули совместного рисования, загружаемые по требованию. */
+interface PlanSyncKit {
+  yjs: typeof Y;
+  Provider: typeof WebsocketProvider;
+  sync: typeof PlanSync;
+}
 
 /**
  * Yjs и общий документ плана загружаются только в браузере, когда открыт
@@ -36,7 +44,7 @@ const PLAN_SYNC_PATH = '/bastion-plan-sync';
  *
  * @returns Модули совместного рисования.
  */
-async function loadPlanSyncKit() {
+async function loadPlanSyncKit(): Promise<PlanSyncKit> {
   const [yjs, { WebsocketProvider: Provider }, sync] = await Promise.all([
     import('yjs'),
     import('y-websocket'),
@@ -46,12 +54,10 @@ async function loadPlanSyncKit() {
   return { yjs, Provider, sync };
 }
 
-type PlanSyncKit = Awaited<ReturnType<typeof loadPlanSyncKit>>;
-
 /** Открытый план: общий документ, соединение и личная отмена. */
 interface PlanSession {
   kit: PlanSyncKit;
-  doc: Y.Doc;
+  yDocument: Y.Doc;
   provider: WebsocketProvider;
   undoManager: Y.UndoManager;
   syncTimer: ReturnType<typeof setTimeout>;
@@ -130,8 +136,8 @@ export function usePlanEditor(
       const token = toValue(shareToken);
 
       return token
-        ? `bastion-plan-shared-${token}`
-        : `bastion-plan-${toValue(bastionId)}`;
+        ? getBastionDataKey('sharedPlan', token)
+        : getBastionDataKey('plan', toValue(bastionId));
     },
     () => {
       const token = toValue(shareToken);
@@ -170,6 +176,7 @@ export function usePlanEditor(
     };
   });
 
+  /** Сохраняет план в базу, когда правки на время прекратились. */
   const scheduleSave = useDebounceFn(() => save(), PLAN_AUTOSAVE_DELAY_MS);
 
   /**
@@ -180,7 +187,7 @@ export function usePlanEditor(
   const setPointer = useThrottleFn(
     (pointer: PlanPresencePointer | undefined) => {
       session?.provider.awareness.setLocalStateField(
-        'pointer',
+        PLAN_PRESENCE_FIELDS.pointer,
         pointer ?? null,
       );
     },
@@ -202,19 +209,19 @@ export function usePlanEditor(
    * @param plan План из базы.
    */
   function seed(current: PlanSession, plan: PlanState): void {
-    const { kit, doc } = current;
+    const { kit, yDocument } = current;
 
-    if (!kit.sync.isPlanDocSeeded(doc)) {
+    if (!kit.sync.isPlanDocSeeded(yDocument)) {
       kit.yjs.applyUpdate(
-        doc,
+        yDocument,
         kit.sync.createPlanSeedUpdate(plan.document, plan.version),
         systemOrigin,
       );
     }
 
-    document.value = kit.sync.readPlanFromDoc(doc);
+    document.value = kit.sync.readPlanFromDoc(yDocument);
     savedDocument.value = document.value;
-    savedVersion = kit.sync.getPlanDocVersion(doc);
+    savedVersion = kit.sync.getPlanDocVersion(yDocument);
     isReady.value = true;
   }
 
@@ -227,7 +234,7 @@ export function usePlanEditor(
     clearTimeout(session.syncTimer);
     session.provider.destroy();
     session.undoManager.destroy();
-    session.doc.destroy();
+    session.yDocument.destroy();
     session = undefined;
 
     isReady.value = false;
@@ -252,18 +259,21 @@ export function usePlanEditor(
     }
 
     const { sync } = kit;
-    const doc = new kit.yjs.Doc();
+    const yDocument = new kit.yjs.Doc();
 
-    const undoManager = new kit.yjs.UndoManager(sync.getPlanContentMaps(doc), {
-      trackedOrigins: new Set([localOrigin]),
-      // Шаги разделяет `stopCapturing`: правка — один шаг, мазок — один шаг.
-      captureTimeout: Number.POSITIVE_INFINITY,
-    });
+    const undoManager = new kit.yjs.UndoManager(
+      sync.getPlanContentMaps(yDocument),
+      {
+        trackedOrigins: new Set([localOrigin]),
+        // Шаги разделяет `stopCapturing`: правка — один шаг, мазок — один шаг.
+        captureTimeout: Number.POSITIVE_INFINITY,
+      },
+    );
 
     const provider = new kit.Provider(
       getPlanSyncUrl(),
       toValue(bastionId),
-      doc,
+      yDocument,
     );
 
     // Без связи с сервером план всё равно открывается: рисовать и сохранять
@@ -274,20 +284,26 @@ export function usePlanEditor(
       }
     }, PLAN_SYNC_TIMEOUT_MS);
 
-    const current: PlanSession = { kit, doc, provider, undoManager, syncTimer };
+    const current: PlanSession = {
+      kit,
+      yDocument,
+      provider,
+      undoManager,
+      syncTimer,
+    };
 
     session = current;
     canEdit.value = plan.canEdit;
     isPremium.value = plan.premium;
 
-    doc.on('update', (_update: Uint8Array, origin: unknown) => {
+    yDocument.on('update', (_update: Uint8Array, origin: unknown) => {
       if (!isReady.value) {
         return;
       }
 
-      const version = sync.getPlanDocVersion(doc);
+      const version = sync.getPlanDocVersion(yDocument);
 
-      document.value = sync.readPlanFromDoc(doc);
+      document.value = sync.readPlanFromDoc(yDocument);
 
       if (origin === localOrigin || origin === undoManager) {
         void scheduleSave();
@@ -326,13 +342,16 @@ export function usePlanEditor(
     awareness.on('change', () => {
       participants.value = readPlanParticipants(
         awareness.getStates(),
-        doc.clientID,
+        yDocument.clientID,
         presenceUser.value?.id,
       );
     });
 
     if (presenceUser.value) {
-      awareness.setLocalStateField('user', presenceUser.value);
+      awareness.setLocalStateField(
+        PLAN_PRESENCE_FIELDS.user,
+        presenceUser.value,
+      );
     }
   }
 
@@ -366,7 +385,10 @@ export function usePlanEditor(
 
   watch(presenceUser, (current) => {
     if (current) {
-      session?.provider.awareness.setLocalStateField('user', current);
+      session?.provider.awareness.setLocalStateField(
+        PLAN_PRESENCE_FIELDS.user,
+        current,
+      );
     }
   });
 
@@ -380,10 +402,10 @@ export function usePlanEditor(
       return;
     }
 
-    const { kit, doc, undoManager } = session;
+    const { kit, yDocument, undoManager } = session;
 
     undoManager.stopCapturing();
-    kit.sync.applyPlanChanges(doc, document.value, next, localOrigin);
+    kit.sync.applyPlanChanges(yDocument, document.value, next, localOrigin);
     undoManager.stopCapturing();
   }
 
@@ -401,7 +423,7 @@ export function usePlanEditor(
   function applyInStroke(next: PlanDocument): void {
     if (session && next !== document.value) {
       session.kit.sync.applyPlanChanges(
-        session.doc,
+        session.yDocument,
         document.value,
         next,
         localOrigin,
@@ -442,7 +464,7 @@ export function usePlanEditor(
     try {
       const saved = await saveBastionPlan(
         id,
-        current.kit.sync.getPlanDocVersion(current.doc) ?? 0,
+        current.kit.sync.getPlanDocVersion(current.yDocument) ?? 0,
         snapshot,
       );
 
@@ -484,7 +506,12 @@ export function usePlanEditor(
       // отказ. Документ мог закрыться, пока шёл запрос.
       if (session === current) {
         savedVersion = version;
-        current.kit.sync.setPlanDocVersion(current.doc, version, systemOrigin);
+
+        current.kit.sync.setPlanDocVersion(
+          current.yDocument,
+          version,
+          systemOrigin,
+        );
       }
 
       savedDocument.value = snapshot;

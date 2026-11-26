@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type {
     CatalogFacility,
+    CatalogFacilityChoice,
     FacilitySetupDraft,
     SpecialFacilityDraft,
   } from '../../model';
@@ -11,6 +12,8 @@
     canAddSpecial,
     countSelected,
     FACILITY_SETUP_LABELS,
+    getCatalogFacilityChoices,
+    getCatalogFacilityDetails,
   } from '../../model';
 
   /**
@@ -45,57 +48,22 @@
     );
   }
 
-  /**
-   * Подпись сооружения: уровень, пространство, приказы, «можно несколько».
-   *
-   * @param facility Сооружение справочника.
-   * @returns Строка подробностей.
-   */
-  function getDetails(facility: CatalogFacility): string {
-    return [
-      facility.level
-        ? fillTemplate(FACILITY_SETUP_LABELS.levelGroup, {
-            level: facility.level,
-          })
-        : '',
-      facility.space?.name ?? '',
-      (facility.orders ?? []).map((order) => order.name).join(', '),
-      facility.repeatable ? FACILITY_SETUP_LABELS.repeatable : '',
-    ]
-      .filter(Boolean)
-      .join(' · ');
-  }
+  /** Строки списка: всё, что шаблон спрашивает у сооружения, посчитано один раз. */
+  const rows = computed(() =>
+    facilities.map((facility) => {
+      const selectedCount = countSelected(draft.value, facility.url);
 
-  /**
-   * Выборы сооружения с вариантами для селекта.
-   *
-   * @param facility Сооружение справочника.
-   * @returns Выборы с названием, числом вариантов и списком. Описание
-   * варианта — например, что создаётся инструментом мастерской.
-   */
-  function getChoices(facility: CatalogFacility) {
-    return (facility.choices ?? []).flatMap((choice) =>
-      choice.name
-        ? [
-            {
-              name: choice.name,
-              count: choice.count ?? 1,
-              items: (choice.options ?? []).flatMap((option) =>
-                option.name
-                  ? [
-                      {
-                        label: option.name,
-                        value: option.name,
-                        description: option.description ?? undefined,
-                      },
-                    ]
-                  : [],
-              ),
-            },
-          ]
-        : [],
-    );
-  }
+      return {
+        facility,
+        details: getCatalogFacilityDetails(facility),
+        choices: getCatalogFacilityChoices(facility),
+        selectedCount,
+        isAddShown: !!facility.repeatable || !selectedCount,
+        canAdd: canAddSpecial(draft.value, facility, limit),
+        selections: getSelections(facility),
+      };
+    }),
+  );
 
   /**
    * Добавляет сооружение в черновик.
@@ -103,10 +71,13 @@
    * @param facility Сооружение справочника.
    */
   function add(facility: CatalogFacility): void {
-    draft.value.special = [
-      ...draft.value.special,
-      { facilityUrl: facility.url, choices: {} },
-    ];
+    draft.value = {
+      ...draft.value,
+      special: [
+        ...draft.value.special,
+        { facilityUrl: facility.url, choices: {} },
+      ],
+    };
   }
 
   /**
@@ -121,9 +92,12 @@
       return;
     }
 
-    draft.value.special = draft.value.special.filter(
-      (_, position) => position !== last.index,
-    );
+    draft.value = {
+      ...draft.value,
+      special: draft.value.special.filter(
+        (_, position) => position !== last.index,
+      ),
+    };
   }
 
   /**
@@ -144,20 +118,28 @@
   /**
    * Запоминает выбранные варианты, не больше положенного числа.
    *
-   * @param selection Экземпляр сооружения.
+   * @param index Позиция экземпляра в черновике.
    * @param choice Выбор: название и сколько вариантов можно взять.
-   * @param choice.name Название выбора.
-   * @param choice.count Сколько вариантов можно взять.
-   * @param value Выбранные варианты.
+   * @param options Выбранные варианты.
    */
   function setChoice(
-    selection: SpecialFacilityDraft,
-    choice: { name: string; count: number },
-    value: Array<string>,
+    index: number,
+    choice: CatalogFacilityChoice,
+    options: Array<string>,
   ): void {
-    selection.choices = {
-      ...selection.choices,
-      [choice.name]: value.slice(0, choice.count),
+    draft.value = {
+      ...draft.value,
+      special: draft.value.special.map((selection, position) =>
+        position === index
+          ? {
+              ...selection,
+              choices: {
+                ...selection.choices,
+                [choice.name]: options.slice(0, choice.count),
+              },
+            }
+          : selection,
+      ),
     };
   }
 </script>
@@ -169,7 +151,15 @@
     </div>
 
     <div
-      v-for="facility in facilities"
+      v-for="{
+        facility,
+        details,
+        choices,
+        selectedCount,
+        isAddShown,
+        canAdd,
+        selections,
+      } in rows"
       :key="facility.url"
       class="flex flex-col gap-2 rounded-lg border border-default p-3"
     >
@@ -179,7 +169,7 @@
             {{ facility.name.rus }}
           </span>
 
-          <span class="text-xs text-muted">{{ getDetails(facility) }}</span>
+          <span class="text-xs text-muted">{{ details }}</span>
 
           <span
             v-if="facility.prerequisite"
@@ -192,21 +182,21 @@
 
         <div class="flex shrink-0 items-center gap-2">
           <UButton
-            v-if="facility.repeatable || !countSelected(draft, facility.url)"
+            v-if="isAddShown"
             icon="tabler:plus"
             size="sm"
             variant="subtle"
-            :disabled="!canAddSpecial(draft, facility, limit)"
+            :disabled="!canAdd"
             @click.left.exact.prevent="add(facility)"
           >
             {{ FACILITY_SETUP_LABELS.add }}
-            <template v-if="countSelected(draft, facility.url) > 0">
-              ({{ countSelected(draft, facility.url) }})
+            <template v-if="selectedCount > 0">
+              ({{ selectedCount }})
             </template>
           </UButton>
 
           <UButton
-            v-if="countSelected(draft, facility.url) > 0"
+            v-if="selectedCount > 0"
             icon="tabler:trash"
             color="error"
             variant="subtle"
@@ -218,14 +208,14 @@
         </div>
       </div>
 
-      <template v-if="getChoices(facility).length">
+      <template v-if="choices.length">
         <div
-          v-for="{ index, selection } in getSelections(facility)"
+          v-for="{ index, selection } in selections"
           :key="index"
           class="flex flex-wrap items-end gap-2 border-l-2 border-primary/60 pl-3"
         >
           <UFormField
-            v-for="choice in getChoices(facility)"
+            v-for="choice in choices"
             :key="choice.name"
             :label="choice.name"
             class="min-w-48 flex-1"
@@ -237,7 +227,7 @@
               value-key="value"
               multiple
               class="w-full"
-              @update:model-value="setChoice(selection, choice, $event)"
+              @update:model-value="setChoice(index, choice, $event)"
             />
           </UFormField>
         </div>

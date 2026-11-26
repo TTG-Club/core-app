@@ -7,6 +7,7 @@
   import { useBastionAction } from '../composables';
   import {
     ACTIVITY_LABELS,
+    canGiveBastionOrders,
     getOrderTitle,
     giveBastionOrder,
     performBastionTurn,
@@ -35,12 +36,7 @@
 
   const isActive = computed(() => bastion.status === 'ACTIVE');
 
-  const canMaintain = computed(
-    () =>
-      isActive.value
-      && (bastion.canManage
-        || bastion.members.some((member) => member.canGiveOrders)),
-  );
+  const canMaintain = computed(() => canGiveBastionOrders(bastion));
 
   /** Приказы сооружений, которые ещё выполняются: «Обслуживать» их отменит. */
   const activeOrders = computed(

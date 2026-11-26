@@ -1,11 +1,12 @@
 <script setup lang="ts">
-  import type { PlanPoint, PlanPreview } from '../composables';
   import type {
     CellSide,
     DoorKind,
     FurnitureKind,
     PlanCell,
     PlanPaletteFacility,
+    PlanPoint,
+    PlanPreview,
     PlanSelection,
     PlanTool,
     PlayerBastion,
@@ -25,6 +26,7 @@
     canPlaceFacilityRoom,
     canRemoveLevel,
     createPaletteFacilities,
+    FULL_TURN_DEGREES,
     getCellAt,
     getFacilityRoomCells,
     getFacilityRoomSize,
@@ -35,11 +37,19 @@
     isBastionWalled,
     mergeRooms,
     placeFacilityRoom,
+    PLAN_COARSE_POINTER_QUERY,
     PLAN_CORRIDOR_WIDTHS,
+    PLAN_DEFAULT_SIDE_TAB,
     PLAN_EDIT_TOOLS,
     PLAN_FURNITURE_ROTATION_STEP,
+    PLAN_GROUND_LEVEL,
+    PLAN_HOTKEYS,
     PLAN_LABELS,
     PLAN_LIMITS,
+    PLAN_NUMBER_LOCALE,
+    PLAN_SIDE_TABS,
+    PLAN_SPIRAL_MIN_SIDE,
+    PLAN_SPIRAL_SIZE_STEP,
     PLAN_TOOL_GROUPS,
     PLAN_TOOL_HINTS,
     PLAN_TOUCH_TOOL_HINTS,
@@ -137,8 +147,10 @@
    */
   function rotateFurniture(direction: 1 | -1 = 1): void {
     furnitureRotation.value =
-      (furnitureRotation.value + direction * PLAN_FURNITURE_ROTATION_STEP + 360)
-      % 360;
+      (furnitureRotation.value
+        + direction * PLAN_FURNITURE_ROTATION_STEP
+        + FULL_TURN_DEGREES)
+      % FULL_TURN_DEGREES;
   }
 
   /**
@@ -169,7 +181,13 @@
 
     const limit = largest?.width ?? PLAN_LIMITS.maxStairSide;
 
-    spiralSide.value = Math.min(limit, Math.max(1, current - direction * 2));
+    spiralSide.value = Math.min(
+      limit,
+      Math.max(
+        PLAN_SPIRAL_MIN_SIDE,
+        current - direction * PLAN_SPIRAL_SIZE_STEP,
+      ),
+    );
   }
 
   /**
@@ -398,10 +416,10 @@
   });
 
   /** Палец вместо мыши: подсказки без Shift, правой кнопки и колеса. */
-  const isCoarsePointer = useMediaQuery('(pointer: coarse)');
+  const isCoarsePointer = useMediaQuery(PLAN_COARSE_POINTER_QUERY);
 
   const toolHint = computed(() => {
-    if (tool.value === 'wall' && level.value !== 0) {
+    if (tool.value === 'wall' && level.value !== PLAN_GROUND_LEVEL) {
       return PLAN_LABELS.wallsGroundOnly;
     }
 
@@ -437,7 +455,9 @@
     return cells
       ? fillTemplate(PLAN_LABELS.wallsSummary, {
           cells,
-          cost: (cells * PLAN_LIMITS.wallCostPerCell).toLocaleString('ru-RU'),
+          cost: (cells * PLAN_LIMITS.wallCostPerCell).toLocaleString(
+            PLAN_NUMBER_LOCALE,
+          ),
           days: cells * PLAN_LIMITS.wallDaysPerCell,
         })
       : '';
@@ -445,14 +465,7 @@
 
   // Комнаты этажа и сооружения на отдельных вкладках: вместе список не
   // помещался в панель.
-  const sideTabs = [
-    { label: PLAN_LABELS.rooms, value: 'rooms', slot: 'rooms' as const },
-    {
-      label: PLAN_LABELS.facilities,
-      value: 'facilities',
-      slot: 'facilities' as const,
-    },
-  ];
+  const sideTabs = [...PLAN_SIDE_TABS];
 
   const wallsBlocksText = computed(() =>
     wallLimit.value === undefined
@@ -470,6 +483,14 @@
   );
 
   const isWalled = computed(() => isBastionWalled(editor.document.value));
+
+  const wallsEnclosedClass = computed(() =>
+    isWalled.value ? 'text-success' : 'text-muted',
+  );
+
+  const wallsEnclosedText = computed(() =>
+    isWalled.value ? PLAN_LABELS.wallsEnclosed : PLAN_LABELS.wallsOpen,
+  );
 
   // Лестница соединяет этажи: пока этаж один, ставить её некуда.
   const disabledTools = computed<Partial<Record<PlanTool, string>>>(() =>
@@ -508,7 +529,7 @@
   // Этаж мог пропасть после отмены — тогда показывается первый.
   watch(levels, (current) => {
     if (!current.includes(level.value)) {
-      level.value = 0;
+      level.value = PLAN_GROUND_LEVEL;
     }
   });
 
@@ -539,7 +560,7 @@
 
     const key = event.key.toLowerCase();
 
-    if ((event.ctrlKey || event.metaKey) && key === 'z') {
+    if ((event.ctrlKey || event.metaKey) && key === PLAN_HOTKEYS.undo) {
       event.preventDefault();
 
       if (event.shiftKey) {
@@ -573,7 +594,11 @@
     }
 
     // У мебели R поворачивает предмет перед установкой, а не берёт комнату.
-    if (key === 'r' && tool.value === 'furniture' && editor.canEdit.value) {
+    if (
+      key === PLAN_HOTKEYS.rotate
+      && tool.value === 'furniture'
+      && editor.canEdit.value
+    ) {
       rotateFurniture();
 
       return;
@@ -666,12 +691,12 @@
 
   /** Невидимая точка, у которой открывается контекстное меню. */
   const contextMenuContent = computed(() => {
-    const { x, y } = contextMenuPosition.value;
+    const { x: left, y: top } = contextMenuPosition.value;
 
     return {
       align: 'start' as const,
       side: 'bottom' as const,
-      reference: { getBoundingClientRect: () => new DOMRect(x, y, 0, 0) },
+      reference: { getBoundingClientRect: () => new DOMRect(left, top, 0, 0) },
     };
   });
 
@@ -724,7 +749,7 @@
   /** Убирает пустой текущий этаж и переходит на первый. */
   function handleRemoveLevel(): void {
     editor.commit(removeLevel(editor.document.value, level.value));
-    level.value = 0;
+    level.value = PLAN_GROUND_LEVEL;
   }
 
   /**
@@ -916,6 +941,7 @@
           :stair-level="stairLevel"
           :has-level-above="hasLevelAbove"
           :has-level-below="hasLevelBelow"
+          @rotate-furniture="rotateFurniture()"
         />
 
         <PlanRoomPanel
@@ -931,7 +957,7 @@
 
         <UTabs
           :items="sideTabs"
-          default-value="rooms"
+          :default-value="PLAN_DEFAULT_SIDE_TAB"
           variant="link"
           size="sm"
           :ui="{ list: 'w-full', trigger: 'grow' }"
@@ -986,9 +1012,9 @@
 
           <p
             v-if="wallsText"
-            :class="['text-xs', isWalled ? 'text-success' : 'text-muted']"
+            :class="['text-xs', wallsEnclosedClass]"
           >
-            {{ isWalled ? PLAN_LABELS.wallsEnclosed : PLAN_LABELS.wallsOpen }}
+            {{ wallsEnclosedText }}
           </p>
         </section>
       </aside>

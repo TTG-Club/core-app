@@ -1,4 +1,4 @@
-import type { FilterGroup } from '~infrastructure/filter';
+import type { FilterGroup, SourcePreset } from '~infrastructure/filter';
 
 import { describe, expect, it } from 'vitest';
 
@@ -169,20 +169,93 @@ describe('быстрые наборы', () => {
     values: [{ id: 'EFA', value: 'EFA', name: 'Эберрон', selected: true }],
   };
 
+  const basicPreset: SourcePreset = {
+    id: 'basic',
+    label: 'Только базовые',
+    acronyms: [HANDBOOK_ACRONYM],
+  };
+
+  const officialPreset: SourcePreset = {
+    id: 'official',
+    label: 'Только официальные',
+    keys: ['OFFICIAL'],
+  };
+
+  const officialSettingsPreset: SourcePreset = {
+    id: 'official-settings',
+    label: 'Официальные и сеттинги',
+    keys: ['OFFICIAL', 'SETTING'],
+  };
+
   it('отмечает группы набора целиком и снимает остальные', () => {
-    const updated = applySourcePreset([createGroup(), settings], ['OFFICIAL']);
+    const updated = applySourcePreset(
+      [createGroup(), settings],
+      officialPreset,
+      catalog,
+    );
 
     expect(countSources(updated)).toEqual({ selected: 3, total: 4 });
     expect(updated.at(1)?.values?.at(0)?.selected).toBeNull();
-    expect(isSourcePresetActive(updated, ['OFFICIAL'])).toBe(true);
-    expect(isSourcePresetActive(updated, ['OFFICIAL', 'SETTING'])).toBe(false);
+    expect(isSourcePresetActive(updated, officialPreset, catalog)).toBe(true);
+
+    expect(isSourcePresetActive(updated, officialSettingsPreset, catalog)).toBe(
+      false,
+    );
+  });
+
+  it('набор по акрониму отмечает одну книгу', () => {
+    const updated = applySourcePreset(
+      [createGroup(), settings],
+      basicPreset,
+      catalog,
+    );
+
+    expect(countSources(updated)).toEqual({ selected: 1, total: 4 });
+    expect(updated.at(0)?.values?.at(0)?.selected).toBe(true);
+    expect(isSourcePresetActive(updated, basicPreset, catalog)).toBe(true);
+    expect(isSourcePresetActive(updated, officialPreset, catalog)).toBe(false);
+  });
+
+  it('находит книгу по названию, когда идентификатор — само название', () => {
+    const group: FilterGroup = {
+      key: 'Basic',
+      name: 'Базовые',
+      type: 'filter',
+      values: [
+        {
+          id: HANDBOOK_NAME,
+          value: HANDBOOK_NAME,
+          name: HANDBOOK_NAME,
+          selected: null,
+        },
+        { id: 'Вбросы', value: 'Вбросы', name: 'Вбросы', selected: true },
+      ],
+    };
+
+    const updated = applySourcePreset([group], basicPreset, catalog);
+
+    expect(
+      updated.at(0)?.values?.map((filterItem) => filterItem.selected),
+    ).toEqual([true, null]);
   });
 
   it('набор недоступен, когда в панели нет его группы', () => {
-    expect(isSourcePresetAvailable([createGroup()], ['OFFICIAL'])).toBe(true);
+    expect(
+      isSourcePresetAvailable([createGroup()], officialPreset, catalog),
+    ).toBe(true);
 
     expect(
-      isSourcePresetAvailable([createGroup()], ['OFFICIAL', 'SETTING']),
+      isSourcePresetAvailable([createGroup()], officialSettingsPreset, catalog),
     ).toBe(false);
+  });
+
+  it('набор недоступен, когда в панели нет его книги', () => {
+    expect(isSourcePresetAvailable([settings], basicPreset, catalog)).toBe(
+      false,
+    );
+
+    expect(isSourcePresetAvailable([createGroup()], basicPreset, catalog)).toBe(
+      true,
+    );
   });
 });

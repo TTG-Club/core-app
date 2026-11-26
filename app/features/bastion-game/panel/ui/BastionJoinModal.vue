@@ -37,7 +37,7 @@
 
   const selectedId = ref<string>();
 
-  const items = computed(() =>
+  const bastionOptions = computed(() =>
     bastions.map((bastion) => ({
       value: bastion.id,
       label: bastion.name,
@@ -118,7 +118,7 @@
         <URadioGroup
           v-else
           v-model="selectedId"
-          :items
+          :items="bastionOptions"
         />
       </div>
     </template>

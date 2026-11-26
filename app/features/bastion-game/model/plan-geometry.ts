@@ -1,5 +1,4 @@
 import type {
-  CellSide,
   FurnitureKind,
   PlanCell,
   PlanCircle,
@@ -15,9 +14,19 @@ import {
   PLAN_FURNITURE_SIZES,
   PLAN_LIMITS,
 } from './plan-constants';
+import { CELL_SIDES } from './plan-schema';
 
 /** Точность сравнения: центр ровно на окружности считается внутри. */
 const EPSILON = 1e-9;
+
+/** Полный оборот в градусах. */
+export const FULL_TURN_DEGREES = 360;
+
+/** Угол на север в градусах от востока по часовой. */
+const NORTH_ANGLE_DEGREES = -90;
+
+/** Насколько середина стены башни отстоит от края пола, в клетках. */
+const TOWER_RING_OFFSET = 0.25;
 
 /** Граница на ребре: стена, пунктирный край двора или ничего. */
 export type PlanBoundaryKind = 'wall' | 'edge';
@@ -36,12 +45,12 @@ export type PlanOccupancy = ReadonlyMap<string, PlanRoom>;
 /**
  * Ключ клетки для словарей.
  *
- * @param x Столбец.
- * @param y Строка.
+ * @param column Столбец.
+ * @param row Строка.
  * @returns Ключ «x:y».
  */
-export function getCellKey(x: number, y: number): string {
-  return `${x}:${y}`;
+export function getCellKey(column: number, row: number): string {
+  return `${column}:${row}`;
 }
 
 /**
@@ -118,8 +127,8 @@ export function sortFurnitureByLayer<T extends Pick<PlanFurniture, 'kind'>>(
   furniture: ReadonlyArray<T>,
 ): Array<T> {
   return [
-    ...furniture.filter((item) => isFloorFurniture(item.kind)),
-    ...furniture.filter((item) => !isFloorFurniture(item.kind)),
+    ...furniture.filter((piece) => isFloorFurniture(piece.kind)),
+    ...furniture.filter((piece) => !isFloorFurniture(piece.kind)),
   ];
 }
 
@@ -148,9 +157,13 @@ export function isFurnitureOnGrid(furniture: PlanFurniture): boolean {
 export function getRectCells(from: PlanCell, to: PlanCell): Array<PlanCell> {
   const cells: Array<PlanCell> = [];
 
-  for (let y = Math.min(from.y, to.y); y <= Math.max(from.y, to.y); y++) {
-    for (let x = Math.min(from.x, to.x); x <= Math.max(from.x, to.x); x++) {
-      cells.push({ x, y });
+  for (let row = Math.min(from.y, to.y); row <= Math.max(from.y, to.y); row++) {
+    for (
+      let column = Math.min(from.x, to.x);
+      column <= Math.max(from.x, to.x);
+      column++
+    ) {
+      cells.push({ x: column, y: row });
     }
   }
 
@@ -196,10 +209,14 @@ export function getCircleCells(circle: PlanCircle): Array<PlanCell> {
   const normals = getTowerSideAngles(circle).map(toUnit);
   const apothem = getTowerApothem(circle);
 
-  for (let y = top; y < Math.ceil(circle.cy + circle.r); y++) {
-    for (let x = left; x < Math.ceil(circle.cx + circle.r); x++) {
-      const deltaX = x + 0.5 - circle.cx;
-      const deltaY = y + 0.5 - circle.cy;
+  for (let row = top; row < Math.ceil(circle.cy + circle.r); row++) {
+    for (
+      let column = left;
+      column < Math.ceil(circle.cx + circle.r);
+      column++
+    ) {
+      const deltaX = column + 0.5 - circle.cx;
+      const deltaY = row + 0.5 - circle.cy;
 
       const isInside = circle.sides
         ? normals.every(
@@ -209,7 +226,7 @@ export function getCircleCells(circle: PlanCircle): Array<PlanCell> {
         : deltaX * deltaX + deltaY * deltaY <= circle.r * circle.r + EPSILON;
 
       if (isInside) {
-        cells.push({ x, y });
+        cells.push({ x: column, y: row });
       }
     }
   }
@@ -234,9 +251,21 @@ export function toPlanCircle(shape: {
   r: number;
   sides?: number | null;
 }): PlanCircle {
-  const { cx, cy, r, sides } = shape;
+  const { cx: centerX, cy: centerY, r: radius, sides } = shape;
 
-  return sides ? { cx, cy, r, sides } : { cx, cy, r };
+  return sides
+    ? { cx: centerX, cy: centerY, r: radius, sides }
+    : { cx: centerX, cy: centerY, r: radius };
+}
+
+/**
+ * Приводит угол к полуинтервалу [0, 360).
+ *
+ * @param angle Угол в градусах, любой.
+ * @returns Тот же угол в [0, 360).
+ */
+function normalizeAngle(angle: number): number {
+  return ((angle % FULL_TURN_DEGREES) + FULL_TURN_DEGREES) % FULL_TURN_DEGREES;
 }
 
 /**
@@ -266,12 +295,13 @@ export function getTowerSideAngles(circle: PlanCircle): Array<number> {
     return [];
   }
 
-  const step = 360 / sides;
-  const first = sides % 2 === 1 ? -90 + step / 2 : -90;
+  const step = FULL_TURN_DEGREES / sides;
 
-  return Array.from(
-    { length: sides },
-    (_, index) => (((first + index * step) % 360) + 360) % 360,
+  const first =
+    sides % 2 === 1 ? NORTH_ANGLE_DEGREES + step / 2 : NORTH_ANGLE_DEGREES;
+
+  return Array.from({ length: sides }, (_, index) =>
+    normalizeAngle(first + index * step),
   );
 }
 
@@ -499,13 +529,12 @@ export function getBoundarySegments(
 ): Array<PlanSegment> {
   const rows = new Map<number, Set<number>>();
   const columns = new Map<number, Set<number>>();
-  const sides: ReadonlyArray<CellSide> = ['N', 'E', 'S', 'W'];
 
   for (const key of occupancy.keys()) {
-    const [x = 0, y = 0] = key.split(':').map(Number);
+    const [column = 0, row = 0] = key.split(':').map(Number);
 
-    for (const side of sides) {
-      const edge = getCanonicalEdge({ level, x, y, side });
+    for (const side of CELL_SIDES) {
+      const edge = getCanonicalEdge({ level, x: column, y: row, side });
 
       if (getBoundaryKind(occupancy, edge) !== kind) {
         continue;
@@ -609,18 +638,20 @@ export function findTowerRing(
       continue;
     }
 
-    const { cx, cy } = shape;
-    const distance = Math.hypot(point.x - cx, point.y - cy);
+    const { cx: centerX, cy: centerY } = shape;
+    const distance = Math.hypot(point.x - centerX, point.y - centerY);
 
     if (Math.abs(distance - getTowerRingRadius(shape)) > tolerance) {
       continue;
     }
 
-    const degrees = (Math.atan2(point.y - cy, point.x - cx) * 180) / Math.PI;
+    const degrees =
+      (Math.atan2(point.y - centerY, point.x - centerX) * 180) / Math.PI;
+
     const step = PLAN_LIMITS.towerAngleStep;
     const snapped = Math.round(degrees / step) * step;
 
-    return { room, angle: ((snapped % 360) + 360) % 360 };
+    return { room, angle: normalizeAngle(snapped) };
   }
 
   return undefined;
@@ -661,7 +692,7 @@ function findPolygonSide(
  * @returns Расстояние в клетках.
  */
 export function getTowerRingRadius(circle: PlanCircle): number {
-  return getTowerApothem(circle) + 0.25;
+  return getTowerApothem(circle) + TOWER_RING_OFFSET;
 }
 
 /**
@@ -691,16 +722,16 @@ export function getTowerRingPoint(circle: PlanCircle, angle: number): PlanCell {
 export function getLineCells(from: PlanCell, to: PlanCell): Array<PlanCell> {
   const cells: Array<PlanCell> = [];
 
-  let { x, y } = from;
+  let { x: column, y: row } = from;
 
-  while (x !== to.x || y !== to.y) {
-    if (Math.abs(to.x - x) >= Math.abs(to.y - y)) {
-      x += Math.sign(to.x - x);
+  while (column !== to.x || row !== to.y) {
+    if (Math.abs(to.x - column) >= Math.abs(to.y - row)) {
+      column += Math.sign(to.x - column);
     } else {
-      y += Math.sign(to.y - y);
+      row += Math.sign(to.y - row);
     }
 
-    cells.push({ x, y });
+    cells.push({ x: column, y: row });
   }
 
   return cells;
@@ -777,8 +808,14 @@ export function getLevelCenter(
   document: PlanDocument,
   level: number,
 ): PlanCell | undefined {
-  const onLevel = <T extends { level: number }>(item: T) =>
-    item.level === level;
+  /**
+   * Лежит ли объект на нужном этаже.
+   *
+   * @param entry Объект плана с этажом.
+   * @returns true, если этаж совпадает.
+   */
+  const onLevel = <T extends { level: number }>(entry: T): boolean =>
+    entry.level === level;
 
   const bounds: Array<PlanBounds> = [
     ...document.rooms
@@ -791,14 +828,14 @@ export function getLevelCenter(
       right: stair.x + stair.width,
       bottom: stair.y + stair.height,
     })),
-    ...document.furniture.filter(onLevel).map((item) => {
-      const { width, depth } = getFurnitureSize(item);
+    ...document.furniture.filter(onLevel).map((piece) => {
+      const { width, depth } = getFurnitureSize(piece);
 
       return {
-        left: item.x,
-        top: item.y,
-        right: item.x + width,
-        bottom: item.y + depth,
+        left: piece.x,
+        top: piece.y,
+        right: piece.x + width,
+        bottom: piece.y + depth,
       };
     }),
     ...document.columns.filter(onLevel).map((column) => ({
@@ -813,10 +850,10 @@ export function getLevelCenter(
     return undefined;
   }
 
-  const left = Math.min(...bounds.map((item) => item.left));
-  const top = Math.min(...bounds.map((item) => item.top));
-  const right = Math.max(...bounds.map((item) => item.right));
-  const bottom = Math.max(...bounds.map((item) => item.bottom));
+  const left = Math.min(...bounds.map((box) => box.left));
+  const top = Math.min(...bounds.map((box) => box.top));
+  const right = Math.max(...bounds.map((box) => box.right));
+  const bottom = Math.max(...bounds.map((box) => box.bottom));
 
   return { x: (left + right) / 2, y: (top + bottom) / 2 };
 }

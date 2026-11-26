@@ -1,3 +1,5 @@
+import type { SourcePreset } from '../types';
+
 /** Плейсхолдер поля поиска по фильтрам внутри дровера */
 export const FILTER_DRAWER_SEARCH_PLACEHOLDER = 'Поиск по фильтрам...';
 
@@ -21,18 +23,21 @@ export const FILTER_SOURCES_SELECT_ALL_ICON = 'tabler:checks';
 export const FILTER_SOURCES_CLEAR_ALL_ICON = 'tabler:square-off';
 
 /**
- * Быстрые наборы над списком источников: одним нажатием отмечают целые группы
- * и снимают остальное. Ключи — типы источников из фильтров разделов.
+ * Быстрые наборы над списком источников: одним нажатием отмечают свои книги
+ * и снимают остальное. «Базовые» — три основные книги: Книга игрока,
+ * Руководство мастера и Бестиарий; «официальные» — вся группа официальных
+ * источников. Книги, которых нет в разделе, просто пропускаются.
  */
-export const FILTER_SOURCES_PRESETS: ReadonlyArray<{
-  id: string;
-  label: string;
-  keys: ReadonlyArray<string>;
-}> = [
-  { id: 'official', label: 'Только базовые', keys: ['OFFICIAL'] },
+export const FILTER_SOURCES_PRESETS: ReadonlyArray<SourcePreset> = [
+  {
+    id: 'basic',
+    label: 'Только базовые',
+    acronyms: ['PHB', 'DMG', 'MM'],
+  },
+  { id: 'official', label: 'Только официальные', keys: ['OFFICIAL'] },
   {
     id: 'official-settings',
-    label: 'Базовые и сеттинги',
+    label: 'Официальные и сеттинги',
     keys: ['OFFICIAL', 'SETTING'],
   },
 ];

@@ -1,6 +1,4 @@
 <script setup lang="ts">
-  import type { TabsItem } from '@nuxt/ui';
-
   import type {
     BastionActivity,
     BastionActivityOrder,
@@ -14,9 +12,11 @@
   import {
     ACTIVITY_LABELS,
     BASTION_CARD_UI,
+    BASTION_JOURNAL_TABS,
     cancelBastionOrder,
     EVENT_LABELS,
     formatLedgerAmount,
+    getLedgerAmountClass,
     getOrderTitle,
     getTurnsLeftText,
     LEDGER_REASON_LABELS,
@@ -39,13 +39,6 @@
 
   const { run } = useBastionAction();
   const { format } = useDayjs();
-
-  const tabs: Array<TabsItem> = [
-    { label: ACTIVITY_LABELS.ordersTab, slot: 'orders', value: 'orders' },
-    { label: EVENT_LABELS.tab, slot: 'events', value: 'events' },
-    { label: ACTIVITY_LABELS.turnsTab, slot: 'turns', value: 'turns' },
-    { label: ACTIVITY_LABELS.ledgerTab, slot: 'ledger', value: 'ledger' },
-  ];
 
   /**
    * Сроки приказа: у выполняемого — сколько ходов осталось.
@@ -116,7 +109,7 @@
     </template>
 
     <UTabs
-      :items="tabs"
+      :items="BASTION_JOURNAL_TABS"
       variant="link"
       :ui="{ list: 'justify-start', content: 'pt-3' }"
     >
@@ -322,7 +315,7 @@
 
             <span
               class="tabular-nums"
-              :class="entry.amountGp > 0 ? 'text-success' : 'text-error'"
+              :class="getLedgerAmountClass(entry.amountGp)"
             >
               {{ formatLedgerAmount(entry.amountGp) }}
             </span>

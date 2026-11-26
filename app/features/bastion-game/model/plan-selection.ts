@@ -62,7 +62,7 @@ export function isObjectSelected(
   selection: PlanSelection,
   target: PlanObjectRef,
 ): boolean {
-  return selection.some((item) => isSameObject(item, target));
+  return selection.some((selected) => isSameObject(selected, target));
 }
 
 /**
@@ -78,7 +78,7 @@ export function toggleObject(
   target: PlanObjectRef,
 ): PlanSelection {
   return isObjectSelected(selection, target)
-    ? selection.filter((item) => !isSameObject(item, target))
+    ? selection.filter((selected) => !isSameObject(selected, target))
     : [...selection, target];
 }
 
@@ -93,7 +93,9 @@ export function addToSelection(
   selection: PlanSelection,
   added: PlanSelection,
 ): PlanSelection {
-  const fresh = added.filter((item) => !isObjectSelected(selection, item));
+  const fresh = added.filter(
+    (candidate) => !isObjectSelected(selection, candidate),
+  );
 
   return fresh.length ? [...selection, ...fresh] : selection;
 }
@@ -110,7 +112,9 @@ export function getSelectedIds(
   kind: PlanObjectKind,
 ): Set<string> {
   return new Set(
-    selection.filter((item) => item.kind === kind).map((item) => item.id),
+    selection
+      .filter((selected) => selected.kind === kind)
+      .map((selected) => selected.id),
   );
 }
 
@@ -127,8 +131,8 @@ export function getSelectedRooms(
 ): Array<PlanRoom> {
   const rooms = new Map(document.rooms.map((room) => [room.id, room]));
 
-  return selection.flatMap((item) => {
-    const room = item.kind === 'room' ? rooms.get(item.id) : undefined;
+  return selection.flatMap((selected) => {
+    const room = selected.kind === 'room' ? rooms.get(selected.id) : undefined;
 
     return room ? [room] : [];
   });
@@ -155,7 +159,8 @@ function getObjectLevel(
     column: document.columns,
   };
 
-  return collections[target.kind].find((item) => item.id === target.id)?.level;
+  return collections[target.kind].find((entry) => entry.id === target.id)
+    ?.level;
 }
 
 /**
@@ -173,7 +178,7 @@ export function pruneSelection(
   level: number,
 ): PlanSelection {
   const kept = selection.filter(
-    (item) => getObjectLevel(document, item) === level,
+    (selected) => getObjectLevel(document, selected) === level,
   );
 
   return kept.length === selection.length ? selection : kept;
@@ -234,18 +239,41 @@ export function getObjectsInArea(
   const top = Math.min(area.from.y, area.to.y);
   const bottom = Math.max(area.from.y, area.to.y);
 
-  const isInside = (cell: PlanCell) =>
+  /**
+   * Лежит ли клетка внутри рамки.
+   *
+   * @param cell Клетка.
+   * @returns true, если клетка в рамке.
+   */
+  const isInside = (cell: PlanCell): boolean =>
     cell.x >= left && cell.x <= right && cell.y >= top && cell.y <= bottom;
 
-  // Колонны стоят и на линиях сетки: правый и нижний край рамки — граница
-  // последней клетки.
-  const isPointInside = (point: PlanCell) =>
+  /**
+   * Лежит ли точка внутри рамки. Колонны стоят и на линиях сетки: правый и
+   * нижний край рамки — граница последней клетки.
+   *
+   * @param point Точка в клетках.
+   * @returns true, если точка в рамке.
+   */
+  const isPointInside = (point: PlanCell): boolean =>
     point.x >= left
     && point.x <= right + 1
     && point.y >= top
     && point.y <= bottom + 1;
 
-  const isRectInside = (cell: PlanCell, width: number, depth: number) =>
+  /**
+   * Лежит ли прямоугольник объекта внутри рамки целиком.
+   *
+   * @param cell Левая верхняя клетка объекта.
+   * @param width Ширина в клетках.
+   * @param depth Глубина в клетках.
+   * @returns true, если оба угла в рамке.
+   */
+  const isRectInside = (
+    cell: PlanCell,
+    width: number,
+    depth: number,
+  ): boolean =>
     isInside(cell)
     && isInside({ x: cell.x + width - 1, y: cell.y + depth - 1 });
 
@@ -266,12 +294,12 @@ export function getObjectsInArea(
     .map((stair): PlanObjectRef => ({ kind: 'stair', id: stair.id }));
 
   const furniture = document.furniture
-    .filter((item) => {
-      const { width, depth } = getFurnitureSize(item);
+    .filter((piece) => {
+      const { width, depth } = getFurnitureSize(piece);
 
-      return item.level === level && isRectInside(item, width, depth);
+      return piece.level === level && isRectInside(piece, width, depth);
     })
-    .map((item): PlanObjectRef => ({ kind: 'furniture', id: item.id }));
+    .map((piece): PlanObjectRef => ({ kind: 'furniture', id: piece.id }));
 
   const columns = document.columns
     .filter((column) => column.level === level && isPointInside(column))
@@ -311,13 +339,13 @@ export function getSelectionCells(
     );
 
   const furnitureCells = document.furniture
-    .filter((item) => furnitureIds.has(item.id))
-    .flatMap((item) => {
-      const { width, depth } = getFurnitureSize(item);
+    .filter((piece) => furnitureIds.has(piece.id))
+    .flatMap((piece) => {
+      const { width, depth } = getFurnitureSize(piece);
 
-      return getRectCells(item, {
-        x: item.x + width - 1,
-        y: item.y + depth - 1,
+      return getRectCells(piece, {
+        x: piece.x + width - 1,
+        y: piece.y + depth - 1,
       });
     });
 
@@ -346,12 +374,12 @@ function isPointOnGrid(point: PlanCell): boolean {
 /**
  * Сдвигает точку на смещение.
  *
- * @param item Объект с координатами.
+ * @param target Объект с координатами.
  * @param offset Сдвиг в клетках.
  * @returns Сдвинутый объект.
  */
-function shiftItem<T extends PlanCell>(item: T, offset: PlanCell): T {
-  return { ...item, x: item.x + offset.x, y: item.y + offset.y };
+function shiftObject<T extends PlanCell>(target: T, offset: PlanCell): T {
+  return { ...target, x: target.x + offset.x, y: target.y + offset.y };
 }
 
 /**
@@ -383,7 +411,7 @@ export function canMoveObjects(
 
   const areRoomsFree = rooms.every((room) =>
     room.cells.every((cell) => {
-      const moved = shiftItem(cell, offset);
+      const moved = shiftObject(cell, offset);
 
       const owner = occupancies
         .get(room.level)
@@ -398,7 +426,7 @@ export function canMoveObjects(
     && document.stairs
       .filter((stair) => stairIds.has(stair.id))
       .every((stair) => {
-        const moved = shiftItem(stair, offset);
+        const moved = shiftObject(stair, offset);
 
         return (
           isCellOnGrid(moved)
@@ -409,11 +437,11 @@ export function canMoveObjects(
         );
       })
     && document.furniture
-      .filter((item) => furnitureIds.has(item.id))
-      .every((item) => isFurnitureOnGrid(shiftItem(item, offset)))
+      .filter((piece) => furnitureIds.has(piece.id))
+      .every((piece) => isFurnitureOnGrid(shiftObject(piece, offset)))
     && document.columns
       .filter((column) => columnIds.has(column.id))
-      .every((column) => isPointOnGrid(shiftItem(column, offset)))
+      .every((column) => isPointOnGrid(shiftObject(column, offset)))
   );
 }
 
@@ -453,15 +481,34 @@ export function moveObjects(
       ),
   );
 
-  const isOwn = (level: number, cell: PlanCell) =>
+  /**
+   * Принадлежит ли клетка одной из сдвигаемых комнат.
+   *
+   * @param level Этаж.
+   * @param cell Клетка.
+   * @returns true, если клетка сдвигается вместе с комнатой.
+   */
+  const isOwn = (level: number, cell: PlanCell): boolean =>
     own.has(`${level}:${getCellKey(cell.x, cell.y)}`);
 
-  const isOnEdge = (edge: PlanEdge) =>
+  /**
+   * Касается ли ребро сдвигаемой комнаты: дверь или окно едут вместе с ней.
+   *
+   * @param edge Ребро.
+   * @returns true, если хоть одна клетка ребра своя.
+   */
+  const isOnEdge = (edge: PlanEdge): boolean =>
     getEdgeCells(edge).some((cell) => isOwn(edge.level, cell));
 
+  /**
+   * Сдвигает клетки комнаты и центр башни.
+   *
+   * @param room Комната.
+   * @returns Сдвинутая комната.
+   */
   const moveRoomShape = (room: PlanRoom): PlanRoom => ({
     ...room,
-    cells: room.cells.map((cell) => shiftItem(cell, offset)),
+    cells: room.cells.map((cell) => shiftObject(cell, offset)),
     shape: room.shape
       ? {
           ...room.shape,
@@ -477,25 +524,25 @@ export function moveObjects(
       roomIds.has(room.id) ? moveRoomShape(room) : room,
     ),
     doors: document.doors.map((door) =>
-      isOnEdge(door) ? shiftItem(door, offset) : door,
+      isOnEdge(door) ? shiftObject(door, offset) : door,
     ),
-    windows: document.windows.map((item) =>
-      isOnEdge(item) ? shiftItem(item, offset) : item,
+    windows: document.windows.map((windowEdge) =>
+      isOnEdge(windowEdge) ? shiftObject(windowEdge, offset) : windowEdge,
     ),
     stairs: document.stairs.map((stair) =>
       stairIds.has(stair.id) || isOwn(stair.level, stair)
-        ? shiftItem(stair, offset)
+        ? shiftObject(stair, offset)
         : stair,
     ),
     columns: document.columns.map((column) =>
       columnIds.has(column.id) || isOwn(column.level, getCellAt(column))
-        ? shiftItem(column, offset)
+        ? shiftObject(column, offset)
         : column,
     ),
-    furniture: document.furniture.map((item) =>
-      furnitureIds.has(item.id) || isOwn(item.level, item)
-        ? shiftItem(item, offset)
-        : item,
+    furniture: document.furniture.map((piece) =>
+      furnitureIds.has(piece.id) || isOwn(piece.level, piece)
+        ? shiftObject(piece, offset)
+        : piece,
     ),
   });
 }
@@ -559,7 +606,9 @@ export function removeObjects(
     ...document,
     rooms: document.rooms.filter((room) => !roomIds.has(room.id)),
     stairs: document.stairs.filter((stair) => !stairIds.has(stair.id)),
-    furniture: document.furniture.filter((item) => !furnitureIds.has(item.id)),
+    furniture: document.furniture.filter(
+      (piece) => !furnitureIds.has(piece.id),
+    ),
     columns: document.columns.filter((column) => !columnIds.has(column.id)),
   });
 }

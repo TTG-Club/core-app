@@ -5,7 +5,7 @@
   import { UiResult } from '~ui/result';
 
   import { useGameBastions, useMyBastions } from '../composables';
-  import { BASTION_GAME_LABELS } from '../model';
+  import { BASTION_GAME_LABELS, BASTION_SKELETON_COUNT } from '../model';
   import {
     BastionCard,
     BastionFormModal,
@@ -86,6 +86,13 @@
   const players = computed(() => overview.value?.players ?? []);
   const canAdd = computed(() => !!overview.value?.canAdd);
   const currentUserId = computed(() => user.value?.id ?? undefined);
+
+  const isLoading = computed(
+    () => status.value === 'pending' || status.value === 'idle',
+  );
+
+  /** Свои бастионы для окна добавления ещё грузятся. */
+  const isMinePending = computed(() => mine.status.value === 'pending');
 
   const mineErrorMessage = computed(() =>
     mine.status.value === 'error' ? mine.errorMessage.value : undefined,
@@ -191,11 +198,11 @@
     </div>
 
     <div
-      v-if="status === 'pending' || status === 'idle'"
+      v-if="isLoading"
       class="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
     >
       <USkeleton
-        v-for="index in 3"
+        v-for="index in BASTION_SKELETON_COUNT"
         :key="index"
         class="h-44"
       />
@@ -269,7 +276,7 @@
     <BastionJoinModal
       v-model:open="isJoinOpen"
       :bastions="mine.freeBastions.value"
-      :pending="mine.status.value === 'pending'"
+      :pending="isMinePending"
       :error-message="mineErrorMessage"
       :loading="isSaving"
       @submit="handleJoin"

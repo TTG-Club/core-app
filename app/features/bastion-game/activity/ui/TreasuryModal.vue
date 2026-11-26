@@ -4,7 +4,11 @@
   import { UiModalActions } from '~ui/modal-actions';
 
   import { useBastionAction } from '../../composables';
-  import { ACTIVITY_LABELS, adjustBastionTreasury } from '../../model';
+  import {
+    ACTIVITY_LABELS,
+    adjustBastionTreasury,
+    TREASURY_NOTE_MAX_LENGTH,
+  } from '../../model';
 
   /** Казна мастером: плюс — пополнение, минус — списание. */
   const isOpen = defineModel<boolean>('open', { required: true });
@@ -76,7 +80,7 @@
           <UInput
             id="bastion-treasury-note"
             v-model="note"
-            :maxlength="500"
+            :maxlength="TREASURY_NOTE_MAX_LENGTH"
             class="w-full"
           />
         </UFormField>

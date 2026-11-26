@@ -6,11 +6,13 @@
     BASTION_DETAIL_LABELS,
     BASTION_SHARE_LABELS,
     fetchSharedBastion,
+    getBastionDataKey,
     getBastionErrorMessage,
     getSharedBastionRoute,
     PLAN_LABELS,
   } from '~bastion-game/model';
   import { PlanEditor } from '~bastion-game/plan';
+  import { fillTemplate } from '~bastions/model';
   import { UiResult } from '~ui/result';
 
   // Бастионы пока открыты только админам
@@ -25,26 +27,41 @@
     typeof route.params.token === 'string' ? route.params.token : '',
   );
 
-  const { data, status, error } = useAsyncData(
-    () => `shared-player-bastion-${token.value}`,
+  const {
+    data: sharedAccess,
+    status,
+    error,
+  } = useAsyncData(
+    () => getBastionDataKey('shared', token.value),
     () => fetchSharedBastion(token.value),
     { server: false, lazy: true },
   );
 
-  const bastion = computed(() => data.value?.bastion);
+  const bastion = computed(() => sharedAccess.value?.bastion);
 
   useSeoMeta({
     title: () =>
       bastion.value
-        ? `${PLAN_LABELS.title}: ${bastion.value.name}`
+        ? fillTemplate(PLAN_LABELS.pageTitle, {
+            title: PLAN_LABELS.title,
+            name: bastion.value.name,
+          })
         : PLAN_LABELS.title,
     robots: 'noindex',
   });
 
   const backRoute = computed(() => getSharedBastionRoute(token.value));
 
+  const isLoading = computed(
+    () => status.value === 'pending' || status.value === 'idle',
+  );
+
   const isNotFound = computed(
     () => error.value?.statusCode === StatusCodes.NOT_FOUND,
+  );
+
+  const resultStatus = computed<'404' | 'error'>(() =>
+    isNotFound.value ? '404' : 'error',
   );
 
   const errorTitle = computed(() =>
@@ -77,13 +94,13 @@
     </template>
 
     <USkeleton
-      v-if="status === 'pending' || status === 'idle'"
+      v-if="isLoading"
       class="h-[70vh]"
     />
 
     <UiResult
       v-else-if="status === 'error' || !bastion"
-      :status="isNotFound ? '404' : 'error'"
+      :status="resultStatus"
       :title="errorTitle"
       :sub-title="errorDetails"
     />

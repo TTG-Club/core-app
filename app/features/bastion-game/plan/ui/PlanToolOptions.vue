@@ -2,6 +2,7 @@
   import type {
     CellSide,
     DoorKind,
+    PlanButtonLook,
     PlanTool,
     StairKind,
     StairTarget,
@@ -16,11 +17,13 @@
     DOOR_KIND_LABELS,
     DOOR_KINDS,
     getLevelLabel,
+    PLAN_BUTTON_LOOKS,
     PLAN_CORRIDOR_WIDTHS,
     PLAN_FEET_PER_CELL,
-    PLAN_FURNITURE_ROTATION_STEP,
     PLAN_LABELS,
     PLAN_LIMITS,
+    PLAN_SPIRAL_MIN_SIDE,
+    PLAN_SPIRAL_SIZE_STEP,
     STAIR_KIND_ICONS,
     STAIR_KIND_LABELS,
     STAIR_KINDS,
@@ -70,11 +73,10 @@
     fillTemplate(PLAN_LABELS.degrees, { degrees: furnitureRotation.value }),
   );
 
-  /** Поворачивает предмет, который поставит инструмент мебели. */
-  function rotateFurniture(): void {
-    furnitureRotation.value =
-      (furnitureRotation.value + PLAN_FURNITURE_ROTATION_STEP) % 360;
-  }
+  const emit = defineEmits<{
+    /** Повернуть предмет, который поставит инструмент мебели. */
+    'rotate-furniture': [];
+  }>();
 
   const isSpiral = computed(() => stairKind.value === 'SPIRAL');
 
@@ -85,7 +87,7 @@
   );
 
   /**
-   * Меняет заданный размер винтовой лестницы на две клетки — так она
+   * Меняет заданный размер винтовой лестницы на шаг — так она
    * остаётся по центру башни.
    *
    * @param direction 1 — больше, -1 — меньше.
@@ -95,9 +97,16 @@
 
     spiralSide.value = Math.min(
       PLAN_LIMITS.maxStairSide,
-      Math.max(1, current + direction * 2),
+      Math.max(
+        PLAN_SPIRAL_MIN_SIDE,
+        current + direction * PLAN_SPIRAL_SIZE_STEP,
+      ),
     );
   }
+
+  const isSpiralSmallest = computed(
+    () => spiralSide.value === PLAN_SPIRAL_MIN_SIDE,
+  );
 
   const doorItems = DOOR_KINDS.map((kind) => ({
     label: DOOR_KIND_LABELS[kind],
@@ -132,13 +141,8 @@
    * @param isActive Выбрана ли.
    * @returns Цвет и вид кнопки.
    */
-  function getChoiceLook(isActive: boolean): {
-    color: 'primary' | 'neutral';
-    variant: 'solid' | 'outline';
-  } {
-    return isActive
-      ? { color: 'primary', variant: 'solid' }
-      : { color: 'neutral', variant: 'outline' };
+  function getChoiceLook(isActive: boolean): PlanButtonLook {
+    return PLAN_BUTTON_LOOKS.choice[isActive ? 'active' : 'idle'];
   }
 
   /**
@@ -220,7 +224,7 @@
           color="neutral"
           variant="outline"
           :aria-label="PLAN_LABELS.spiralSmaller"
-          :disabled="spiralSide === 1"
+          :disabled="isSpiralSmallest"
           @click.left.exact.prevent="resizeSpiral(-1)"
         />
 
@@ -301,7 +305,7 @@
           size="xs"
           color="neutral"
           variant="outline"
-          @click.left.exact.prevent="rotateFurniture"
+          @click.left.exact.prevent="emit('rotate-furniture')"
         >
           {{ PLAN_LABELS.rotateFurniture }}
         </UButton>

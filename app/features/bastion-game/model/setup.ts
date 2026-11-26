@@ -5,7 +5,11 @@ import type {
   SelectedChoice,
 } from './schema';
 
+import { fillTemplate } from '~bastions/model';
+
 import {
+  FACILITY_DETAILS_SEPARATOR,
+  FACILITY_SETUP_LABELS,
   SPECIAL_FACILITY_PROGRESSION,
   STARTING_BASIC_SPACES,
 } from './constants';
@@ -20,6 +24,14 @@ const STARTING_BASIC_SPACE_SET: ReadonlySet<string> = new Set(
 export interface SpecialFacilityDraft {
   facilityUrl: string;
   choices: Record<string, Array<string>>;
+}
+
+/** Выбор сооружения справочника с вариантами для селекта. */
+export interface CatalogFacilityChoice {
+  name: string;
+  /** Сколько вариантов можно взять. */
+  count: number;
+  items: Array<{ label: string; value: string; description?: string }>;
 }
 
 /** Черновик стартового выбора сооружений персонажа. */
@@ -225,4 +237,59 @@ export function fitSpecialToLevel(
   return draft.special
     .filter((selection) => urls.has(selection.facilityUrl))
     .slice(0, limit);
+}
+
+/**
+ * Подпись сооружения справочника: уровень, пространство, приказы,
+ * «можно несколько».
+ *
+ * @param facility Сооружение справочника.
+ * @returns Строка подробностей.
+ */
+export function getCatalogFacilityDetails(facility: CatalogFacility): string {
+  return [
+    facility.level
+      ? fillTemplate(FACILITY_SETUP_LABELS.levelGroup, {
+          level: facility.level,
+        })
+      : '',
+    facility.space?.name ?? '',
+    (facility.orders ?? []).map((order) => order.name).join(', '),
+    facility.repeatable ? FACILITY_SETUP_LABELS.repeatable : '',
+  ]
+    .filter(Boolean)
+    .join(FACILITY_DETAILS_SEPARATOR);
+}
+
+/**
+ * Выборы сооружения справочника с вариантами для селекта.
+ *
+ * @param facility Сооружение справочника.
+ * @returns Выборы с названием, числом вариантов и списком. Описание
+ * варианта — например, что создаётся инструментом мастерской.
+ */
+export function getCatalogFacilityChoices(
+  facility: CatalogFacility,
+): Array<CatalogFacilityChoice> {
+  return (facility.choices ?? []).flatMap((choice) =>
+    choice.name
+      ? [
+          {
+            name: choice.name,
+            count: choice.count ?? 1,
+            items: (choice.options ?? []).flatMap((option) =>
+              option.name
+                ? [
+                    {
+                      label: option.name,
+                      value: option.name,
+                      description: option.description ?? undefined,
+                    },
+                  ]
+                : [],
+            ),
+          },
+        ]
+      : [],
+  );
 }

@@ -9,6 +9,7 @@
     isTowerKind,
     PLAN_FEET_PER_CELL,
     PLAN_LABELS,
+    PLAN_NO_FACILITY,
     ROOM_KIND_LABELS,
   } from '../../model';
 
@@ -30,9 +31,6 @@
     'remove': [];
   }>();
 
-  /** Значение пункта «без сооружения»: у USelect пустое значение не выбирается. */
-  const NO_FACILITY = 'none';
-
   const name = ref(room.name);
 
   // Другая комната или отмена правки — поле показывает актуальное название.
@@ -49,12 +47,15 @@
   }));
 
   const facilityItems = computed(() => [
-    { label: PLAN_LABELS.noFacility, value: NO_FACILITY },
+    { label: PLAN_LABELS.noFacility, value: PLAN_NO_FACILITY },
     ...facilities.map((facility) => ({
-      label: `${facility.name} · ${fillTemplate(PLAN_LABELS.area, {
-        used: facility.used,
-        max: facility.squares,
-      })}`,
+      label: fillTemplate(PLAN_LABELS.facilityOption, {
+        name: facility.name,
+        area: fillTemplate(PLAN_LABELS.area, {
+          used: facility.used,
+          max: facility.squares,
+        }),
+      }),
       value: facility.id,
     })),
   ]);
@@ -98,7 +99,7 @@
    * @param value Сооружение или «без сооружения».
    */
   function changeFacility(value: string): void {
-    emit('change-facility', value === NO_FACILITY ? undefined : value);
+    emit('change-facility', value === PLAN_NO_FACILITY ? undefined : value);
   }
 </script>
 
@@ -137,7 +138,7 @@
     <UFormField :label="PLAN_LABELS.roomFacility">
       <USelect
         id="plan-room-facility"
-        :model-value="room.facilityId ?? NO_FACILITY"
+        :model-value="room.facilityId ?? PLAN_NO_FACILITY"
         :items="facilityItems"
         value-key="value"
         :disabled="!canEdit"
