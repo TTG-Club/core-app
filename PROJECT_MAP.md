@@ -463,7 +463,9 @@ modals), so its capabilities are listed here rather than squeezed into the table
   proficiency modal. Background tool links may come without a name snapshot:
   the background wizard waits for the catalog and names them by `url`; a link
   the catalog does not have (its book is switched off in the profile) shows a
-  hint instead of «нет».
+  hint instead of «нет». Feat choices of a background are named the same way
+  from `/feats/select`; a choice missing there keeps its `url` as the label, so
+  the player never loses the feat.
 - Character portrait uploaded to S3 (hover the avatar to add / replace /
   remove); the chosen file first goes through the `shared/ui/image-crop`
   square-crop editor.
