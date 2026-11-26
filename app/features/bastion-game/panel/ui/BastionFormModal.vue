@@ -12,10 +12,11 @@
   import {
     BASTION_FORM_LABELS,
     BASTION_NAME_MAX_LENGTH,
-    BASTION_START_LEVEL,
     CHARACTER_LEVEL_MAX,
     CHARACTER_LEVEL_MIN,
     createMemberDrafts,
+    getMemberLevelHint,
+    isBastionNameValid,
     toMemberRequests,
   } from '../../model';
 
@@ -55,11 +56,7 @@
   /** Вне игры новых игроков не добавить — форма об этом напоминает. */
   const isOutsideGame = computed(() => !!bastion && !bastion.gameId);
 
-  const isValid = computed(() => {
-    const trimmed = name.value.trim();
-
-    return trimmed.length > 0 && trimmed.length <= BASTION_NAME_MAX_LENGTH;
-  });
+  const isValid = computed(() => isBastionNameValid(name.value));
 
   /** Ошибка поля названия: только когда что-то введено, но не подходит. */
   const nameError = computed(() =>
@@ -76,19 +73,6 @@
     name.value = bastion?.name ?? '';
     drafts.value = createMemberDrafts(players, bastion);
   });
-
-  /**
-   * Подсказка к уровню. Персонаж ниже 5 уровня бастиона по правилам ещё не
-   * имеет — мастер может дать доступ заранее, форма только предупреждает.
-   *
-   * @param draft Строка формы доступа.
-   * @returns Текст предупреждения или undefined.
-   */
-  function getLevelHint(draft: BastionMemberDraft): string | undefined {
-    return draft.selected && draft.characterLevel < BASTION_START_LEVEL
-      ? BASTION_FORM_LABELS.belowStartLevel
-      : undefined;
-  }
 
   /** Закрывает окно без сохранения. */
   function cancel(): void {
@@ -175,7 +159,7 @@
             <UFormField
               class="sm:col-span-3"
               :label="BASTION_FORM_LABELS.characterLevel"
-              :hint="getLevelHint(draft)"
+              :hint="getMemberLevelHint(draft)"
             >
               <UInputNumber
                 :id="`player-bastion-level-${draft.userId}`"

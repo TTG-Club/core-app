@@ -4,6 +4,7 @@
   import { useFacilityCatalog } from '../../composables';
   import {
     FACILITY_SETUP_LABELS,
+    FACILITY_SKELETON_COUNT,
     fitSpecialToLevel,
     getAvailableSpecialFacilities,
     getBasicFacilities,
@@ -69,7 +70,7 @@
     class="flex flex-col gap-3"
   >
     <USkeleton
-      v-for="index in 4"
+      v-for="index in FACILITY_SKELETON_COUNT"
       :key="index"
       class="h-16"
     />

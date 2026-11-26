@@ -5,12 +5,14 @@
     PlayerBastionMember,
   } from '../../model';
 
+  import { fillTemplate } from '~bastions/model';
   import { UiModalActions } from '~ui/modal-actions';
 
   import { useBastionAction, useFacilityCatalog } from '../../composables';
   import {
     ACTIVITY_LABELS,
     buildBasicFacility,
+    DEFAULT_BUILD_SPACE,
     FACILITY_SPACES,
     getBasicFacilities,
     getBuildTermsText,
@@ -36,7 +38,7 @@
   const { isRunning, run } = useBastionAction();
 
   const facilityUrl = ref<string>();
-  const space = ref<FacilitySpaceCode>('CRAMPED');
+  const space = ref<FacilitySpaceCode>(DEFAULT_BUILD_SPACE);
 
   const facilityItems = computed(() =>
     getBasicFacilities(catalog.value).map((facility) => ({
@@ -46,14 +48,17 @@
   );
 
   const spaceItems = FACILITY_SPACES.map((value) => ({
-    label: `${SPACE_LABELS[value]} — ${getBuildTermsText(value)}`,
+    label: fillTemplate(ACTIVITY_LABELS.optionWithTerms, {
+      name: SPACE_LABELS[value],
+      terms: getBuildTermsText(value),
+    }),
     value,
   }));
 
   watch(isOpen, (opened) => {
     if (opened) {
       facilityUrl.value = undefined;
-      space.value = 'CRAMPED';
+      space.value = DEFAULT_BUILD_SPACE;
     }
   });
 

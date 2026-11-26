@@ -14,6 +14,8 @@
     BASTION_EVENT_ICONS,
     decideBastionEvent,
     EVENT_LABELS,
+    getMagicItemRoute,
+    stripEventItemSuffix,
   } from '../../model';
 
   /**
@@ -95,20 +97,18 @@
 
   /** Полученный предмет ссылкой на его карточку; пусто — записан словами или не получен. */
   const itemLink = computed(() =>
-    event.noteUrl ? `/magic-items/${event.noteUrl}` : '',
+    event.noteUrl ? getMagicItemRoute(event.noteUrl) : '',
   );
 
   /**
    * Итог события без хвоста «Получено: …», когда предмет показан ссылкой
    * отдельной строкой: иначе название повторилось бы дважды.
    */
-  const summaryText = computed(() => {
-    const suffix = ` ${EVENT_LABELS.recordItem} ${event.note}.`;
-
-    return itemLink.value && event.summary.endsWith(suffix)
-      ? event.summary.slice(0, -suffix.length)
-      : event.summary;
-  });
+  const summaryText = computed(() =>
+    itemLink.value && event.note
+      ? stripEventItemSuffix(event.summary, event.note)
+      : event.summary,
+  );
 
   /**
    * Отправляет решение по событию.

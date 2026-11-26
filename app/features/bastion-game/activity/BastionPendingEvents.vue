@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { BastionActivity, PlayerBastion } from '../model';
 
-  import { BASTION_CARD_UI, EVENT_LABELS } from '../model';
+  import { BASTION_CARD_UI, EVENT_LABELS, getPendingEvents } from '../model';
   import { BastionEventCard } from './ui';
 
   /**
@@ -17,9 +17,7 @@
     updated: [bastion: PlayerBastion];
   }>();
 
-  const pendingEvents = computed(
-    () => activity?.events.filter((event) => event.status === 'PENDING') ?? [],
-  );
+  const pendingEvents = computed(() => getPendingEvents(activity));
 </script>
 
 <template>

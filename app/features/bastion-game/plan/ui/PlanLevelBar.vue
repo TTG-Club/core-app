@@ -20,7 +20,7 @@
     remove: [];
   }>();
 
-  const items = computed(() =>
+  const levelOptions = computed(() =>
     [...levels].reverse().map((value) => ({
       label: getLevelLabel(value),
       value,
@@ -60,7 +60,7 @@
     <USelect
       id="plan-level"
       v-model="level"
-      :items="items"
+      :items="levelOptions"
       value-key="value"
       :aria-label="PLAN_LABELS.level"
       size="sm"

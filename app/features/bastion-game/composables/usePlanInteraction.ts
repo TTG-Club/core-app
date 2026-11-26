@@ -9,6 +9,8 @@ import type {
   PlanDocument,
   PlanFurniture,
   PlanObjectRef,
+  PlanPoint,
+  PlanPreview,
   PlanRoom,
   PlanRoomSeed,
   PlanSelection,
@@ -58,6 +60,7 @@ import {
   placeOpening,
   placeTowerStair,
   PLAN_FEET_PER_CELL,
+  PLAN_GROUND_LEVEL,
   PLAN_LABELS,
   PLAN_LIMITS,
   rotateFurniture,
@@ -66,18 +69,7 @@ import {
   TOWER_SHAPE_SIDES,
 } from '../model';
 
-/** Точка холста в клетках (дробная). */
-export interface PlanPoint {
-  x: number;
-  y: number;
-}
-
-/** Что рисуется поверх плана, пока жест не закончен. */
-export type PlanPreview =
-  | { kind: 'rect'; from: PlanCell; to: PlanCell; label: string | undefined }
-  | { kind: 'circle'; circle: PlanCircle; label: string }
-  | { kind: 'move'; cells: Array<PlanCell>; isValid: boolean };
-
+/** Что редактор плана даёт обработчику жестов: документ и запись правок. */
 interface PlanEditorApi {
   document: ShallowRef<PlanDocument>;
   /** У владельца бастиона подписка: можно ставить предметы по подписке. */
@@ -88,6 +80,7 @@ interface PlanEditorApi {
   endStroke: () => void;
 }
 
+/** Состояние редактора, от которого зависят жесты на холсте. */
 interface PlanInteractionOptions {
   editor: PlanEditorApi;
   tool: Ref<PlanTool>;
@@ -144,7 +137,7 @@ type PlanGesture =
     }
   | {
       type: 'furniture';
-      item: PlanFurniture;
+      furniture: PlanFurniture;
       anchor: PlanCell;
       offset: PlanCell;
       /** Щелчок без сдвига поворачивает предмет (инструмент «Мебель»). */
@@ -162,6 +155,28 @@ type PlanGesture =
 
 /** Жест башни, которую тянут от центра. */
 type TowerGesture = Extract<PlanGesture, { type: 'tower' }>;
+
+/**
+ * Мазок ворот: начатый на воротах закладывает проёмы стеной, иначе ставит
+ * ворота в стену.
+ *
+ * @param document План в начале мазка.
+ * @param cell Клетка, где начали вести.
+ * @returns Правка для клеток мазка.
+ */
+function getGatePaint(
+  document: PlanDocument,
+  cell: PlanCell,
+): (next: PlanDocument, cells: Array<PlanCell>) => PlanDocument {
+  const isGate = !isDefenseGate(document, cell);
+
+  return (next, cells) => paintDefenseGates(next, cells, isGate);
+}
+
+/** Жесты-мазки: правят план по ходу и закрываются одним шагом отмены. */
+const STROKE_GESTURES: ReadonlySet<PlanGesture['type']> = new Set<
+  PlanGesture['type']
+>(['corridor', 'erase', 'wall']);
 
 /**
  * Окружность башни по жесту: у многоугольной — с числом сторон.
@@ -280,37 +295,20 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
   }
 
   /**
-   * Мазок ворот: начатый на воротах закладывает проёмы стеной, иначе ставит
-   * ворота в стену.
-   *
-   * @param document План в начале мазка.
-   * @param cell Клетка, где начали вести.
-   * @returns Правка для клеток мазка.
-   */
-  function getGatePaint(
-    document: PlanDocument,
-    cell: PlanCell,
-  ): (next: PlanDocument, cells: Array<PlanCell>) => PlanDocument {
-    const isGate = !isDefenseGate(document, cell);
-
-    return (next, cells) => paintDefenseGates(next, cells, isGate);
-  }
-
-  /**
    * Начинает перетаскивание стоящего предмета мебели.
    *
-   * @param item Предмет.
+   * @param furniture Предмет.
    * @param cell Клетка, за которую взяли.
    * @param rotateOnClick Поворачивать ли предмет, если его не сдвинули.
    */
   function startFurnitureMove(
-    item: PlanFurniture,
+    furniture: PlanFurniture,
     cell: PlanCell,
     rotateOnClick: boolean,
   ): void {
     gesture = {
       type: 'furniture',
-      item,
+      furniture,
       anchor: cell,
       offset: { x: 0, y: 0 },
       rotateOnClick,
@@ -402,7 +400,9 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
       selected !== undefined
       && selected.level === level.value
       && !isTowerKind(selected.kind)
-      && selected.cells.some((item) => item.x === cell.x && item.y === cell.y);
+      && selected.cells.some(
+        (roomCell) => roomCell.x === cell.x && roomCell.y === cell.y,
+      );
 
     gesture = {
       type: 'room',
@@ -519,7 +519,7 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
 
         break;
       case 'wall':
-        if (level.value === 0) {
+        if (level.value === PLAN_GROUND_LEVEL) {
           editor.beginStroke();
           gesture = { type: 'wall', last: cell, paint: paintWall };
           editor.applyInStroke(paintWall(document, [cell]));
@@ -539,7 +539,10 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
         break;
       case 'door':
         // Дверь в защитной стене — ворота: их можно протянуть на несколько клеток.
-        if (level.value === 0 && isDefenseWallCell(document, cell)) {
+        if (
+          level.value === PLAN_GROUND_LEVEL
+          && isDefenseWallCell(document, cell)
+        ) {
           const paint = getGatePaint(document, cell);
 
           editor.beginStroke();
@@ -575,10 +578,10 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
 
         break;
       case 'furniture': {
-        const item = findFurnitureAt(document, level.value, point);
+        const furniture = findFurnitureAt(document, level.value, point);
 
-        if (item) {
-          startFurnitureMove(item, cell, true);
+        if (furniture) {
+          startFurnitureMove(furniture, cell, true);
 
           break;
         }
@@ -702,8 +705,14 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
           y: cell.y - gesture.anchor.y,
         };
 
-        const { item } = gesture;
-        const moved = { ...item, x: item.x + offset.x, y: item.y + offset.y };
+        const { furniture } = gesture;
+
+        const moved = {
+          ...furniture,
+          x: furniture.x + offset.x,
+          y: furniture.y + offset.y,
+        };
+
         const { width, depth } = getFurnitureSize(moved);
 
         gesture.offset = offset;
@@ -731,10 +740,12 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
 
         preview.value = {
           kind: 'move',
-          cells: getSelectionCells(document, gesture.selection).map((item) => ({
-            x: item.x + offset.x,
-            y: item.y + offset.y,
-          })),
+          cells: getSelectionCells(document, gesture.selection).map(
+            (selectionCell) => ({
+              x: selectionCell.x + offset.x,
+              y: selectionCell.y + offset.y,
+            }),
+          ),
           isValid: canMoveObjects(document, gesture.selection, offset),
         };
 
@@ -871,13 +882,13 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
 
         break;
       case 'furniture': {
-        const { item, offset } = finished;
+        const { furniture, offset } = finished;
         const isClick = offset.x === 0 && offset.y === 0;
 
         if (isClick && finished.rotateOnClick) {
-          editor.commit(rotateFurniture(document, item.id));
+          editor.commit(rotateFurniture(document, furniture.id));
         } else if (!isClick) {
-          editor.commit(moveFurniture(document, item.id, offset));
+          editor.commit(moveFurniture(document, furniture.id, offset));
         }
 
         break;
@@ -967,7 +978,7 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
 
   /** Прерывает жест без изменений (Escape). */
   function cancel(): void {
-    if (gesture && ['corridor', 'erase', 'wall'].includes(gesture.type)) {
+    if (gesture && STROKE_GESTURES.has(gesture.type)) {
       editor.endStroke();
     }
 

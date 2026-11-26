@@ -1,53 +1,11 @@
-/** Цвета холста плана, взятые из темы сайта. */
-export interface PlanTheme {
-  background: number;
-  grid: number;
-  gridMajor: number;
-  text: number;
-  muted: number;
-  accent: number;
-  warning: number;
-  error: number;
-  shade: number;
-}
+import type { PlanTheme } from '../model';
 
-/** Запасные цвета — если тему прочитать не удалось (SSR, тесты). */
-const FALLBACK_THEME: PlanTheme = {
-  background: 0x0f141c,
-  grid: 0x1f2835,
-  gridMajor: 0x2b3545,
-  text: 0xe3e8f0,
-  muted: 0x9aa6b8,
-  accent: 0xc8a24a,
-  warning: 0xd9a441,
-  error: 0xe0806f,
-  shade: 0x2b3545,
-};
-
-const THEME_KEYS: ReadonlyArray<keyof PlanTheme> = [
-  'background',
-  'grid',
-  'gridMajor',
-  'text',
-  'muted',
-  'accent',
-  'warning',
-  'error',
-  'shade',
-];
-
-/** CSS-переменные Nuxt UI, из которых берётся тема холста. */
-const THEME_VARIABLES: Record<keyof PlanTheme, string> = {
-  background: '--ui-bg',
-  grid: '--ui-border',
-  gridMajor: '--ui-border-accented',
-  text: '--ui-text',
-  muted: '--ui-text-muted',
-  accent: '--ui-primary',
-  warning: '--ui-warning',
-  error: '--ui-error',
-  shade: '--ui-bg-accented',
-};
+import {
+  PLAN_THEME_FALLBACK,
+  PLAN_THEME_KEYS,
+  PLAN_THEME_OBSERVED_ATTRIBUTES,
+  PLAN_THEME_VARIABLES,
+} from '../model';
 
 /**
  * Переводит CSS-цвет в число для WebGL. Токены темы бывают в oklch, который
@@ -87,7 +45,7 @@ function toHexNumber(
  * @returns Текущие цвета холста.
  */
 export function usePlanTheme() {
-  const theme = shallowRef<PlanTheme>(FALLBACK_THEME);
+  const theme = shallowRef<PlanTheme>(PLAN_THEME_FALLBACK);
 
   /** Перечитывает цвета из CSS-переменных корневого элемента. */
   function read(): void {
@@ -107,12 +65,14 @@ export function usePlanTheme() {
     }
 
     const styles = getComputedStyle(document.documentElement);
-    const next: PlanTheme = { ...FALLBACK_THEME };
+    const next: PlanTheme = { ...PLAN_THEME_FALLBACK };
 
-    for (const key of THEME_KEYS) {
-      const cssColor = styles.getPropertyValue(THEME_VARIABLES[key]).trim();
+    for (const key of PLAN_THEME_KEYS) {
+      const cssColor = styles
+        .getPropertyValue(PLAN_THEME_VARIABLES[key])
+        .trim();
 
-      next[key] = toHexNumber(context, cssColor) ?? FALLBACK_THEME[key];
+      next[key] = toHexNumber(context, cssColor) ?? PLAN_THEME_FALLBACK[key];
     }
 
     theme.value = next;
@@ -125,7 +85,7 @@ export function usePlanTheme() {
   if (import.meta.client) {
     useMutationObserver(document.documentElement, read, {
       attributes: true,
-      attributeFilter: ['class', 'data-theme', 'style'],
+      attributeFilter: [...PLAN_THEME_OBSERVED_ATTRIBUTES],
     });
   }
 

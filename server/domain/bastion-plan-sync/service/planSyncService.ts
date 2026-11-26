@@ -12,6 +12,7 @@ import {
 } from 'y-protocols/awareness';
 import {
   messageYjsSyncStep1,
+  messageYjsSyncStep2,
   readSyncStep1,
   readSyncStep2,
   readUpdate,
@@ -23,6 +24,18 @@ import { z } from 'zod';
 
 import { USER_TOKEN_COOKIE } from '#shared/consts';
 
+import {
+  BEARER_PREFIX,
+  PLAN_SYNC_CLOSE_CODES,
+  PLAN_SYNC_MAX_MESSAGE_BYTES,
+  PLAN_SYNC_MAX_PEERS_PER_ROOM,
+  PLAN_SYNC_MAX_ROOMS,
+  PLAN_SYNC_MESSAGE,
+  PLAN_SYNC_ROOM_GRACE_MS,
+  PLAYER_BASTION_PLAN_PATH_SUFFIX,
+  PLAYER_BASTIONS_API_PATH,
+} from '../model';
+
 /**
  * Комнаты совместного рисования планов бастионов.
  *
@@ -31,21 +44,6 @@ import { USER_TOKEN_COOKIE } from '#shared/consts';
  * запрос со своим входом. Протокол — стандартный y-websocket (синхронизация
  * и присутствие), поэтому клиент — штатный `WebsocketProvider`.
  */
-
-const MESSAGE_SYNC = 0;
-const MESSAGE_AWARENESS = 1;
-
-/** Сколько держать документ после ухода последнего участника. */
-const ROOM_GRACE_MS = 60_000;
-
-/** Предел одного сообщения: план целиком с запасом. */
-const MAX_MESSAGE_BYTES = 4 * 1024 * 1024;
-
-const MAX_PEERS_PER_ROOM = 32;
-const MAX_ROOMS = 500;
-
-const CLOSE_POLICY_VIOLATION = 1008;
-const CLOSE_TRY_AGAIN_LATER = 1013;
 
 const bastionIdSchema = z.string().uuid();
 
@@ -66,7 +64,7 @@ interface PlanSyncPeer {
 }
 
 interface PlanSyncRoom {
-  doc: Y.Doc;
+  yDocument: Y.Doc;
   awareness: Awareness;
   peers: Map<string, PlanSyncPeer>;
   closeTimer: ReturnType<typeof setTimeout> | undefined;
@@ -89,8 +87,8 @@ const rooms = new Map<string, PlanSyncRoom>();
 function getRequestToken(headers: Headers): string | undefined {
   const authorization = headers.get('authorization');
 
-  if (authorization?.startsWith('Bearer ')) {
-    return authorization.slice('Bearer '.length);
+  if (authorization?.startsWith(BEARER_PREFIX)) {
+    return authorization.slice(BEARER_PREFIX.length);
   }
 
   const prefix = `${USER_TOKEN_COOKIE}=`;
@@ -124,6 +122,8 @@ function getBastionId(url: string): string | undefined {
  * отвечает 403 или 404 чужим и сообщает, можно ли рисовать.
  *
  * @param request Запрос на подключение.
+ * @param request.url Адрес запроса.
+ * @param request.headers Заголовки запроса.
  * @returns Бастион и право правки.
  * @throws {Response} Отказ в подключении.
  */
@@ -146,8 +146,8 @@ export async function checkPlanSyncAccess(request: {
     const { url } = getApiSecrets();
 
     const response = await $fetch<unknown>(
-      `${url}/api/v2/player-bastions/${bastionId}/plan`,
-      { headers: { authorization: `Bearer ${token}` }, retry: 0 },
+      `${url}${PLAYER_BASTIONS_API_PATH}/${bastionId}${PLAYER_BASTION_PLAN_PATH_SUFFIX}`,
+      { headers: { authorization: `${BEARER_PREFIX}${token}` }, retry: 0 },
     );
 
     const access = planAccessSchema.parse(response);
@@ -209,23 +209,23 @@ function getRoom(bastionId: string): PlanSyncRoom {
     return existing;
   }
 
-  const doc = new Y.Doc();
-  const awareness = new Awareness(doc);
+  const yDocument = new Y.Doc();
+  const awareness = new Awareness(yDocument);
 
   // Сервер присутствия не публикует.
   awareness.setLocalState(null);
 
   const room: PlanSyncRoom = {
-    doc,
+    yDocument,
     awareness,
     peers: new Map(),
     closeTimer: undefined,
   };
 
-  doc.on('update', (update: Uint8Array, origin: unknown) => {
+  yDocument.on('update', (update: Uint8Array, origin: unknown) => {
     const encoder = encoding.createEncoder();
 
-    encoding.writeVarUint(encoder, MESSAGE_SYNC);
+    encoding.writeVarUint(encoder, PLAN_SYNC_MESSAGE.sync);
     writeUpdate(encoder, update);
 
     broadcast(room, encoding.toUint8Array(encoder), getOriginPeerId(origin));
@@ -260,7 +260,7 @@ function getRoom(bastionId: string): PlanSyncRoom {
 
       const encoder = encoding.createEncoder();
 
-      encoding.writeVarUint(encoder, MESSAGE_AWARENESS);
+      encoding.writeVarUint(encoder, PLAN_SYNC_MESSAGE.awareness);
 
       encoding.writeVarUint8Array(
         encoder,
@@ -308,21 +308,21 @@ export function openPlanSyncPeer(peer: Peer): void {
   const access = getPeerAccess(peer);
 
   if (!access) {
-    peer.close(CLOSE_POLICY_VIOLATION);
+    peer.close(PLAN_SYNC_CLOSE_CODES.policyViolation);
 
     return;
   }
 
-  if (!rooms.has(access.bastionId) && rooms.size >= MAX_ROOMS) {
-    peer.close(CLOSE_TRY_AGAIN_LATER);
+  if (!rooms.has(access.bastionId) && rooms.size >= PLAN_SYNC_MAX_ROOMS) {
+    peer.close(PLAN_SYNC_CLOSE_CODES.tryAgainLater);
 
     return;
   }
 
   const room = getRoom(access.bastionId);
 
-  if (room.peers.size >= MAX_PEERS_PER_ROOM) {
-    peer.close(CLOSE_TRY_AGAIN_LATER);
+  if (room.peers.size >= PLAN_SYNC_MAX_PEERS_PER_ROOM) {
+    peer.close(PLAN_SYNC_CLOSE_CODES.tryAgainLater);
 
     return;
   }
@@ -340,8 +340,8 @@ export function openPlanSyncPeer(peer: Peer): void {
 
   const syncEncoder = encoding.createEncoder();
 
-  encoding.writeVarUint(syncEncoder, MESSAGE_SYNC);
-  writeSyncStep1(syncEncoder, room.doc);
+  encoding.writeVarUint(syncEncoder, PLAN_SYNC_MESSAGE.sync);
+  writeSyncStep1(syncEncoder, room.yDocument);
   send(target, encoding.toUint8Array(syncEncoder));
 
   const states = [...room.awareness.getStates().keys()];
@@ -349,7 +349,7 @@ export function openPlanSyncPeer(peer: Peer): void {
   if (states.length) {
     const awarenessEncoder = encoding.createEncoder();
 
-    encoding.writeVarUint(awarenessEncoder, MESSAGE_AWARENESS);
+    encoding.writeVarUint(awarenessEncoder, PLAN_SYNC_MESSAGE.awareness);
 
     encoding.writeVarUint8Array(
       awarenessEncoder,
@@ -376,15 +376,15 @@ function handleSyncMessage(
   const encoder = encoding.createEncoder();
   const syncType = decoding.readVarUint(decoder);
 
-  encoding.writeVarUint(encoder, MESSAGE_SYNC);
+  encoding.writeVarUint(encoder, PLAN_SYNC_MESSAGE.sync);
 
   if (syncType === messageYjsSyncStep1) {
-    readSyncStep1(decoder, encoder, room.doc);
+    readSyncStep1(decoder, encoder, room.yDocument);
   } else if (source.canEdit) {
-    if (syncType === messageYjsSyncStep1 + 1) {
-      readSyncStep2(decoder, room.doc, source.peer.id);
+    if (syncType === messageYjsSyncStep2) {
+      readSyncStep2(decoder, room.yDocument, source.peer.id);
     } else {
-      readUpdate(decoder, room.doc, source.peer.id);
+      readUpdate(decoder, room.yDocument, source.peer.id);
     }
   }
 
@@ -398,26 +398,26 @@ function handleSyncMessage(
  * Принимает сообщение участника.
  *
  * @param peer Соединение.
- * @param data Сообщение.
+ * @param message Сообщение.
  */
-export function handlePlanSyncMessage(peer: Peer, data: Uint8Array): void {
+export function handlePlanSyncMessage(peer: Peer, message: Uint8Array): void {
   const access = getPeerAccess(peer);
   const room = access ? rooms.get(access.bastionId) : undefined;
   const source = room?.peers.get(peer.id);
 
-  if (!room || !source || data.byteLength > MAX_MESSAGE_BYTES) {
-    peer.close(CLOSE_POLICY_VIOLATION);
+  if (!room || !source || message.byteLength > PLAN_SYNC_MAX_MESSAGE_BYTES) {
+    peer.close(PLAN_SYNC_CLOSE_CODES.policyViolation);
 
     return;
   }
 
   try {
-    const decoder = decoding.createDecoder(data);
+    const decoder = decoding.createDecoder(message);
     const messageType = decoding.readVarUint(decoder);
 
-    if (messageType === MESSAGE_SYNC) {
+    if (messageType === PLAN_SYNC_MESSAGE.sync) {
       handleSyncMessage(room, source, decoder);
-    } else if (messageType === MESSAGE_AWARENESS) {
+    } else if (messageType === PLAN_SYNC_MESSAGE.awareness) {
       applyAwarenessUpdate(
         room.awareness,
         decoding.readVarUint8Array(decoder),
@@ -426,7 +426,7 @@ export function handlePlanSyncMessage(peer: Peer, data: Uint8Array): void {
     }
   } catch (error) {
     consola.warn('[PLAN SYNC] Bad message', error);
-    peer.close(CLOSE_POLICY_VIOLATION);
+    peer.close(PLAN_SYNC_CLOSE_CODES.policyViolation);
   }
 }
 
@@ -458,7 +458,7 @@ export function closePlanSyncPeer(peer: Peer): void {
     }
 
     room.awareness.destroy();
-    room.doc.destroy();
+    room.yDocument.destroy();
     rooms.delete(access.bastionId);
-  }, ROOM_GRACE_MS);
+  }, PLAN_SYNC_ROOM_GRACE_MS);
 }

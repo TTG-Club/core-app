@@ -1,5 +1,8 @@
 import type {
+  BastionActivity,
   BastionActivityOrder,
+  BastionEvent,
+  BastionGuest,
   BastionOrderCode,
   FacilityOrderOptionDetail,
   FacilitySpaceCode,
@@ -14,6 +17,9 @@ import {
   DEFENSE_WALL_COST_PER_SQUARE,
   DEFENSE_WALL_DAYS_PER_SQUARE,
   DEFENSE_WALL_LABELS,
+  EVENT_LABELS,
+  LEDGER_AMOUNT_CLASSES,
+  MENAGERIE_CREATURE_ICON_CLASSES,
   TURN_FORMS,
   TURNS_LEFT_LABELS,
 } from './activity-constants';
@@ -66,7 +72,7 @@ export function getTurnsLeftText(
   currentTurn: number | null | undefined,
 ): string {
   if (readyOnTurn == null || currentTurn == null) {
-    return '—';
+    return TURNS_LEFT_LABELS.unknown;
   }
 
   const count = getTurnsLeft(readyOnTurn, currentTurn);
@@ -198,4 +204,66 @@ export function formatLedgerAmount(amount: number): string {
   const sign = amount > 0 ? '+' : '−';
 
   return `${sign}${Math.abs(amount)} ${ACTIVITY_LABELS.gold}`;
+}
+
+/**
+ * Цвет суммы движения казны.
+ *
+ * @param amount Сумма, зм.
+ * @returns Класс цвета прихода или расхода.
+ */
+export function getLedgerAmountClass(amount: number): string {
+  return amount > 0
+    ? LEDGER_AMOUNT_CLASSES.income
+    : LEDGER_AMOUNT_CLASSES.expense;
+}
+
+/**
+ * Итог события без хвоста «Получено: …», когда предмет показан ссылкой
+ * отдельной строкой: иначе название повторилось бы дважды.
+ *
+ * @param summary Итог события от сервера.
+ * @param note Название полученного предмета.
+ * @returns Итог без хвоста или как есть, если хвоста нет.
+ */
+export function stripEventItemSuffix(summary: string, note: string): string {
+  const suffix = ` ${EVENT_LABELS.recordItem} ${note}.`;
+
+  return summary.endsWith(suffix) ? summary.slice(0, -suffix.length) : summary;
+}
+
+/**
+ * Цвет значка существа в вольерах: защитник выделен.
+ *
+ * @param isDefender Существо защищает бастион.
+ * @returns Класс цвета значка.
+ */
+export function getMenagerieCreatureIconClass(isDefender: boolean): string {
+  return isDefender
+    ? MENAGERIE_CREATURE_ICON_CLASSES.defender
+    : MENAGERIE_CREATURE_ICON_CLASSES.resident;
+}
+
+/**
+ * События, которые ждут решения.
+ *
+ * @param activity Журналы бастиона; пока не загружены — пусто.
+ * @returns События со статусом «ждёт решения».
+ */
+export function getPendingEvents(
+  activity: BastionActivity | undefined,
+): Array<BastionEvent> {
+  return activity?.events.filter((event) => event.status === 'PENDING') ?? [];
+}
+
+/**
+ * Подпись кнопки у гостя: беженцам находят дом, остальных отсылают.
+ *
+ * @param guest Гость.
+ * @returns Подпись.
+ */
+export function getGuestDismissLabel(guest: BastionGuest): string {
+  return guest.kind.value === 'REFUGEES'
+    ? EVENT_LABELS.dismissRefugees
+    : EVENT_LABELS.dismiss;
 }

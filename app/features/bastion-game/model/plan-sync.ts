@@ -15,7 +15,7 @@ import * as Y from 'yjs';
 import { z } from 'zod';
 
 import { ROOM_KIND_LABELS } from './plan-constants';
-import { resolvePlanConflicts } from './plan-edit';
+import { createEmptyPlan, resolvePlanConflicts } from './plan-edit';
 import { getCellKey, getEdgeKey, toPlanCircle } from './plan-geometry';
 import {
   planCellSchema,
@@ -28,6 +28,13 @@ import {
   planTowerOpeningSchema,
   ROOM_KINDS,
 } from './plan-schema';
+import {
+  PLAN_CONTENT_MAPS,
+  PLAN_SYNC_MAPS,
+  PLAN_SYNC_META_KEYS,
+  PLAN_SYNC_ROOM_KEYS,
+  PLAN_SYNC_SEED_CLIENT,
+} from './plan-sync-constants';
 
 /**
  * Общий документ плана для совместного рисования (Yjs).
@@ -40,46 +47,6 @@ import {
  * Модуль не входит в barrel модели: Yjs нужен только открытому редактору
  * плана, поэтому редактор загружает его динамически, в браузере.
  */
-
-/** Карты общего документа. */
-export const PLAN_SYNC_MAPS = {
-  meta: 'meta',
-  levels: 'levels',
-  rooms: 'rooms',
-  doors: 'doors',
-  windows: 'windows',
-  towerOpenings: 'towerOpenings',
-  stairs: 'stairs',
-  columns: 'columns',
-  defenseWalls: 'defenseWalls',
-  furniture: 'furniture',
-  defenseGates: 'defenseGates',
-} as const;
-
-/** Карты с содержимым плана — их отслеживает личная отмена. */
-const PLAN_CONTENT_MAPS = [
-  PLAN_SYNC_MAPS.levels,
-  PLAN_SYNC_MAPS.rooms,
-  PLAN_SYNC_MAPS.doors,
-  PLAN_SYNC_MAPS.windows,
-  PLAN_SYNC_MAPS.towerOpenings,
-  PLAN_SYNC_MAPS.stairs,
-  PLAN_SYNC_MAPS.columns,
-  PLAN_SYNC_MAPS.defenseWalls,
-  PLAN_SYNC_MAPS.furniture,
-  PLAN_SYNC_MAPS.defenseGates,
-] as const;
-
-const META_VERSION = 'version';
-const META_SEEDED = 'seeded';
-
-/**
- * Начальное содержимое пишется от имени служебного клиента с номером от
- * версии плана. Одна и та же версия у всех даёт побайтно одинаковые правки,
- * и Yjs не задваивает план, когда его одновременно заводят два человека.
- */
-const SEED_CLIENT_BASE = 0x7f000000;
-const SEED_CLIENT_RANGE = 0x00ffffff;
 
 const roomFieldsSchema = z.object({
   name: z.string(),
@@ -97,22 +64,22 @@ type PlanCollectionKey = (typeof PLAN_CONTENT_MAPS)[number];
 /**
  * Карта общего документа.
  *
- * @param doc Общий документ.
+ * @param yDocument Общий документ.
  * @param name Имя карты.
  * @returns Карта.
  */
-function getMap(doc: Y.Doc, name: string): Y.Map<unknown> {
-  return doc.getMap<unknown>(name);
+function getMap(yDocument: Y.Doc, name: string): Y.Map<unknown> {
+  return yDocument.getMap<unknown>(name);
 }
 
 /**
  * Карты, которые меняет правка плана: на них настраивается личная отмена.
  *
- * @param doc Общий документ.
+ * @param yDocument Общий документ.
  * @returns Карты с содержимым плана.
  */
-export function getPlanContentMaps(doc: Y.Doc): Array<Y.Map<unknown>> {
-  return PLAN_CONTENT_MAPS.map((name) => getMap(doc, name));
+export function getPlanContentMaps(yDocument: Y.Doc): Array<Y.Map<unknown>> {
+  return PLAN_CONTENT_MAPS.map((name) => getMap(yDocument, name));
 }
 
 /**
@@ -151,10 +118,10 @@ function readValues<T>(map: Y.Map<unknown>, schema: z.ZodType<T>): Array<T> {
 function readCells(cells: Y.Map<unknown>): Array<PlanCell> {
   return [...cells.keys()]
     .flatMap((key) => {
-      const [x, y] = key.split(':').map(Number);
-      const parsed = planCellSchema.safeParse({ x, y });
+      const [column, row] = key.split(':').map(Number);
+      const parsed = planCellSchema.safeParse({ x: column, y: row });
 
-      return parsed.success && Number.isInteger(x) && Number.isInteger(y)
+      return parsed.success && Number.isInteger(column) && Number.isInteger(row)
         ? [parsed.data]
         : [];
     })
@@ -175,7 +142,7 @@ function readRooms(map: Y.Map<unknown>): Array<PlanRoom> {
       }
 
       const fields = roomFieldsSchema.safeParse(value.toJSON());
-      const cells = value.get('cells');
+      const cells = value.get(PLAN_SYNC_ROOM_KEYS.cells);
 
       if (!fields.success || !(cells instanceof Y.Map)) {
         return [];
@@ -212,35 +179,44 @@ function readRooms(map: Y.Map<unknown>): Array<PlanRoom> {
 /**
  * Собирает план из общего документа и сводит противоречия слияния.
  *
- * @param doc Общий документ.
+ * @param yDocument Общий документ.
  * @returns План.
  */
-export function readPlanFromDoc(doc: Y.Doc): PlanDocument {
-  const levels = [...getMap(doc, PLAN_SYNC_MAPS.levels).keys()]
+export function readPlanFromDoc(yDocument: Y.Doc): PlanDocument {
+  const levels = [...getMap(yDocument, PLAN_SYNC_MAPS.levels).keys()]
     .map(Number)
     .filter((level) => Number.isInteger(level));
 
   return resolvePlanConflicts({
     levels,
-    rooms: readRooms(getMap(doc, PLAN_SYNC_MAPS.rooms)),
-    doors: readValues(getMap(doc, PLAN_SYNC_MAPS.doors), planDoorSchema),
-    windows: readValues(getMap(doc, PLAN_SYNC_MAPS.windows), planEdgeSchema),
+    rooms: readRooms(getMap(yDocument, PLAN_SYNC_MAPS.rooms)),
+    doors: readValues(getMap(yDocument, PLAN_SYNC_MAPS.doors), planDoorSchema),
+    windows: readValues(
+      getMap(yDocument, PLAN_SYNC_MAPS.windows),
+      planEdgeSchema,
+    ),
     towerOpenings: readValues(
-      getMap(doc, PLAN_SYNC_MAPS.towerOpenings),
+      getMap(yDocument, PLAN_SYNC_MAPS.towerOpenings),
       planTowerOpeningSchema,
     ).map((opening) => ({ ...opening, kind: opening.kind ?? undefined })),
-    stairs: readValues(getMap(doc, PLAN_SYNC_MAPS.stairs), planStairSchema),
-    columns: readValues(getMap(doc, PLAN_SYNC_MAPS.columns), planColumnSchema),
+    stairs: readValues(
+      getMap(yDocument, PLAN_SYNC_MAPS.stairs),
+      planStairSchema,
+    ),
+    columns: readValues(
+      getMap(yDocument, PLAN_SYNC_MAPS.columns),
+      planColumnSchema,
+    ),
     defenseWalls: readValues(
-      getMap(doc, PLAN_SYNC_MAPS.defenseWalls),
+      getMap(yDocument, PLAN_SYNC_MAPS.defenseWalls),
       planCellSchema,
     ),
     furniture: readValues(
-      getMap(doc, PLAN_SYNC_MAPS.furniture),
+      getMap(yDocument, PLAN_SYNC_MAPS.furniture),
       planFurnitureSchema,
     ),
     defenseGates: readValues(
-      getMap(doc, PLAN_SYNC_MAPS.defenseGates),
+      getMap(yDocument, PLAN_SYNC_MAPS.defenseGates),
       planCellSchema,
     ),
   });
@@ -261,11 +237,11 @@ function applyListChanges<T>(
   map: Y.Map<unknown>,
   previous: ReadonlyArray<T>,
   next: ReadonlyArray<T>,
-  getKey: (item: T) => string,
-  toValue: (item: T) => unknown,
+  getKey: (entry: T) => string,
+  toValue: (entry: T) => unknown,
 ): void {
-  const before = new Map(previous.map((item) => [getKey(item), item]));
-  const after = new Map(next.map((item) => [getKey(item), item]));
+  const before = new Map(previous.map((entry) => [getKey(entry), entry]));
+  const after = new Map(next.map((entry) => [getKey(entry), entry]));
 
   for (const key of before.keys()) {
     if (!after.has(key)) {
@@ -273,11 +249,11 @@ function applyListChanges<T>(
     }
   }
 
-  for (const [key, item] of after) {
+  for (const [key, entry] of after) {
     const old = before.get(key);
 
-    if (!old || !isEqual(old, item)) {
-      map.set(key, toValue(item));
+    if (!old || !isEqual(old, entry)) {
+      map.set(key, toValue(entry));
     }
   }
 }
@@ -286,11 +262,11 @@ function applyListChanges<T>(
  * Значение двери, окна, лестницы или колонны в карте: обычный объект без
  * `undefined`.
  *
- * @param item Объект плана.
+ * @param planObject Объект плана.
  * @returns Значение.
  */
 function toPlainValue(
-  item:
+  planObject:
     | PlanDoor
     | PlanWindow
     | PlanStair
@@ -298,7 +274,7 @@ function toPlainValue(
     | PlanFurniture
     | PlanCell,
 ): unknown {
-  return { ...item };
+  return { ...planObject };
 }
 
 /**
@@ -346,13 +322,13 @@ function insertRoom(
     target.set(field, value);
   }
 
-  target.set('order', order);
+  target.set(PLAN_SYNC_ROOM_KEYS.order, order);
 
   for (const cell of room.cells) {
     cells.set(getCellKey(cell.x, cell.y), true);
   }
 
-  target.set('cells', cells);
+  target.set(PLAN_SYNC_ROOM_KEYS.cells, cells);
   rooms.set(room.id, target);
 }
 
@@ -390,7 +366,11 @@ function applyRoomChanges(
     }
 
     const target = rooms.get(room.id);
-    const cells = target instanceof Y.Map ? target.get('cells') : undefined;
+
+    const cells =
+      target instanceof Y.Map
+        ? target.get(PLAN_SYNC_ROOM_KEYS.cells)
+        : undefined;
 
     // Комнату мог удалить другой человек, пока её правили здесь: тогда
     // она возвращается целиком.
@@ -423,14 +403,14 @@ function applyRoomChanges(
  * только то, что поменяла эта правка, поэтому чужие правки, пришедшие за это
  * время, не затираются.
  *
- * @param doc Общий документ.
+ * @param yDocument Общий документ.
  * @param previous План до правки.
  * @param next План после правки.
  * @param origin Источник транзакции (для личной отмены).
  * @param nextOrder Порядок для новых комнат; по умолчанию время создания.
  */
 export function applyPlanChanges(
-  doc: Y.Doc,
+  yDocument: Y.Doc,
   previous: PlanDocument,
   next: PlanDocument,
   origin: unknown,
@@ -507,7 +487,7 @@ export function applyPlanChanges(
           map,
           previous.furniture,
           next.furniture,
-          (item) => item.id,
+          (piece) => piece.id,
           toPlainValue,
         ),
     },
@@ -535,15 +515,15 @@ export function applyPlanChanges(
     },
   ];
 
-  doc.transact(() => {
+  yDocument.transact(() => {
     for (const { name, apply } of lists) {
-      apply(getMap(doc, name));
+      apply(getMap(yDocument, name));
     }
 
     // Новые комнаты встают в конец: порядок — время создания, а при споре
     // за клетку побеждает комната, нарисованная раньше.
     applyRoomChanges(
-      getMap(doc, PLAN_SYNC_MAPS.rooms),
+      getMap(yDocument, PLAN_SYNC_MAPS.rooms),
       previous.rooms,
       next.rooms,
       nextOrder,
@@ -554,23 +534,26 @@ export function applyPlanChanges(
 /**
  * Заведён ли в общем документе план из базы.
  *
- * @param doc Общий документ.
+ * @param yDocument Общий документ.
  * @returns true, если начальное содержимое уже есть.
  */
-export function isPlanDocSeeded(doc: Y.Doc): boolean {
-  return getMap(doc, PLAN_SYNC_MAPS.meta).get(META_SEEDED) === true;
+export function isPlanDocSeeded(yDocument: Y.Doc): boolean {
+  return (
+    getMap(yDocument, PLAN_SYNC_MAPS.meta).get(PLAN_SYNC_META_KEYS.seeded)
+    === true
+  );
 }
 
 /**
  * Версия плана в базе, известная участникам: с ней сохраняется следующая
  * правка.
  *
- * @param doc Общий документ.
+ * @param yDocument Общий документ.
  * @returns Версия или undefined, если план ещё не заведён.
  */
-export function getPlanDocVersion(doc: Y.Doc): number | undefined {
+export function getPlanDocVersion(yDocument: Y.Doc): number | undefined {
   const parsed = metaVersionSchema.safeParse(
-    getMap(doc, PLAN_SYNC_MAPS.meta).get(META_VERSION),
+    getMap(yDocument, PLAN_SYNC_MAPS.meta).get(PLAN_SYNC_META_KEYS.version),
   );
 
   return parsed.success ? parsed.data : undefined;
@@ -580,17 +563,20 @@ export function getPlanDocVersion(doc: Y.Doc): number | undefined {
  * Записывает версию плана после сохранения, чтобы следующий сохраняющий
  * участник не получил отказ из-за устаревшей версии.
  *
- * @param doc Общий документ.
+ * @param yDocument Общий документ.
  * @param version Новая версия.
  * @param origin Источник транзакции.
  */
 export function setPlanDocVersion(
-  doc: Y.Doc,
+  yDocument: Y.Doc,
   version: number,
   origin: unknown,
 ): void {
-  doc.transact(() => {
-    getMap(doc, PLAN_SYNC_MAPS.meta).set(META_VERSION, version);
+  yDocument.transact(() => {
+    getMap(yDocument, PLAN_SYNC_MAPS.meta).set(
+      PLAN_SYNC_META_KEYS.version,
+      version,
+    );
   }, origin);
 }
 
@@ -609,13 +595,14 @@ export function createPlanSeedUpdate(
 ): Uint8Array {
   const seed = new Y.Doc();
 
-  seed.clientID = SEED_CLIENT_BASE + (version % SEED_CLIENT_RANGE);
+  seed.clientID =
+    PLAN_SYNC_SEED_CLIENT.base + (version % PLAN_SYNC_SEED_CLIENT.range);
 
   seed.transact(() => {
     const meta = getMap(seed, PLAN_SYNC_MAPS.meta);
 
-    meta.set(META_SEEDED, true);
-    meta.set(META_VERSION, version);
+    meta.set(PLAN_SYNC_META_KEYS.seeded, true);
+    meta.set(PLAN_SYNC_META_KEYS.version, version);
   });
 
   // Порядок комнат при заведении — их место в списке из базы, а не время:
@@ -638,16 +625,5 @@ export function createPlanSeedUpdate(
  * @returns Пустой план.
  */
 function createEmptyDocument(): PlanDocument {
-  return {
-    levels: [],
-    rooms: [],
-    doors: [],
-    windows: [],
-    towerOpenings: [],
-    stairs: [],
-    columns: [],
-    defenseWalls: [],
-    furniture: [],
-    defenseGates: [],
-  };
+  return { ...createEmptyPlan(), levels: [] };
 }

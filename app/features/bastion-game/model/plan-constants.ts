@@ -6,6 +6,77 @@ import type {
   StairKind,
   TowerShape,
 } from './plan-schema';
+import type { PlanTheme } from './plan-types';
+
+/** Путь WebSocket совместного редактора плана: `/{bastionId}`. */
+export const PLAN_SYNC_PATH = '/bastion-plan-sync';
+
+/** Цвета участников: различимы на светлой и тёмной теме. */
+export const PLAN_PRESENCE_COLORS = [
+  0xe5484d, 0x3e63dd, 0x30a46c, 0xf76b15, 0x8e4ec6, 0x12a594, 0xd6409f,
+  0xa18072,
+] as const;
+
+/** Множитель строкового хеша, по которому участнику выбирается цвет. */
+export const PLAN_PRESENCE_HASH_MULTIPLIER = 31;
+
+/** Поля состояния присутствия Yjs: кто открыл план и где его указатель. */
+export const PLAN_PRESENCE_FIELDS = {
+  user: 'user',
+  pointer: 'pointer',
+} as const;
+
+/** Как часто отправлять положение указателя, мс. */
+export const PLAN_POINTER_THROTTLE_MS = 50;
+
+/** Пауза после правки перед автосохранением, мс. */
+export const PLAN_AUTOSAVE_DELAY_MS = 1500;
+
+/** Сколько ждать общий документ, прежде чем рисовать без соавторов, мс. */
+export const PLAN_SYNC_TIMEOUT_MS = 5000;
+
+/** Запасные цвета холста — если тему прочитать не удалось (SSR, тесты). */
+export const PLAN_THEME_FALLBACK: PlanTheme = {
+  background: 0x0f141c,
+  grid: 0x1f2835,
+  gridMajor: 0x2b3545,
+  text: 0xe3e8f0,
+  muted: 0x9aa6b8,
+  accent: 0xc8a24a,
+  error: 0xe0806f,
+  shade: 0x2b3545,
+};
+
+/** CSS-переменные Nuxt UI, из которых берётся тема холста. */
+export const PLAN_THEME_VARIABLES: Record<keyof PlanTheme, string> = {
+  background: '--ui-bg',
+  grid: '--ui-border',
+  gridMajor: '--ui-border-accented',
+  text: '--ui-text',
+  muted: '--ui-text-muted',
+  accent: '--ui-primary',
+  error: '--ui-error',
+  shade: '--ui-bg-accented',
+};
+
+/** Цвета темы холста по порядку чтения. */
+export const PLAN_THEME_KEYS: ReadonlyArray<keyof PlanTheme> = [
+  'background',
+  'grid',
+  'gridMajor',
+  'text',
+  'muted',
+  'accent',
+  'error',
+  'shade',
+];
+
+/** Атрибуты корня страницы, смена которых меняет тему сайта. */
+export const PLAN_THEME_OBSERVED_ATTRIBUTES = [
+  'class',
+  'data-theme',
+  'style',
+] as const;
 
 /** Ограничения плана — те же, что проверяет сервер (`PlanRules`). */
 export const PLAN_LIMITS = {
@@ -246,9 +317,7 @@ export const PLAN_EDIT_TOOLS: ReadonlySet<PlanTool> = new Set(
 );
 
 /** Группы инструментов на панели: навигация, пол, детали. */
-export const PLAN_TOOL_GROUPS: ReadonlyArray<
-  ReadonlyArray<{ tool: PlanTool; icon: string; label: string; key: string }>
-> = [
+export const PLAN_TOOL_GROUPS: ReadonlyArray<ReadonlyArray<PlanToolOption>> = [
   [
     {
       tool: 'select',
@@ -459,6 +528,165 @@ export const DIRECTION_LABELS: Record<CellSide, string> = {
   W: 'Подъём на запад',
 };
 
+/** Этаж, на котором стоит защитная стена и считаются ворота. */
+export const PLAN_GROUND_LEVEL = 0;
+
+/** Шаг размера винтовой лестницы, клеток: так она остаётся по центру башни. */
+export const PLAN_SPIRAL_SIZE_STEP = 2;
+
+/** Наименьшая сторона винтовой лестницы, клеток. */
+export const PLAN_SPIRAL_MIN_SIDE = 1;
+
+/** Клавиши редактора помимо клавиш инструментов. */
+export const PLAN_HOTKEYS = {
+  /** С Ctrl или Cmd — отмена, вместе с Shift — повтор. */
+  undo: 'z',
+  /** Поворот предмета, который ставит инструмент мебели. */
+  rotate: 'r',
+} as const;
+
+/** Кнопка инструмента на панели. */
+export interface PlanToolOption {
+  tool: PlanTool;
+  icon: string;
+  label: string;
+  key: string;
+}
+
+/** Цвет и вид кнопки выбора. */
+export interface PlanButtonLook {
+  color: 'primary' | 'neutral';
+  variant: 'solid' | 'soft' | 'outline' | 'ghost';
+}
+
+/**
+ * Как выглядят кнопки выбора: выбранная подсвечена. `choice` — настройки
+ * инструмента, `tool` — инструменты на панели, `panel` — формы башни и
+ * предметы во всплывающих панелях.
+ */
+export const PLAN_BUTTON_LOOKS: Record<
+  'choice' | 'tool' | 'panel',
+  Record<'active' | 'idle', PlanButtonLook>
+> = {
+  choice: {
+    active: { color: 'primary', variant: 'solid' },
+    idle: { color: 'neutral', variant: 'outline' },
+  },
+  tool: {
+    active: { color: 'primary', variant: 'solid' },
+    idle: { color: 'neutral', variant: 'ghost' },
+  },
+  panel: {
+    active: { color: 'primary', variant: 'soft' },
+    idle: { color: 'neutral', variant: 'ghost' },
+  },
+};
+
+/** Подсказки клавиш на кнопках отмены и повтора. */
+export const PLAN_HISTORY_KBDS = {
+  undo: ['meta', PLAN_HOTKEYS.undo],
+  redo: ['meta', 'shift', PLAN_HOTKEYS.undo],
+} as const;
+
+/** Медиазапрос пальца вместо мыши: подсказки без Shift, правой кнопки и колеса. */
+export const PLAN_COARSE_POINTER_QUERY = '(pointer: coarse)';
+
+/** Кнопки мыши, которыми двигают холст (`PointerEvent.button`). */
+export const PLAN_PAN_MOUSE_BUTTONS: ReadonlyArray<number> = [1, 2];
+
+/** Локаль чисел в подписях редактора. */
+export const PLAN_NUMBER_LOCALE = 'ru-RU';
+
+/** Значение пункта «без сооружения»: у USelect пустое значение не выбирается. */
+export const PLAN_NO_FACILITY = 'none';
+
+/** Начертание подписей на холсте. */
+export const PLAN_CANVAS_TEXT = {
+  boldWeight: '700',
+  regularWeight: '400',
+  /** Обводка цветом фона, чтобы подпись читалась поверх линий, пикселей. */
+  strokeWidth: 3,
+} as const;
+
+/** Прозрачность слоёв холста. */
+export const PLAN_ALPHA = {
+  grid: 0.6,
+  /** Штриховка стен башни. */
+  hatch: 0.7,
+  /** Штриховка сплошных клеток защитной стены. */
+  solidHatch: 0.6,
+  /** Заливка защитной стены и пунктир этажа ниже. */
+  shade: 0.5,
+  /** Подложка ворот поверх штриховки стены. */
+  gateBackground: 0.9,
+  /** Выбранная комната и выбранные объекты. */
+  selected: 0.16,
+  /** Сердцевина выбранной башни: светлее, чтобы штриховка не терялась. */
+  selectedTowerCore: 0.14,
+  /** Пол комнаты цветом её сооружения. */
+  facilityTint: 0.08,
+  /** Набросок комнаты или башни, пока жест не закончен. */
+  preview: 0.15,
+  /** Клетки, куда переедут перетаскиваемые объекты. */
+  moveGhost: 0.25,
+  /** Клетка под указателем. */
+  hover: 0.8,
+} as const;
+
+/**
+ * Толщина линий холста в экранных пикселях: множитель `hairline`, чтобы
+ * толщина не зависела от масштаба.
+ */
+export const PLAN_STROKE = {
+  window: 1.3,
+  /** Лестницы, мебель и пунктир прибывающих лестниц. */
+  detail: 1.4,
+  medium: 1.5,
+  spiralArrow: 1.6,
+  outline: 2,
+  /** Обвод стен башни. */
+  wall: 2.5,
+  bold: 3,
+} as const;
+
+/** Заметная линия сетки — каждые столько клеток (25 футов). */
+export const PLAN_GRID_MAJOR_STEP = 5;
+
+/** Наименьшая толщина стены на экране при любом масштабе, пикселей. */
+export const PLAN_WALL_MIN_PIXELS = 3;
+
+/** Отступ лестницы от края её рамки, доля клетки. */
+export const PLAN_STAIR_INSET = 0.08;
+
+/** Стрелка подъёма прямой лестницы: доля длины и размер крыльев в клетках. */
+export const PLAN_STAIR_ARROW = { reach: 0.7, wing: 0.18 } as const;
+
+/** Отступ подписи «Вверх/Вниз» от лестницы, клеток. */
+export const PLAN_STAIR_LABEL_OFFSET = {
+  /** Под винтовой лестницей. */
+  spiral: 0.35,
+  alongX: 0.6,
+  alongY: 0.4,
+} as const;
+
+/** Решётка ворот: сколько прутьев и отступ крайних от края проёма, доля клетки. */
+export const PLAN_PORTCULLIS_BARS = 5;
+export const PLAN_PORTCULLIS_INSET = 0.08;
+
+/** Межстрочный интервал второй строки подписи комнаты. */
+export const PLAN_LABEL_LINE_HEIGHT = 1.3;
+
+/** Указатель соавтора: радиус точки и отступ имени, экранных пикселей. */
+export const PLAN_CURSOR = { dotRadius: 5, nameOffset: 20 } as const;
+
+/** Подсветка двери или окна под указателем, доли клетки. */
+export const PLAN_HOVER = {
+  /** Кольцо проёма в стене башни. */
+  ringRadius: 0.4,
+  markerLength: 0.8,
+  markerThickness: 0.2,
+} as const;
+
 /**
  * Цвета сооружений в списке и метки на холсте. Холст рисует WebGL, CSS-токены
  * туда не доходят, поэтому палитра задана числами; подобраны так, чтобы
@@ -508,6 +736,8 @@ export const PLAN_LABELS = {
   mergeRooms: 'Объединить',
   mergeRoomsHint: 'Башни и комнаты разных этажей не объединяются',
   facilities: 'Сооружения',
+  facilityOption: '{name} · {area}',
+  pageTitle: '{title}: {name}',
   noFacilities:
     'У персонажей ещё нет сооружений — выберите их на странице бастиона.',
   area: '{used} / {max}',
@@ -559,3 +789,17 @@ export const PLAN_LABELS = {
   wallsOpen: 'Стена не замыкает бастион: до комнат можно дойти снаружи.',
   newRoom: '{kind} {number}',
 } as const;
+
+/**
+ * Вкладки боковой панели: комнаты этажа и сооружения. Вместе список не
+ * помещался в панель.
+ */
+export const PLAN_SIDE_TABS = [
+  { label: PLAN_LABELS.rooms, value: 'rooms', slot: 'rooms' },
+  { label: PLAN_LABELS.facilities, value: 'facilities', slot: 'facilities' },
+] as const;
+
+export type PlanSideTab = (typeof PLAN_SIDE_TABS)[number]['value'];
+
+/** Вкладка боковой панели при открытии редактора. */
+export const PLAN_DEFAULT_SIDE_TAB: PlanSideTab = 'rooms';

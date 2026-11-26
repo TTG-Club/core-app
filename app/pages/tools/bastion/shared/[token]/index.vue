@@ -10,6 +10,7 @@
     BASTION_GAME_LABELS,
     BASTION_SHARE_LABELS,
     fetchSharedBastion,
+    getBastionDataKey,
     getBastionErrorMessage,
     getBastionRoute,
     getSharedBastionPlanRoute,
@@ -40,18 +41,24 @@
     typeof route.params.token === 'string' ? route.params.token : '',
   );
 
-  const { data, status, error, refresh } = useAsyncData(
-    () => `shared-player-bastion-${token.value}`,
+  const {
+    data: sharedBastion,
+    status,
+    error,
+    refresh,
+  } = useAsyncData(
+    () => getBastionDataKey('shared', token.value),
     () => fetchSharedBastion(token.value),
     { server: false, lazy: true },
   );
 
   useSeoMeta({
-    title: () => data.value?.bastion.name ?? BASTION_SHARE_LABELS.sharedTitle,
+    title: () =>
+      sharedBastion.value?.bastion.name ?? BASTION_SHARE_LABELS.sharedTitle,
     robots: 'noindex',
   });
 
-  const bastion = computed(() => data.value?.bastion);
+  const bastion = computed(() => sharedBastion.value?.bastion);
   const isAuthOpen = ref(false);
   const isRequesting = ref(false);
 
@@ -67,6 +74,13 @@
   const isNotFound = computed(
     () => error.value?.statusCode === StatusCodes.NOT_FOUND,
   );
+
+  const isLoading = computed(
+    () => status.value === 'pending' || status.value === 'idle',
+  );
+
+  /** Вид заглушки ошибки: «не найдено» или общая ошибка. */
+  const resultStatus = computed(() => (isNotFound.value ? '404' : 'error'));
 
   const errorTitle = computed(() =>
     isNotFound.value
@@ -86,8 +100,8 @@
    * @param access Доступ после запроса.
    */
   function setAccess(access: BastionShareAccess): void {
-    if (data.value) {
-      data.value = { ...data.value, access };
+    if (sharedBastion.value) {
+      sharedBastion.value = { ...sharedBastion.value, access };
     }
   }
 
@@ -120,7 +134,7 @@
   >
     <div class="flex flex-col gap-6">
       <div
-        v-if="status === 'pending' || status === 'idle'"
+        v-if="isLoading"
         class="flex flex-col gap-3"
       >
         <USkeleton class="h-8 w-1/3" />
@@ -129,8 +143,8 @@
       </div>
 
       <UiResult
-        v-else-if="status === 'error' || !data || !bastion"
-        :status="isNotFound ? '404' : 'error'"
+        v-else-if="status === 'error' || !sharedBastion || !bastion"
+        :status="resultStatus"
         :title="errorTitle"
         :sub-title="errorDetails"
       />
@@ -172,7 +186,7 @@
             </UButton>
 
             <UButton
-              v-if="data.access === 'ANONYMOUS'"
+              v-if="sharedBastion.access === 'ANONYMOUS'"
               icon="tabler:login"
               color="neutral"
               variant="outline"
@@ -182,7 +196,7 @@
             </UButton>
 
             <UButton
-              v-else-if="data.access === 'NONE'"
+              v-else-if="sharedBastion.access === 'NONE'"
               icon="tabler:pencil-question"
               :loading="isRequesting"
               @click.left.exact.prevent="requestEdit"
@@ -191,7 +205,7 @@
             </UButton>
 
             <UBadge
-              v-else-if="data.access === 'PENDING'"
+              v-else-if="sharedBastion.access === 'PENDING'"
               color="warning"
               variant="subtle"
               size="lg"

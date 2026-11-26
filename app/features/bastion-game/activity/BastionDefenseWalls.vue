@@ -26,6 +26,11 @@
 
   const isBuilding = computed(() => !!walls.value?.building);
 
+  /** Подсказка у кнопки стройки: идёт ли уже стройка. */
+  const buildTooltip = computed(() =>
+    isBuilding.value ? DEFENSE_WALL_LABELS.busy : DEFENSE_WALL_LABELS.hint,
+  );
+
   /** Стены строит тот, кто может править запущенный бастион. */
   const canBuild = computed(
     () => editing && bastion.canEdit && bastion.status === 'ACTIVE',
@@ -90,7 +95,7 @@
 
       <UTooltip
         v-if="canBuild"
-        :text="isBuilding ? DEFENSE_WALL_LABELS.busy : DEFENSE_WALL_LABELS.hint"
+        :text="buildTooltip"
         :ui="{ content: 'max-w-sm h-auto' }"
       >
         <UButton

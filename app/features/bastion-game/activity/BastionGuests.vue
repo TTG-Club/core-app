@@ -6,8 +6,10 @@
   import { useBastionAction } from '../composables';
   import {
     BASTION_GUEST_ICONS,
+    canGiveBastionOrders,
     dismissBastionGuest,
     EVENT_LABELS,
+    getGuestDismissLabel,
     getTurnsSpanText,
   } from '../model';
 
@@ -28,12 +30,7 @@
 
   const guests = computed(() => bastion.guests ?? []);
 
-  const canDismiss = computed(
-    () =>
-      bastion.status === 'ACTIVE'
-      && (bastion.canManage
-        || bastion.members.some((member) => member.canGiveOrders)),
-  );
+  const canDismiss = computed(() => canGiveBastionOrders(bastion));
 
   /**
    * Подпись гостя: кто, сколько, с какого хода и когда уедет.
@@ -53,18 +50,6 @@
             left: getTurnsSpanText(guest.leavesOnTurn, bastion.turn),
           })
       : terms;
-  }
-
-  /**
-   * Подпись кнопки: беженцам находят дом, остальных отсылают.
-   *
-   * @param guest Гость.
-   * @returns Подпись.
-   */
-  function getDismissLabel(guest: BastionGuest): string {
-    return guest.kind.value === 'REFUGEES'
-      ? EVENT_LABELS.dismissRefugees
-      : EVENT_LABELS.dismiss;
   }
 
   /**
@@ -116,7 +101,7 @@
           :loading="isRunning"
           @click.left.exact.prevent="dismiss(guest.id)"
         >
-          {{ getDismissLabel(guest) }}
+          {{ getGuestDismissLabel(guest) }}
         </UButton>
       </li>
     </ul>

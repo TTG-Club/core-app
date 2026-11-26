@@ -3,7 +3,13 @@
 
   import { fillTemplate } from '~bastions/model';
 
-  import { ACTIVITY_LABELS, BASTION_CARD_UI, LAST_TURN_LABELS } from '../model';
+  import {
+    ACTIVITY_LABELS,
+    BASTION_CARD_UI,
+    getLastTurnHiddenKey,
+    getPendingEvents,
+    LAST_TURN_LABELS,
+  } from '../model';
   import { BastionEventCard } from './ui';
 
   /**
@@ -24,7 +30,7 @@
 
   /** Номер хода, итоги которого пользователь скрыл: свой для каждого бастиона. */
   const hiddenTurn = useLocalStorage<number>(
-    () => `bastion-last-turn-hidden-${bastion.id}`,
+    () => getLastTurnHiddenKey(bastion.id),
     0,
   );
 
@@ -53,9 +59,7 @@
   );
 
   /** События, которые ждут решения: их показывает `BastionPendingEvents` ниже. */
-  const pendingEvents = computed(
-    () => activity?.events.filter((event) => event.status === 'PENDING') ?? [],
-  );
+  const pendingEvents = computed(() => getPendingEvents(activity));
 
   const isVisible = computed(
     () => !!lastTurn.value && lastTurn.value.number !== hiddenTurn.value,

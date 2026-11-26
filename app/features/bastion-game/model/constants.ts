@@ -5,6 +5,24 @@ export const PLAYER_BASTIONS_API_PATH = '/api/v2/player-bastions';
 /** Справочник сооружений для экрана выбора (раздел «Бастионы» сайта). */
 export const BASTION_FACILITY_CATALOG_API_PATH = '/api/v2/bastions/search';
 
+/** Карточка сооружения бастиона в core-api: `/{url}`. */
+export const BASTION_FACILITY_API_PATH = '/api/v2/bastions';
+
+/**
+ * Ключи `useAsyncData`: одинаковый ключ у разных страниц означает общий
+ * кеш, поэтому строятся они только здесь.
+ */
+export const BASTION_DATA_KEYS = {
+  myBastions: 'my-player-bastions',
+  bastion: 'player-bastion',
+  activity: 'player-bastion-activity',
+  shared: 'shared-player-bastion',
+  plan: 'bastion-plan',
+  sharedPlan: 'bastion-plan-shared',
+} as const;
+
+export type BastionDataKind = keyof typeof BASTION_DATA_KEYS;
+
 /** Пространства стартовых базовых сооружений: одно тесное, одно вместительное. */
 export const STARTING_BASIC_SPACES = ['CRAMPED', 'ROOMY'] as const;
 
@@ -52,7 +70,20 @@ export const FACILITY_SETUP_LABELS = {
   creaturesEmpty: 'Зверинец пуст. Свободно {free} из {capacity} больших мест',
   creatureNotDefender: '{name} (не защитник)',
   squares: 'кв.',
+  /** Пространство сооружения: «Тесное (4 кв.)». */
+  spaceTerms: '{name} ({squares} {unit})',
+  /** Выбор сооружения и что в нём выбрано: «Сад: травы». */
+  choiceTerms: '{name}: {options}',
 } as const;
+
+/** Разделитель подробностей сооружения в одну строку. */
+export const FACILITY_DETAILS_SEPARATOR = ' · ';
+
+/** Разделитель выборов сооружения в одну строку. */
+export const FACILITY_CHOICES_SEPARATOR = '; ';
+
+/** Сколько заглушек показывать, пока грузится справочник сооружений. */
+export const FACILITY_SKELETON_COUNT = 4;
 
 /** Значение вкладки «Бастионы» на странице игры. */
 export const GAME_BASTIONS_TAB_VALUE = 'bastions';
@@ -62,6 +93,30 @@ export const MY_BASTIONS_ROUTE = '/tools/bastion';
 
 /** Бастион по ссылке «поделиться»: открывается кем угодно, только на чтение. */
 export const SHARED_BASTION_ROUTE = '/tools/bastion/shared';
+
+/** Хвост адреса страницы плана бастиона. */
+export const BASTION_PLAN_ROUTE_SUFFIX = '/plan';
+
+/** Страница игры каталога «Поиска игр». */
+export const GAMES_ROUTE = '/games';
+
+/** Раздел сооружений бастиона в справочнике. */
+export const BASTION_FACILITIES_ROUTE = '/bastions';
+
+/** Раздел магических предметов в справочнике. */
+export const MAGIC_ITEMS_ROUTE = '/magic-items';
+
+/** Раздел бестиария в справочнике. */
+export const BESTIARY_ROUTE = '/bestiary';
+
+/** Ключ хранилища с номером хода, итоги которого пользователь скрыл. */
+export const LAST_TURN_HIDDEN_STORAGE_KEY = 'bastion-game:last-turn-hidden';
+
+/** Версия бастиона, который ещё не сохранён на сервере. */
+export const NEW_BASTION_VERSION = 0;
+
+/** Сколько строк-заглушек показывать, пока грузится список. */
+export const BASTION_SKELETON_COUNT = 3;
 
 export const BASTION_SHARE_LABELS = {
   share: 'Поделиться',
@@ -116,6 +171,12 @@ export const SPECIAL_FACILITY_PROGRESSION: ReadonlyArray<{
 export const CHARACTER_LEVEL_MIN = 1;
 export const CHARACTER_LEVEL_MAX = 20;
 export const BASTION_NAME_MAX_LENGTH = 100;
+
+/** Наибольшая длина итога приказа, который вписывает мастер. */
+export const ORDER_RESULT_MAX_LENGTH = 4000;
+
+/** Наибольшая длина пометки к операции казны. */
+export const TREASURY_NOTE_MAX_LENGTH = 500;
 
 export const PLAYER_BASTION_STATUS_LABELS: Record<PlayerBastionStatus, string> =
   {
@@ -275,6 +336,12 @@ export const ARTISAN_TOOL_ICONS: ReadonlyArray<
 /** Сколько четвертей места занимает большое существо в вольерах зверинца. */
 export const MENAGERIE_LARGE_SPACE = 4;
 
+/** Дробные доли большого места в вольерах: по остатку от деления на четыре. */
+export const QUARTER_FRACTIONS = ['', '¼', '½', '¾'] as const;
+
+/** Сколько четвертей места занимает в вольерах существо меньше большого. */
+export const MENAGERIE_MEDIUM_SPACE = 1;
+
 /** Размеры существ, которых держат в вольерах зверинца. */
 export const MENAGERIE_SIZES = [
   { value: 'TINY', label: 'Крошечный' },
@@ -285,5 +352,26 @@ export const MENAGERIE_SIZES = [
 
 export type MenagerieSizeCode = (typeof MENAGERIE_SIZES)[number]['value'];
 
+/** Размеры существ пунктами списка. */
+export const MENAGERIE_SIZE_ITEMS: Array<{
+  label: string;
+  value: MenagerieSizeCode;
+}> = MENAGERIE_SIZES.map((size) => ({
+  label: size.label,
+  value: size.value,
+}));
+
+/** Размер существа не из таблицы, с которого начинается форма зверинца. */
+export const MENAGERIE_DEFAULT_SIZE: MenagerieSizeCode = 'MEDIUM';
+
+/** Размер животного не из таблицы, с которого начинается форма конюшни. */
+export const STABLE_DEFAULT_SIZE: MenagerieSizeCode = 'LARGE';
+
+/** Значение пункта «Другое существо» / «Другое животное» в списках. */
+export const CUSTOM_CREATURE_VALUE = 'CUSTOM';
+
 /** Сколько половин места занимает большое животное в конюшне. */
 export const STABLE_LARGE_SPACE = 2;
+
+/** Сколько половин места занимает в конюшне животное меньше большого. */
+export const STABLE_MEDIUM_SPACE = 1;

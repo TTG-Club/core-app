@@ -3,7 +3,11 @@
 
   import { fillTemplate } from '~bastions/model';
 
-  import { PLAN_FACILITY_DRAG_TYPE, PLAN_LABELS } from '../../model';
+  import {
+    PLAN_FACILITY_DRAG_TYPE,
+    PLAN_LABELS,
+    toCssColor,
+  } from '../../model';
 
   /**
    * Сооружения бастиона: цвет на плане и счётчик «занято / можно». Сооружение
@@ -64,13 +68,30 @@
   }
 
   /**
-   * Цвет для образца в CSS: холст хранит его числом.
+   * Выбирает сооружение касанием, если его можно поставить на план.
    *
-   * @param color Цвет 0xRRGGBB.
-   * @returns Цвет в виде `#rrggbb`.
+   * @param facility Сооружение.
    */
-  function toCssColor(color: number): string {
-    return `#${color.toString(16).padStart(6, '0')}`;
+  function handlePick(facility: PlanPaletteFacility): void {
+    if (isDraggable(facility)) {
+      emit('pick', facility);
+    }
+  }
+
+  /**
+   * Оформление строки: перетаскиваемая отзывается на указатель, выбранная
+   * касанием подсвечена.
+   *
+   * @param facility Сооружение.
+   * @returns Классы строки.
+   */
+  function getRowClass(facility: PlanPaletteFacility): Array<string> {
+    return [
+      isDraggable(facility)
+        ? 'cursor-grab hover:bg-elevated active:cursor-grabbing'
+        : '',
+      facility.id === pickedId ? 'bg-elevated ring-1 ring-primary' : '',
+    ];
   }
 
   /**
@@ -117,15 +138,9 @@
       v-for="facility in facilities"
       :key="facility.id"
       class="flex items-center gap-2 rounded-md px-1 py-0.5 text-sm"
-      :class="{
-        'cursor-grab hover:bg-elevated active:cursor-grabbing':
-          isDraggable(facility),
-        'bg-elevated ring-1 ring-primary': facility.id === pickedId,
-      }"
+      :class="getRowClass(facility)"
       :draggable="isDraggable(facility)"
-      @click.left.exact.prevent="
-        isDraggable(facility) && emit('pick', facility)
-      "
+      @click.left.exact.prevent="handlePick(facility)"
       @dragstart="handleDragStart($event, facility)"
       @dragend="emit('drag-end')"
     >

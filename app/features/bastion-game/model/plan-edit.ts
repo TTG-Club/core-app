@@ -29,6 +29,7 @@ import {
 } from './plan-constants';
 import {
   findTowerRing,
+  FULL_TURN_DEGREES,
   getCanonicalEdge,
   getCellAt,
   getCellKey,
@@ -139,6 +140,12 @@ export function prunePlan(document: PlanDocument): PlanDocument {
     ]),
   );
 
+  /**
+   * Стоит ли проём на стене своего этажа.
+   *
+   * @param edge Ребро двери или окна.
+   * @returns true, если на ребре стена.
+   */
   const isOnWall = (edge: PlanEdge): boolean => {
     const occupancy = occupancies.get(edge.level);
 
@@ -165,7 +172,7 @@ export function prunePlan(document: PlanDocument): PlanDocument {
       (stair) => levels.has(stair.level) && levels.has(stair.toLevel),
     ),
     columns: document.columns.filter((column) => levels.has(column.level)),
-    furniture: document.furniture.filter((item) => levels.has(item.level)),
+    furniture: document.furniture.filter((piece) => levels.has(piece.level)),
     defenseGates: document.defenseGates.filter((cell) =>
       wallCells.has(getCellKey(cell.x, cell.y)),
     ),
@@ -189,6 +196,13 @@ export function resolvePlanConflicts(document: PlanDocument): PlanDocument {
   const levelSet = new Set(levels);
   const taken = new Set<string>();
 
+  /**
+   * Оставляет комнате только клетки, которые ещё никто не занял, и
+   * отмечает их занятыми.
+   *
+   * @param room Комната.
+   * @returns Комната без чужих клеток.
+   */
   const claim = (room: PlanRoom): PlanRoom => {
     const cells = room.cells.filter((cell) => {
       const key = `${room.level}:${getCellKey(cell.x, cell.y)}`;
@@ -279,9 +293,9 @@ function claimCells(
   const added = [...taken]
     .filter((key) => !own.has(key))
     .map((key) => {
-      const [x = 0, y = 0] = key.split(':').map(Number);
+      const [column = 0, row = 0] = key.split(':').map(Number);
 
-      return { x, y };
+      return { x: column, y: row };
     });
 
   const merged = [...target.cells, ...added];
@@ -563,7 +577,15 @@ export function eraseCells(
   cells: ReadonlyArray<PlanCell>,
 ): PlanDocument {
   const erased = new Set(cells.map((cell) => getCellKey(cell.x, cell.y)));
-  const isKept = (cell: PlanCell) => !erased.has(getCellKey(cell.x, cell.y));
+
+  /**
+   * Уцелела ли клетка после стирания.
+   *
+   * @param cell Клетка.
+   * @returns true, если её не стирали.
+   */
+  const isKept = (cell: PlanCell): boolean =>
+    !erased.has(getCellKey(cell.x, cell.y));
 
   const hasFloor = document.rooms.some(
     (room) =>
@@ -611,7 +633,7 @@ export function eraseObjectAt(
   if (column) {
     return {
       ...document,
-      columns: document.columns.filter((item) => item.id !== column.id),
+      columns: document.columns.filter((entry) => entry.id !== column.id),
     };
   }
 
@@ -620,7 +642,9 @@ export function eraseObjectAt(
   if (furniture) {
     return {
       ...document,
-      furniture: document.furniture.filter((item) => item.id !== furniture.id),
+      furniture: document.furniture.filter(
+        (piece) => piece.id !== furniture.id,
+      ),
     };
   }
 
@@ -629,7 +653,7 @@ export function eraseObjectAt(
   if (stair) {
     return {
       ...document,
-      stairs: document.stairs.filter((item) => item.id !== stair.id),
+      stairs: document.stairs.filter((entry) => entry.id !== stair.id),
     };
   }
 
@@ -642,14 +666,16 @@ export function eraseObjectAt(
 
   if (ring) {
     const opening = document.towerOpenings.find(
-      (item) => item.roomId === ring.room.id && item.angle === ring.angle,
+      (towerOpening) =>
+        towerOpening.roomId === ring.room.id
+        && towerOpening.angle === ring.angle,
     );
 
     return opening
       ? {
           ...document,
           towerOpenings: document.towerOpenings.filter(
-            (item) => item !== opening,
+            (towerOpening) => towerOpening !== opening,
           ),
         }
       : removeRoom(document, ring.room.id);
@@ -663,7 +689,10 @@ export function eraseObjectAt(
 
   const key = getEdgeKey(edge);
   const doors = document.doors.filter((door) => getEdgeKey(door) !== key);
-  const windows = document.windows.filter((item) => getEdgeKey(item) !== key);
+
+  const windows = document.windows.filter(
+    (windowEdge) => getEdgeKey(windowEdge) !== key,
+  );
 
   return doors.length === document.doors.length
     && windows.length === document.windows.length
@@ -695,7 +724,9 @@ function placeTowerOpening(
   opening: PlanTowerOpening,
 ): PlanDocument {
   const existing = document.towerOpenings.find(
-    (item) => item.roomId === opening.roomId && item.angle === opening.angle,
+    (towerOpening) =>
+      towerOpening.roomId === opening.roomId
+      && towerOpening.angle === opening.angle,
   );
 
   if (!existing) {
@@ -713,8 +744,8 @@ function placeTowerOpening(
 
   return {
     ...document,
-    towerOpenings: document.towerOpenings.map((item) =>
-      item === existing ? { ...item, kind } : item,
+    towerOpenings: document.towerOpenings.map((towerOpening) =>
+      towerOpening === existing ? { ...towerOpening, kind } : towerOpening,
     ),
   };
 }
@@ -761,15 +792,18 @@ export function placeOpening(
   }
 
   const key = getEdgeKey(edge);
-  const door = document.doors.find((item) => getEdgeKey(item) === key);
-  const windows = document.windows.filter((item) => getEdgeKey(item) !== key);
+  const door = document.doors.find((entry) => getEdgeKey(entry) === key);
+
+  const windows = document.windows.filter(
+    (windowEdge) => getEdgeKey(windowEdge) !== key,
+  );
 
   if (opening.type === 'WINDOW') {
     return windows.length !== document.windows.length
       ? document
       : {
           ...document,
-          doors: document.doors.filter((item) => item !== door),
+          doors: document.doors.filter((entry) => entry !== door),
           windows: [...document.windows, edge],
         };
   }
@@ -779,8 +813,8 @@ export function placeOpening(
 
     return {
       ...document,
-      doors: document.doors.map((item) =>
-        item === door ? { ...item, kind } : item,
+      doors: document.doors.map((entry) =>
+        entry === door ? { ...entry, kind } : entry,
       ),
     };
   }
@@ -827,7 +861,13 @@ function fitSpiralSide(
   limit: number,
   requested = limit,
 ): number {
-  const fits = (side: number) => Number.isInteger(center - side / 2);
+  /**
+   * Встаёт ли лестница этой стороны ровно по клеткам вокруг центра.
+   *
+   * @param side Сторона в клетках.
+   * @returns true, если края лестницы попадают на линии сетки.
+   */
+  const fits = (side: number): boolean => Number.isInteger(center - side / 2);
 
   for (let side = Math.min(limit, requested); side >= 1; side--) {
     if (fits(side)) {
@@ -856,12 +896,12 @@ function getSpiralBounds(
   room: PlanRoom,
 ): { cx: number; cy: number; limit: number } | undefined {
   if (room.kind === 'TOWER' && room.shape) {
-    const { cx, cy } = room.shape;
+    const { cx: centerX, cy: centerY } = room.shape;
     const apothem = getTowerApothem(room.shape);
 
     return {
-      cx,
-      cy,
+      cx: centerX,
+      cy: centerY,
       limit: Math.min(
         PLAN_LIMITS.maxStairSide,
         Math.max(1, Math.floor(apothem * 2) - 1),
@@ -873,12 +913,12 @@ function getSpiralBounds(
     return undefined;
   }
 
-  const xs = room.cells.map((cell) => cell.x);
-  const ys = room.cells.map((cell) => cell.y);
-  const left = Math.min(...xs);
-  const top = Math.min(...ys);
-  const width = Math.max(...xs) - left + 1;
-  const height = Math.max(...ys) - top + 1;
+  const columns = room.cells.map((cell) => cell.x);
+  const rows = room.cells.map((cell) => cell.y);
+  const left = Math.min(...columns);
+  const top = Math.min(...rows);
+  const width = Math.max(...columns) - left + 1;
+  const height = Math.max(...rows) - top + 1;
 
   return {
     cx: left + width / 2,
@@ -984,8 +1024,10 @@ export function addColumn(
   column: PlanColumn,
 ): PlanDocument {
   const isTaken = document.columns.some(
-    (item) =>
-      item.level === column.level && item.x === column.x && item.y === column.y,
+    (existing) =>
+      existing.level === column.level
+      && existing.x === column.x
+      && existing.y === column.y,
   );
 
   return isTaken
@@ -1013,18 +1055,18 @@ export function findFurnitureAt(
   point: PlanCell,
 ): PlanFurniture | undefined {
   // Сверху тот, кто нарисован последним: ковёр под остальной мебелью.
-  return sortFurnitureByLayer(document.furniture).findLast((item) => {
-    if (item.level !== level) {
+  return sortFurnitureByLayer(document.furniture).findLast((piece) => {
+    if (piece.level !== level) {
       return false;
     }
 
-    const { width, depth } = getFurnitureSize(item);
+    const { width, depth } = getFurnitureSize(piece);
 
     return (
-      point.x >= item.x
-      && point.x <= item.x + width
-      && point.y >= item.y
-      && point.y <= item.y + depth
+      point.x >= piece.x
+      && point.x <= piece.x + width
+      && point.y >= piece.y
+      && point.y <= piece.y + depth
     );
   });
 }
@@ -1043,12 +1085,12 @@ export function findStairAt(
   point: PlanCell,
 ): PlanStair | undefined {
   return document.stairs.find(
-    (item) =>
-      item.level === level
-      && point.x >= item.x
-      && point.x <= item.x + item.width
-      && point.y >= item.y
-      && point.y <= item.y + item.height,
+    (stair) =>
+      stair.level === level
+      && point.x >= stair.x
+      && point.x <= stair.x + stair.width
+      && point.y >= stair.y
+      && point.y <= stair.y + stair.height,
   );
 }
 
@@ -1066,9 +1108,9 @@ export function findColumnAt(
   point: PlanCell,
 ): PlanColumn | undefined {
   return document.columns.find(
-    (item) =>
-      item.level === level
-      && Math.hypot(item.x - point.x, item.y - point.y)
+    (column) =>
+      column.level === level
+      && Math.hypot(column.x - point.x, column.y - point.y)
         < PLAN_HIT_TOLERANCE.column,
   );
 }
@@ -1112,7 +1154,7 @@ export function placeFurniture(
 
   const cell = getCellAt(point);
 
-  const item: PlanFurniture = {
+  const piece: PlanFurniture = {
     id: crypto.randomUUID(),
     level,
     x: cell.x,
@@ -1121,8 +1163,8 @@ export function placeFurniture(
     rotation,
   };
 
-  return isFurnitureOnGrid(item)
-    ? { ...document, furniture: [...document.furniture, item] }
+  return isFurnitureOnGrid(piece)
+    ? { ...document, furniture: [...document.furniture, piece] }
     : document;
 }
 
@@ -1137,9 +1179,10 @@ export function rotateFurniture(
   document: PlanDocument,
   id: string,
 ): PlanDocument {
-  return updateFurniture(document, id, (item) => ({
-    ...item,
-    rotation: (item.rotation + PLAN_FURNITURE_ROTATION_STEP) % 360,
+  return updateFurniture(document, id, (piece) => ({
+    ...piece,
+    rotation:
+      (piece.rotation + PLAN_FURNITURE_ROTATION_STEP) % FULL_TURN_DEGREES,
   }));
 }
 
@@ -1160,10 +1203,10 @@ export function moveFurniture(
     return document;
   }
 
-  return updateFurniture(document, id, (item) => ({
-    ...item,
-    x: item.x + offset.x,
-    y: item.y + offset.y,
+  return updateFurniture(document, id, (piece) => ({
+    ...piece,
+    x: piece.x + offset.x,
+    y: piece.y + offset.y,
   }));
 }
 
@@ -1178,9 +1221,9 @@ export function moveFurniture(
 function updateFurniture(
   document: PlanDocument,
   id: string,
-  change: (item: PlanFurniture) => PlanFurniture,
+  change: (piece: PlanFurniture) => PlanFurniture,
 ): PlanDocument {
-  const existing = document.furniture.find((item) => item.id === id);
+  const existing = document.furniture.find((piece) => piece.id === id);
 
   if (!existing) {
     return document;
@@ -1191,8 +1234,8 @@ function updateFurniture(
   return isFurnitureOnGrid(next)
     ? {
         ...document,
-        furniture: document.furniture.map((item) =>
-          item.id === id ? next : item,
+        furniture: document.furniture.map((piece) =>
+          piece.id === id ? next : piece,
         ),
       }
     : document;
@@ -1498,7 +1541,7 @@ export function removeLevel(
   return canRemoveLevel(document, level)
     ? prunePlan({
         ...document,
-        levels: document.levels.filter((item) => item !== level),
+        levels: document.levels.filter((existing) => existing !== level),
       })
     : document;
 }
@@ -1604,7 +1647,9 @@ export function createPaletteFacilities(
     )
     .map((facility, index) => ({
       ...facility,
-      color: PLAN_FACILITY_COLORS[index % PLAN_FACILITY_COLORS.length]!,
+      color:
+        PLAN_FACILITY_COLORS[index % PLAN_FACILITY_COLORS.length]
+        ?? PLAN_FACILITY_COLORS[0],
     }));
 }
 

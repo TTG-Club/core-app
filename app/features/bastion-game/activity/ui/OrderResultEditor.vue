@@ -2,7 +2,11 @@
   import type { BastionActivityOrder, PlayerBastion } from '../../model';
 
   import { useBastionAction } from '../../composables';
-  import { ACTIVITY_LABELS, writeBastionOrderResult } from '../../model';
+  import {
+    ACTIVITY_LABELS,
+    ORDER_RESULT_MAX_LENGTH,
+    writeBastionOrderResult,
+  } from '../../model';
 
   /**
    * Итог выполненного приказа в журнале: что получили или узнали. Записывает
@@ -55,7 +59,7 @@
       :id="`bastion-order-result-${order.id}`"
       v-model="draft"
       :rows="1"
-      :maxlength="4000"
+      :maxlength="ORDER_RESULT_MAX_LENGTH"
       autoresize
       :placeholder="ACTIVITY_LABELS.resultPlaceholder"
       size="sm"

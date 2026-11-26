@@ -3,16 +3,20 @@
     BastionStable,
     MenagerieSizeCode,
     StableTrade,
+    StableTradeMode,
   } from '../../model';
 
   import { fillTemplate } from '~bastions/model';
 
   import {
+    CUSTOM_CREATURE_VALUE,
     formatStableSpace,
     getStableSalePrice,
-    MENAGERIE_SIZES,
+    getStableSpace,
+    MENAGERIE_SIZE_ITEMS,
+    STABLE_DEFAULT_SIZE,
     STABLE_LABELS,
-    STABLE_LARGE_SPACE,
+    STABLE_TRADE_MODE_ITEMS,
   } from '../../model';
 
   /**
@@ -29,32 +33,24 @@
     canManage?: boolean;
   }>();
 
-  /** Значение пункта «Другое животное». */
-  const CUSTOM_ANIMAL = 'CUSTOM';
-
-  const mode = ref<'BUY' | 'SELL'>('BUY');
+  const mode = ref<StableTradeMode>('BUY');
   const kind = ref<string>();
   const sellId = ref<string>();
   const customName = ref('');
-  const customSize = ref<MenagerieSizeCode>('LARGE');
+  const customSize = ref<MenagerieSizeCode>(STABLE_DEFAULT_SIZE);
   const customCost = ref<number>();
-
-  const modeItems = [
-    { label: STABLE_LABELS.buy, value: 'BUY' },
-    { label: STABLE_LABELS.sell, value: 'SELL' },
-  ];
 
   const free = computed(() => stable.capacity - stable.occupied);
 
   const kindItems = computed(() => {
-    const kinds = stable.kinds.map((item) => ({
+    const kinds = stable.kinds.map((stableKind) => ({
       label: fillTemplate(STABLE_LABELS.kindTerms, {
-        name: item.name,
-        size: item.size?.name.toLowerCase() ?? '',
-        cost: item.cost,
+        name: stableKind.name,
+        size: stableKind.size?.name.toLowerCase() ?? '',
+        cost: stableKind.cost,
       }),
-      value: item.value,
-      disabled: item.space > free.value,
+      value: stableKind.value,
+      disabled: stableKind.space > free.value,
     }));
 
     // Животное не из таблицы покупается с согласия Мастера: приказ отдаёт он
@@ -63,7 +59,7 @@
           ...kinds,
           {
             label: STABLE_LABELS.custom,
-            value: CUSTOM_ANIMAL,
+            value: CUSTOM_CREATURE_VALUE,
             disabled: false,
           },
         ]
@@ -80,17 +76,10 @@
     })),
   );
 
-  const sizeItems = MENAGERIE_SIZES.map((size) => ({
-    label: size.label,
-    value: size.value,
-  }));
-
-  const isCustom = computed(() => kind.value === CUSTOM_ANIMAL);
+  const isCustom = computed(() => kind.value === CUSTOM_CREATURE_VALUE);
 
   const isCustomNoRoom = computed(
-    () =>
-      isCustom.value
-      && (customSize.value === 'LARGE' ? STABLE_LARGE_SPACE : 1) > free.value,
+    () => isCustom.value && getStableSpace(customSize.value) > free.value,
   );
 
   const soldAnimal = computed(() =>
@@ -163,7 +152,7 @@
     <UFormField :label="STABLE_LABELS.mode">
       <URadioGroup
         v-model="mode"
-        :items="modeItems"
+        :items="STABLE_TRADE_MODE_ITEMS"
         orientation="horizontal"
       />
     </UFormField>
@@ -195,7 +184,7 @@
         <UFormField :label="STABLE_LABELS.customSize">
           <USelect
             v-model="customSize"
-            :items="sizeItems"
+            :items="MENAGERIE_SIZE_ITEMS"
             value-key="value"
             class="w-full"
           />

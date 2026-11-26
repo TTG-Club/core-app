@@ -1,11 +1,19 @@
 <script setup lang="ts">
-  import type { FurnitureKind, PlanTool, TowerShape } from '../../model';
+  import type {
+    FurnitureKind,
+    PlanButtonLook,
+    PlanTool,
+    PlanToolOption,
+    TowerShape,
+  } from '../../model';
 
   import {
     BASIC_FURNITURE_KINDS,
     FURNITURE_KIND_ICONS,
     FURNITURE_KIND_LABELS,
+    PLAN_BUTTON_LOOKS,
     PLAN_EDIT_TOOLS,
+    PLAN_HISTORY_KBDS,
     PLAN_LABELS,
     PLAN_TOOL_GROUPS,
     PREMIUM_FURNITURE_KINDS,
@@ -53,49 +61,48 @@
   );
 
   /**
-   * Оформление кнопки: выбранный инструмент подсвечен.
+   * Оформление кнопки выбора: выбранная подсвечена.
+   *
+   * @param style Где стоит кнопка: панель инструментов или всплывающая панель.
+   * @param isActive Выбрана ли.
+   * @returns Цвет и вид кнопки.
+   */
+  function getLook(style: 'tool' | 'panel', isActive: boolean): PlanButtonLook {
+    return PLAN_BUTTON_LOOKS[style][isActive ? 'active' : 'idle'];
+  }
+
+  /**
+   * Подсказка инструмента: почему он недоступен или его название.
    *
    * @param option Инструмент.
-   * @returns Цвет и вид кнопки.
+   * @returns Текст подсказки.
    */
-  function getButtonLook(option: { tool: PlanTool }): {
-    color: 'primary' | 'neutral';
-    variant: 'solid' | 'ghost';
-  } {
-    return tool.value === option.tool
-      ? { color: 'primary', variant: 'solid' }
-      : { color: 'neutral', variant: 'ghost' };
+  function getToolTooltip(option: PlanToolOption): string {
+    return disabledTools[option.tool] ?? option.label;
   }
 
   /**
-   * Вид кнопки предмета в панели мебели: выбранный подсвечен.
+   * Клавиша инструмента в подсказке; у недоступного её нет.
    *
-   * @param kind Предмет.
-   * @returns Цвет и вид кнопки.
+   * @param option Инструмент.
+   * @returns Клавиши подсказки.
    */
-  function getFurnitureLook(kind: FurnitureKind): {
-    color: 'primary' | 'neutral';
-    variant: 'soft' | 'ghost';
-  } {
-    return furnitureKind.value === kind
-      ? { color: 'primary', variant: 'soft' }
-      : { color: 'neutral', variant: 'ghost' };
+  function getToolKbds(option: PlanToolOption): Array<string> {
+    return disabledTools[option.tool] ? [] : [option.key];
   }
 
-  /**
-   * Вид кнопки формы башни: выбранная подсвечена.
-   *
-   * @param shape Форма.
-   * @returns Цвет и вид кнопки.
-   */
-  function getTowerLook(shape: TowerShape): {
-    color: 'primary' | 'neutral';
-    variant: 'soft' | 'ghost';
-  } {
-    return towerShape.value === shape
-      ? { color: 'primary', variant: 'soft' }
-      : { color: 'neutral', variant: 'ghost' };
-  }
+  const premiumIcon = computed(() =>
+    premium ? 'tabler:sparkles' : 'tabler:lock',
+  );
+
+  const premiumText = computed(() =>
+    premium ? PLAN_LABELS.premiumFurniture : PLAN_LABELS.premiumFurnitureLocked,
+  );
+
+  const premiumItemClass = computed(() => (premium ? '' : 'opacity-50'));
+
+  const undoKbds = [...PLAN_HISTORY_KBDS.undo];
+  const redoKbds = [...PLAN_HISTORY_KBDS.redo];
 
   /**
    * Берёт форму башни и закрывает панель.
@@ -148,7 +155,7 @@
               :icon="TOWER_SHAPE_ICONS[towerShape]"
               :aria-label="option.label"
               :aria-pressed="tool === option.tool"
-              v-bind="getButtonLook(option)"
+              v-bind="getLook('tool', tool === option.tool)"
               size="sm"
               trailing-icon="tabler:chevron-down"
               @click.left.exact="tool = option.tool"
@@ -161,7 +168,7 @@
                 v-for="shape in TOWER_SHAPES"
                 :key="shape"
                 :icon="TOWER_SHAPE_ICONS[shape]"
-                v-bind="getTowerLook(shape)"
+                v-bind="getLook('panel', towerShape === shape)"
                 size="sm"
                 class="text-left"
                 @click.left.exact.prevent="chooseTower(shape)"
@@ -185,7 +192,7 @@
               :icon="option.icon"
               :aria-label="option.label"
               :aria-pressed="tool === option.tool"
-              v-bind="getButtonLook(option)"
+              v-bind="getLook('tool', tool === option.tool)"
               size="sm"
               trailing-icon="tabler:chevron-down"
               @click.left.exact="tool = option.tool"
@@ -201,7 +208,7 @@
                   v-for="kind in BASIC_FURNITURE_KINDS"
                   :key="kind"
                   :icon="FURNITURE_KIND_ICONS[kind]"
-                  v-bind="getFurnitureLook(kind)"
+                  v-bind="getLook('panel', furnitureKind === kind)"
                   size="sm"
                   class="text-left"
                   @click.left.exact.prevent="chooseFurniture(kind)"
@@ -214,17 +221,11 @@
 
               <div class="flex items-start gap-1 px-2 text-xs text-muted">
                 <UIcon
-                  :name="premium ? 'tabler:sparkles' : 'tabler:lock'"
+                  :name="premiumIcon"
                   class="mt-px size-3.5 shrink-0"
                 />
 
-                <span>
-                  {{
-                    premium
-                      ? PLAN_LABELS.premiumFurniture
-                      : PLAN_LABELS.premiumFurnitureLocked
-                  }}
-                </span>
+                <span>{{ premiumText }}</span>
               </div>
 
               <div class="grid grid-cols-3 gap-1">
@@ -232,10 +233,10 @@
                   v-for="kind in PREMIUM_FURNITURE_KINDS"
                   :key="kind"
                   :icon="FURNITURE_KIND_ICONS[kind]"
-                  v-bind="getFurnitureLook(kind)"
+                  v-bind="getLook('panel', furnitureKind === kind)"
                   size="sm"
                   class="text-left"
-                  :class="{ 'opacity-50': !premium }"
+                  :class="premiumItemClass"
                   :disabled="!premium"
                   @click.left.exact.prevent="chooseFurniture(kind)"
                 >
@@ -248,14 +249,14 @@
 
         <UTooltip
           v-else
-          :text="disabledTools[option.tool] ?? option.label"
-          :kbds="disabledTools[option.tool] ? [] : [option.key]"
+          :text="getToolTooltip(option)"
+          :kbds="getToolKbds(option)"
         >
           <UButton
             :icon="option.icon"
             :aria-label="option.label"
             :aria-pressed="tool === option.tool"
-            v-bind="getButtonLook(option)"
+            v-bind="getLook('tool', tool === option.tool)"
             size="sm"
             :disabled="Boolean(disabledTools[option.tool])"
             @click.left.exact.prevent="tool = option.tool"
@@ -272,7 +273,7 @@
 
       <UTooltip
         :text="PLAN_LABELS.undo"
-        :kbds="['meta', 'z']"
+        :kbds="undoKbds"
       >
         <UButton
           icon="tabler:arrow-back-up"
@@ -287,7 +288,7 @@
 
       <UTooltip
         :text="PLAN_LABELS.redo"
-        :kbds="['meta', 'shift', 'z']"
+        :kbds="redoKbds"
       >
         <UButton
           icon="tabler:arrow-forward-up"

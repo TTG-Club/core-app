@@ -161,26 +161,26 @@ export function getDefaultFacilityFurniture(
 /**
  * Случайный элемент списка.
  *
- * @param items Список.
+ * @param candidates Список.
  * @param random Источник случайных чисел от 0 до 1.
  * @returns Элемент или undefined для пустого списка.
  */
 function pickRandom<T>(
-  items: ReadonlyArray<T>,
+  candidates: ReadonlyArray<T>,
   random: () => number,
 ): T | undefined {
-  return items[Math.floor(random() * items.length)];
+  return candidates[Math.floor(random() * candidates.length)];
 }
 
 /**
  * Перемешивает список (Фишер — Йейтс).
  *
- * @param items Список.
+ * @param values Список.
  * @param random Источник случайных чисел от 0 до 1.
  * @returns Новый перемешанный список.
  */
-function shuffle<T>(items: ReadonlyArray<T>, random: () => number): Array<T> {
-  const result = [...items];
+function shuffle<T>(values: ReadonlyArray<T>, random: () => number): Array<T> {
+  const result = [...values];
 
   for (let index = result.length - 1; index > 0; index--) {
     const other = Math.floor(random() * (index + 1));
@@ -239,11 +239,15 @@ export function furnishRoom(
       const { width, depth } = getFurnitureSize({ kind, rotation });
       const spots: Array<{ cell: PlanCell; keys: Array<string> }> = [];
 
-      for (let y = room.y; y + depth <= room.y + room.depth; y++) {
-        for (let x = room.x; x + width <= room.x + room.width; x++) {
+      for (let row = room.y; row + depth <= room.y + room.depth; row++) {
+        for (
+          let column = room.x;
+          column + width <= room.x + room.width;
+          column++
+        ) {
           const keys = getRectCells(
-            { x, y },
-            { x: x + width - 1, y: y + depth - 1 },
+            { x: column, y: row },
+            { x: column + width - 1, y: row + depth - 1 },
           ).map((cell) => getCellKey(cell.x, cell.y));
 
           const added = keys.filter((key) => !covered.has(key)).length;
@@ -252,7 +256,7 @@ export function furnishRoom(
             keys.every((key) => !layer.has(key))
             && covered.size + added <= limit
           ) {
-            spots.push({ cell: { x, y }, keys });
+            spots.push({ cell: { x: column, y: row }, keys });
           }
         }
       }
@@ -282,7 +286,7 @@ export function furnishRoom(
 
   for (const kind of queue) {
     if (!place(kind)) {
-      available = available.filter((item) => item !== kind);
+      available = available.filter((candidate) => candidate !== kind);
     }
   }
 
@@ -292,7 +296,7 @@ export function furnishRoom(
     const kind = pickRandom(available, random);
 
     if (kind && !place(kind)) {
-      available = available.filter((item) => item !== kind);
+      available = available.filter((candidate) => candidate !== kind);
     }
   }
 

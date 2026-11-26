@@ -14,8 +14,11 @@
     CHARACTER_LEVEL_MAX,
     CHARACTER_LEVEL_MIN,
     createEmptySetupDraft,
+    getBastionLevelHint,
     getSpecialFacilityLimit,
     isBasicChosen,
+    isBastionNameValid,
+    NEW_BASTION_VERSION,
     toSetupRequest,
   } from '../../model';
 
@@ -43,11 +46,7 @@
     getSpecialFacilityLimit(characterLevel.value),
   );
 
-  const isNameValid = computed(() => {
-    const trimmed = name.value.trim();
-
-    return trimmed.length > 0 && trimmed.length <= BASTION_NAME_MAX_LENGTH;
-  });
+  const isNameValid = computed(() => isBastionNameValid(name.value));
 
   const isValid = computed(
     () => isNameValid.value && isBasicChosen(draft.value),
@@ -61,11 +60,7 @@
   );
 
   /** Персонаж ниже 5 уровня бастиона по правилам ещё не имеет. */
-  const levelHint = computed(() =>
-    characterLevel.value < BASTION_START_LEVEL
-      ? BASTION_FORM_LABELS.belowStartLevel
-      : undefined,
-  );
+  const levelHint = computed(() => getBastionLevelHint(characterLevel.value));
 
   // При каждом открытии форма пустая.
   watch(isOpen, (opened) => {
@@ -90,7 +85,7 @@
       return;
     }
 
-    const { basic, special } = toSetupRequest(draft.value, 0);
+    const { basic, special } = toSetupRequest(draft.value, NEW_BASTION_VERSION);
 
     emit('submit', {
       name: name.value.trim(),

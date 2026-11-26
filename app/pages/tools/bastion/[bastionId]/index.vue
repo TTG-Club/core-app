@@ -20,6 +20,7 @@
     BASTION_GAME_LABELS,
     fetchBastionActivity,
     fetchPlayerBastion,
+    getBastionDataKey,
     getBastionErrorMessage,
     getBastionPlanRoute,
     getGameRoute,
@@ -47,14 +48,14 @@
     status,
     error,
   } = useAsyncData(
-    () => `player-bastion-${bastionId.value}`,
+    () => getBastionDataKey('bastion', bastionId.value),
     () => fetchPlayerBastion(bastionId.value),
     { server: false, lazy: true },
   );
 
   /** Журнал бастиона: приказы, ходы и движения казны. */
   const { data: activity, refresh: refreshActivity } = useAsyncData(
-    () => `player-bastion-activity-${bastionId.value}`,
+    () => getBastionDataKey('activity', bastionId.value),
     () => fetchBastionActivity(bastionId.value),
     { server: false, lazy: true },
   );
@@ -106,6 +107,18 @@
 
   const editButtonIcon = computed(() =>
     isEditing.value ? 'tabler:check' : 'tabler:pencil',
+  );
+
+  const editButtonVariant = computed(() =>
+    isEditing.value ? 'solid' : 'subtle',
+  );
+
+  const editButtonColor = computed(() =>
+    isEditing.value ? 'primary' : 'neutral',
+  );
+
+  const isLoading = computed(
+    () => status.value === 'pending' || status.value === 'idle',
   );
 
   /** Тот, кто ведёт бастион, может запустить его, пока тот в закладке. */
@@ -184,7 +197,7 @@
 
     <div class="flex flex-col gap-6">
       <div
-        v-if="status === 'pending' || status === 'idle'"
+        v-if="isLoading"
         class="flex flex-col gap-3"
       >
         <USkeleton class="h-8 w-1/3" />
@@ -233,8 +246,8 @@
             >
               <UButton
                 :icon="editButtonIcon"
-                :variant="isEditing ? 'solid' : 'subtle'"
-                :color="isEditing ? 'primary' : 'neutral'"
+                :variant="editButtonVariant"
+                :color="editButtonColor"
                 @click.left.exact.prevent="isEditing = !isEditing"
               >
                 {{ editButtonLabel }}

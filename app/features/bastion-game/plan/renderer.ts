@@ -1,7 +1,5 @@
 import type { Container, Graphics, Text } from 'pixi.js';
 
-import type { PlanPoint, PlanPreview } from '../composables/usePlanInteraction';
-import type { PlanTheme } from '../composables/usePlanTheme';
 import type {
   CellSide,
   DoorKind,
@@ -12,10 +10,13 @@ import type {
   PlanEdge,
   PlanFurniture,
   PlanOccupancy,
+  PlanPoint,
+  PlanPreview,
   PlanRoom,
   PlanSegment,
   PlanSelection,
   PlanStair,
+  PlanTheme,
   PlanTool,
 } from '../model';
 
@@ -40,13 +41,26 @@ import {
   getTowerStairFrame,
   isDefenseWallCell,
   isWallEdge,
+  PLAN_ALPHA,
   PLAN_CELL_PIXELS,
+  PLAN_CURSOR,
   PLAN_FEET_PER_CELL,
   PLAN_FURNITURE_SIZES,
+  PLAN_GRID_MAJOR_STEP,
+  PLAN_GROUND_LEVEL,
   PLAN_HIT_TOLERANCE,
+  PLAN_HOVER,
+  PLAN_LABEL_LINE_HEIGHT,
   PLAN_LABELS,
   PLAN_LIMITS,
+  PLAN_PORTCULLIS_BARS,
+  PLAN_PORTCULLIS_INSET,
   PLAN_SHAPES,
+  PLAN_STAIR_ARROW,
+  PLAN_STAIR_INSET,
+  PLAN_STAIR_LABEL_OFFSET,
+  PLAN_STROKE,
+  PLAN_WALL_MIN_PIXELS,
   snapToHalf,
   sortFurnitureByLayer,
 } from '../model';
@@ -131,7 +145,7 @@ interface DrawContext {
 
 /**
  * Рисует миллиметровку участка: тонкие линии каждой клетки, заметнее —
- * каждые 5 клеток (25 футов).
+ * каждые `PLAN_GRID_MAJOR_STEP` клеток (25 футов).
  *
  * @param grid Слой сетки.
  * @param theme Цвета темы.
@@ -148,9 +162,14 @@ export function drawGrid(grid: Graphics, theme: PlanTheme): void {
     grid.moveTo(0, index * CELL).lineTo(length, index * CELL);
   }
 
-  grid.stroke({ color: theme.grid, width: 1, pixelLine: true, alpha: 0.6 });
+  grid.stroke({
+    color: theme.grid,
+    width: 1,
+    pixelLine: true,
+    alpha: PLAN_ALPHA.grid,
+  });
 
-  for (let index = 0; index <= size; index += 5) {
+  for (let index = 0; index <= size; index += PLAN_GRID_MAJOR_STEP) {
     grid.moveTo(index * CELL, 0).lineTo(index * CELL, length);
     grid.moveTo(0, index * CELL).lineTo(length, index * CELL);
   }
@@ -159,7 +178,7 @@ export function drawGrid(grid: Graphics, theme: PlanTheme): void {
     color: theme.gridMajor,
     width: 1,
     pixelLine: true,
-    alpha: 0.6,
+    alpha: PLAN_ALPHA.grid,
   });
 }
 
@@ -311,13 +330,17 @@ function drawDoor(
       return;
     }
 
-    for (let index = 0; index < 5; index++) {
-      const offset = -length / 2 + 0.08 + (index * (length - 0.16)) / 4;
+    for (let index = 0; index < PLAN_PORTCULLIS_BARS; index++) {
+      const offset =
+        -length / 2
+        + PLAN_PORTCULLIS_INSET
+        + (index * (length - PLAN_PORTCULLIS_INSET * 2))
+          / (PLAN_PORTCULLIS_BARS - 1);
 
       graphics.circle(
         (center.x + Math.cos(angle) * offset) * CELL,
         (center.y + Math.sin(angle) * offset) * CELL,
-        Math.max(0.05 * CELL, hairline * 1.5),
+        Math.max(0.05 * CELL, hairline * PLAN_STROKE.medium),
       );
     }
 
@@ -329,7 +352,7 @@ function drawDoor(
   graphics
     .poly(getRotatedRect(center, angle, length, thickness))
     .fill({ color: theme.background })
-    .stroke({ color: theme.text, width: hairline * 1.5 });
+    .stroke({ color: theme.text, width: hairline * PLAN_STROKE.medium });
 
   if (kind === 'LOCKED') {
     graphics
@@ -367,7 +390,7 @@ function drawWindow(
         Math.max(PLAN_SHAPES.windowThickness, wall),
       ),
     )
-    .stroke({ color: theme.text, width: hairline * 1.3 });
+    .stroke({ color: theme.text, width: hairline * PLAN_STROKE.window });
 
   graphics
     .moveTo(
@@ -442,11 +465,15 @@ function drawTower(
       );
   }
 
-  graphics.stroke({ color: theme.text, width: hairline, alpha: 0.7 });
+  graphics.stroke({
+    color: theme.text,
+    width: hairline,
+    alpha: PLAN_ALPHA.hatch,
+  });
 
   graphics.circle(centerX, centerY, inner * CELL).fill({
     color: isSelected ? theme.accent : theme.background,
-    alpha: isSelected ? 0.14 : 1,
+    alpha: isSelected ? PLAN_ALPHA.selectedTowerCore : 1,
   });
 
   // Сетка пола внутри окружности: концы хорд считаются, маска не нужна.
@@ -482,9 +509,9 @@ function drawTower(
 
   graphics
     .circle(centerX, centerY, inner * CELL)
-    .stroke({ color: theme.text, width: hairline * 2.5 })
+    .stroke({ color: theme.text, width: hairline * PLAN_STROKE.wall })
     .circle(centerX, centerY, outer * CELL)
-    .stroke({ color: theme.text, width: hairline * 2.5 });
+    .stroke({ color: theme.text, width: hairline * PLAN_STROKE.wall });
 }
 
 /**
@@ -558,7 +585,13 @@ function drawPolygonTower(
   const inner = getTowerPolygon(circle, apothem);
   const outer = getTowerPolygon(circle, apothem + wall);
 
-  const toPixels = (points: ReadonlyArray<PlanCell>) =>
+  /**
+   * Вершины многоугольника в пикселях холста подряд, как ждёт `poly`.
+   *
+   * @param points Вершины в клетках.
+   * @returns Координаты x и y по очереди.
+   */
+  const toPixels = (points: ReadonlyArray<PlanCell>): Array<number> =>
     points.flatMap((point) => [point.x * CELL, point.y * CELL]);
 
   graphics.poly(toPixels(outer)).fill({ color: theme.background });
@@ -577,23 +610,27 @@ function drawPolygonTower(
     const outY = -alongX;
 
     for (let offset = 0; offset < length; offset += HATCH_STEP) {
-      const x = segment.fromX + alongX * offset;
-      const y = segment.fromY + alongY * offset;
+      const pointX = segment.fromX + alongX * offset;
+      const pointY = segment.fromY + alongY * offset;
 
       graphics
-        .moveTo(x * CELL, y * CELL)
+        .moveTo(pointX * CELL, pointY * CELL)
         .lineTo(
-          (x + alongX * HATCH_STEP + outX * wall) * CELL,
-          (y + alongY * HATCH_STEP + outY * wall) * CELL,
+          (pointX + alongX * HATCH_STEP + outX * wall) * CELL,
+          (pointY + alongY * HATCH_STEP + outY * wall) * CELL,
         );
     }
   }
 
-  graphics.stroke({ color: theme.text, width: hairline, alpha: 0.7 });
+  graphics.stroke({
+    color: theme.text,
+    width: hairline,
+    alpha: PLAN_ALPHA.hatch,
+  });
 
   graphics.poly(toPixels(inner)).fill({
     color: isSelected ? theme.accent : theme.background,
-    alpha: isSelected ? 0.14 : 1,
+    alpha: isSelected ? PLAN_ALPHA.selectedTowerCore : 1,
   });
 
   for (const axis of ['x', 'y'] as const) {
@@ -626,9 +663,9 @@ function drawPolygonTower(
 
   graphics
     .poly(toPixels(inner))
-    .stroke({ color: theme.text, width: hairline * 2.5 })
+    .stroke({ color: theme.text, width: hairline * PLAN_STROKE.wall })
     .poly(toPixels(outer))
-    .stroke({ color: theme.text, width: hairline * 2.5 });
+    .stroke({ color: theme.text, width: hairline * PLAN_STROKE.wall });
 }
 
 /**
@@ -647,7 +684,7 @@ function drawSquareTowerWall(
 ): void {
   const { graphics, theme, hairline } = context;
   const band = PLAN_SHAPES.towerWallWidth;
-  const outline = hairline * 2.5;
+  const outline = hairline * PLAN_STROKE.wall;
 
   const segments = getBoundarySegments(
     new Map(room.cells.map((cell) => [getCellKey(cell.x, cell.y), room])),
@@ -655,7 +692,8 @@ function drawSquareTowerWall(
     'wall',
   );
 
-  const traceSegments = () => {
+  /** Обводит стены квадратной башни по их отрезкам. */
+  const traceSegments = (): void => {
     for (const segment of segments) {
       graphics
         .moveTo(segment.fromX * CELL, segment.fromY * CELL)
@@ -691,27 +729,32 @@ function drawSquareTowerWall(
     const alongY = (segment.toY - segment.fromY) / length;
 
     for (let offset = 0; offset < length; offset += HATCH_STEP) {
-      const x = segment.fromX + alongX * offset;
-      const y = segment.fromY + alongY * offset;
+      const pointX = segment.fromX + alongX * offset;
+      const pointY = segment.fromY + alongY * offset;
 
       // Поперёк полосы со сдвигом вдоль неё — как штрихи кольца башни.
       graphics
         .moveTo(
-          (x - alongY * (band / 2)) * CELL,
-          (y + alongX * (band / 2)) * CELL,
+          (pointX - alongY * (band / 2)) * CELL,
+          (pointY + alongX * (band / 2)) * CELL,
         )
         .lineTo(
-          (x + alongX * HATCH_STEP + alongY * (band / 2)) * CELL,
-          (y + alongY * HATCH_STEP - alongX * (band / 2)) * CELL,
+          (pointX + alongX * HATCH_STEP + alongY * (band / 2)) * CELL,
+          (pointY + alongY * HATCH_STEP - alongX * (band / 2)) * CELL,
         );
     }
   }
 
-  graphics.stroke({ color: theme.text, width: hairline, alpha: 0.7 });
+  graphics.stroke({
+    color: theme.text,
+    width: hairline,
+    alpha: PLAN_ALPHA.hatch,
+  });
 }
 
-/** Сколько ступеней в витке винтовой лестницы и какую долю круга они занимают. */
+/** Сколько ступеней в витке винтовой лестницы. */
 const SPIRAL_STEPS = 10;
+/** Какую долю круга занимают ступени винтовой лестницы, радианы. */
 const SPIRAL_SWEEP = (Math.PI * 5) / 3;
 
 /**
@@ -726,7 +769,10 @@ function drawSpiralStair(context: DrawContext, stair: PlanStair): void {
   const { graphics, theme, hairline } = context;
   const centerX = (stair.x + stair.width / 2) * CELL;
   const centerY = (stair.y + stair.height / 2) * CELL;
-  const radius = (Math.min(stair.width, stair.height) / 2 - 0.08) * CELL;
+
+  const radius =
+    (Math.min(stair.width, stair.height) / 2 - PLAN_STAIR_INSET) * CELL;
+
   const newel = Math.min(0.14 * CELL, radius * 0.25);
   const [unitX, unitY] = DIRECTION_VECTORS[stair.direction];
   const start = Math.atan2(unitY, unitX);
@@ -734,7 +780,7 @@ function drawSpiralStair(context: DrawContext, stair: PlanStair): void {
   graphics
     .circle(centerX, centerY, radius)
     .fill({ color: theme.background })
-    .stroke({ color: theme.text, width: hairline * 1.4 });
+    .stroke({ color: theme.text, width: hairline * PLAN_STROKE.detail });
 
   for (let index = 0; index <= SPIRAL_STEPS; index++) {
     const angle = start + (index / SPIRAL_STEPS) * SPIRAL_SWEEP;
@@ -773,7 +819,7 @@ function drawSpiralStair(context: DrawContext, stair: PlanStair): void {
       tipX - alongX * wing - Math.cos(end) * wing * 0.6,
       tipY - alongY * wing - Math.sin(end) * wing * 0.6,
     )
-    .stroke({ color: theme.text, width: hairline * 1.6 });
+    .stroke({ color: theme.text, width: hairline * PLAN_STROKE.spiralArrow });
 
   graphics.circle(centerX, centerY, newel).fill({ color: theme.text });
 }
@@ -805,7 +851,10 @@ function drawStair(context: DrawContext, stair: PlanStair): void {
 
     context.addLabel(
       caption,
-      { x: centerX, y: stair.y + stair.height + 0.35 },
+      {
+        x: centerX,
+        y: stair.y + stair.height + PLAN_STAIR_LABEL_OFFSET.spiral,
+      },
       note,
     );
 
@@ -815,7 +864,7 @@ function drawStair(context: DrawContext, stair: PlanStair): void {
   graphics
     .rect(left, top, width, height)
     .fill({ color: theme.background })
-    .stroke({ color: theme.text, width: hairline * 1.4 });
+    .stroke({ color: theme.text, width: hairline * PLAN_STROKE.detail });
 
   const along = isVertical ? stair.height : stair.width;
   const steps = Math.max(3, Math.round(along * PLAN_SHAPES.stepsPerCell));
@@ -837,10 +886,10 @@ function drawStair(context: DrawContext, stair: PlanStair): void {
   graphics.stroke({ color: theme.text, width: hairline });
 
   const [unitX, unitY] = DIRECTION_VECTORS[stair.direction];
-  const reach = (along / 2) * 0.7;
+  const reach = (along / 2) * PLAN_STAIR_ARROW.reach;
   const tipX = centerX + unitX * reach;
   const tipY = centerY + unitY * reach;
-  const wing = 0.18;
+  const wing = PLAN_STAIR_ARROW.wing;
 
   graphics
     .moveTo((centerX - unitX * reach) * CELL, (centerY - unitY * reach) * CELL)
@@ -854,13 +903,13 @@ function drawStair(context: DrawContext, stair: PlanStair): void {
       (tipX - unitX * wing + unitY * wing) * CELL,
       (tipY - unitY * wing - unitX * wing) * CELL,
     )
-    .stroke({ color: theme.text, width: hairline * 2 });
+    .stroke({ color: theme.text, width: hairline * PLAN_STROKE.outline });
 
   context.addLabel(
     caption,
     {
-      x: centerX - unitX * (stair.width / 2 + 0.6),
-      y: centerY - unitY * (stair.height / 2 + 0.4),
+      x: centerX - unitX * (stair.width / 2 + PLAN_STAIR_LABEL_OFFSET.alongX),
+      y: centerY - unitY * (stair.height / 2 + PLAN_STAIR_LABEL_OFFSET.alongY),
     },
     note,
   );
@@ -880,10 +929,13 @@ function drawArrivingStair(context: DrawContext, stair: PlanStair): void {
     traceDashedCircle(graphics, {
       cx: stair.x + stair.width / 2,
       cy: stair.y + stair.height / 2,
-      r: Math.min(stair.width, stair.height) / 2 - 0.08,
+      r: Math.min(stair.width, stair.height) / 2 - PLAN_STAIR_INSET,
     });
 
-    graphics.stroke({ color: theme.muted, width: hairline * 1.4 });
+    graphics.stroke({
+      color: theme.muted,
+      width: hairline * PLAN_STROKE.detail,
+    });
 
     context.addLabel(
       stair.toLevel > stair.level ? PLAN_LABELS.stairDown : PLAN_LABELS.stairUp,
@@ -894,7 +946,7 @@ function drawArrivingStair(context: DrawContext, stair: PlanStair): void {
     return;
   }
 
-  const inset = 0.08;
+  const inset = PLAN_STAIR_INSET;
   const right = stair.x + stair.width - inset;
   const bottom = stair.y + stair.height - inset;
   const left = stair.x + inset;
@@ -909,7 +961,7 @@ function drawArrivingStair(context: DrawContext, stair: PlanStair): void {
     traceDashedLine(graphics, segment);
   }
 
-  graphics.stroke({ color: theme.muted, width: hairline * 1.4 });
+  graphics.stroke({ color: theme.muted, width: hairline * PLAN_STROKE.detail });
 
   context.addLabel(
     stair.toLevel > stair.level ? PLAN_LABELS.stairDown : PLAN_LABELS.stairUp,
@@ -942,7 +994,7 @@ function drawDefenseWalls(context: DrawContext, document: PlanDocument): void {
     graphics.rect(cell.x * CELL, cell.y * CELL, CELL, CELL);
   }
 
-  graphics.fill({ color: theme.shade, alpha: 0.5 });
+  graphics.fill({ color: theme.shade, alpha: PLAN_ALPHA.shade });
 
   for (const cell of solid) {
     for (let offset = HATCH_STEP * 2; offset < 2; offset += HATCH_STEP * 2) {
@@ -957,7 +1009,11 @@ function drawDefenseWalls(context: DrawContext, document: PlanDocument): void {
     }
   }
 
-  graphics.stroke({ color: theme.text, width: hairline, alpha: 0.6 });
+  graphics.stroke({
+    color: theme.text,
+    width: hairline,
+    alpha: PLAN_ALPHA.solidHatch,
+  });
 
   for (const cell of solid) {
     const sides: Array<[boolean, number, number, number, number]> = [
@@ -976,7 +1032,7 @@ function drawDefenseWalls(context: DrawContext, document: PlanDocument): void {
     }
   }
 
-  graphics.stroke({ color: theme.text, width: hairline * 2 });
+  graphics.stroke({ color: theme.text, width: hairline * PLAN_STROKE.outline });
 
   const walls = new Set(
     document.defenseWalls.map((cell) => getCellKey(cell.x, cell.y)),
@@ -1016,11 +1072,11 @@ function drawDefenseGate(
   const top = gate.y * CELL;
   const middle = 0.5 * CELL;
   const leaf = 0.12 * CELL;
-  const outline = { color: theme.text, width: hairline * 2 };
+  const outline = { color: theme.text, width: hairline * PLAN_STROKE.outline };
 
   graphics
     .rect(left, top, CELL, CELL)
-    .fill({ color: theme.background, alpha: 0.9 });
+    .fill({ color: theme.background, alpha: PLAN_ALPHA.gateBackground });
 
   if (isAlongX) {
     graphics
@@ -1057,7 +1113,7 @@ function drawDefenseGate(
     }
   }
 
-  graphics.stroke({ color: theme.text, width: hairline * 3 });
+  graphics.stroke({ color: theme.text, width: hairline * PLAN_STROKE.bold });
 }
 
 /**
@@ -1073,7 +1129,7 @@ function drawLevelBelow(
   level: number,
 ): void {
   const below = document.levels
-    .filter((item) => item < level)
+    .filter((planLevel) => planLevel < level)
     .sort((first, second) => second - first)[0];
 
   if (below === undefined) {
@@ -1108,7 +1164,36 @@ function drawLevelBelow(
     }
   }
 
-  graphics.stroke({ color: theme.muted, width: hairline * 1.5, alpha: 0.5 });
+  graphics.stroke({
+    color: theme.muted,
+    width: hairline * PLAN_STROKE.medium,
+    alpha: PLAN_ALPHA.shade,
+  });
+}
+
+/**
+ * Заливка пола комнаты поверх фона: выбранная подсвечена акцентом,
+ * комната сооружения — его цветом.
+ *
+ * @param theme Цвета темы.
+ * @param isSelected Выбрана ли комната.
+ * @param tint Цвет сооружения комнаты.
+ * @returns Цвет и прозрачность или undefined, если заливать нечем.
+ */
+function getRoomHighlight(
+  theme: PlanTheme,
+  isSelected: boolean,
+  tint: number | undefined,
+): { color: number; alpha: number } | undefined {
+  if (isSelected) {
+    return { color: theme.accent, alpha: PLAN_ALPHA.selected };
+  }
+
+  if (tint !== undefined) {
+    return { color: tint, alpha: PLAN_ALPHA.facilityTint };
+  }
+
+  return undefined;
 }
 
 /**
@@ -1144,9 +1229,9 @@ function drawFloors(
       ? scene.facilityColors.get(room.facilityId)
       : undefined;
 
-    const isSelected = selectedRooms.has(room.id);
+    const highlight = getRoomHighlight(theme, selectedRooms.has(room.id), tint);
 
-    if (tint === undefined && !isSelected) {
+    if (!highlight) {
       continue;
     }
 
@@ -1154,10 +1239,7 @@ function drawFloors(
       graphics.rect(cell.x * CELL, cell.y * CELL, CELL, CELL);
     }
 
-    graphics.fill({
-      color: isSelected ? theme.accent : (tint ?? theme.accent),
-      alpha: isSelected ? 0.16 : 0.08,
-    });
+    graphics.fill(highlight);
   }
 
   for (const room of rooms) {
@@ -1256,7 +1338,12 @@ function drawRoomLabels(
           used: area.used,
           max: area.squares,
         }),
-        { x: point.x, y: point.y + (LABEL_SIZES.room * 1.3) / (CELL * scale) },
+        {
+          x: point.x,
+          y:
+            point.y
+            + (LABEL_SIZES.room * PLAN_LABEL_LINE_HEIGHT) / (CELL * scale),
+        },
         {
           color: area.used > area.squares ? theme.error : theme.muted,
           size: LABEL_SIZES.note,
@@ -1297,8 +1384,18 @@ export function drawPlan(
     graphics: content,
     theme,
     scale,
-    wallWidth: Math.max(PLAN_SHAPES.wallWidth * CELL, 3 / scale),
+    wallWidth: Math.max(
+      PLAN_SHAPES.wallWidth * CELL,
+      PLAN_WALL_MIN_PIXELS / scale,
+    ),
     hairline: 1 / scale,
+    /**
+     * Подпись на холсте, которая держит размер на экране.
+     *
+     * @param text Текст.
+     * @param point Середина подписи в клетках.
+     * @param style Цвет, размер и начертание.
+     */
     addLabel: (text, point, style) => {
       const label = createText(text, style);
 
@@ -1316,7 +1413,7 @@ export function drawPlan(
 
   drawLevelBelow(context, document, level);
 
-  if (level === 0) {
+  if (level === PLAN_GROUND_LEVEL) {
     drawDefenseWalls(context, document);
   }
 
@@ -1354,13 +1451,16 @@ export function drawPlan(
           PLAN_SHAPES.columnRadius * CELL,
         )
         .fill({ color: theme.background })
-        .stroke({ color: theme.text, width: context.hairline * 2 });
+        .stroke({
+          color: theme.text,
+          width: context.hairline * PLAN_STROKE.outline,
+        });
     }
   }
 
-  for (const item of sortFurnitureByLayer(document.furniture)) {
-    if (item.level === level) {
-      drawFurniture(context, item);
+  for (const furniture of sortFurnitureByLayer(document.furniture)) {
+    if (furniture.level === level) {
+      drawFurniture(context, furniture);
     }
   }
 
@@ -1457,13 +1557,17 @@ function drawSelection(context: DrawContext, scene: PlanScene): void {
     }
   }
 
-  graphics.stroke({ color: theme.accent, width: hairline * 3, cap: 'square' });
+  graphics.stroke({
+    color: theme.accent,
+    width: hairline * PLAN_STROKE.bold,
+    cap: 'square',
+  });
 
   const stairIds = getSelectedIds(selection, 'stair');
   const furnitureIds = getSelectedIds(selection, 'furniture');
   const columnIds = getSelectedIds(selection, 'column');
-  const frame = { color: theme.accent, width: hairline * 2 };
-  const fill = { color: theme.accent, alpha: 0.16 };
+  const frame = { color: theme.accent, width: hairline * PLAN_STROKE.outline };
+  const fill = { color: theme.accent, alpha: PLAN_ALPHA.selected };
 
   for (const stair of document.stairs) {
     if (stair.level === level && stairIds.has(stair.id)) {
@@ -1479,12 +1583,17 @@ function drawSelection(context: DrawContext, scene: PlanScene): void {
     }
   }
 
-  for (const item of document.furniture) {
-    if (item.level === level && furnitureIds.has(item.id)) {
-      const { width, depth } = getFurnitureSize(item);
+  for (const furniture of document.furniture) {
+    if (furniture.level === level && furnitureIds.has(furniture.id)) {
+      const { width, depth } = getFurnitureSize(furniture);
 
       graphics
-        .rect(item.x * CELL, item.y * CELL, width * CELL, depth * CELL)
+        .rect(
+          furniture.x * CELL,
+          furniture.y * CELL,
+          width * CELL,
+          depth * CELL,
+        )
         .fill(fill)
         .stroke(frame);
     }
@@ -1496,7 +1605,7 @@ function drawSelection(context: DrawContext, scene: PlanScene): void {
         .circle(
           column.x * CELL,
           column.y * CELL,
-          PLAN_SHAPES.columnRadius * CELL + hairline * 3,
+          PLAN_SHAPES.columnRadius * CELL + hairline * PLAN_STROKE.bold,
         )
         .stroke(frame);
     }
@@ -1517,15 +1626,18 @@ function drawCursors(
 
   for (const { point, name, color } of cursors) {
     graphics
-      .circle(point.x * CELL, point.y * CELL, hairline * 5)
+      .circle(point.x * CELL, point.y * CELL, hairline * PLAN_CURSOR.dotRadius)
       .fill({ color })
-      .stroke({ color: theme.background, width: hairline * 2 });
+      .stroke({
+        color: theme.background,
+        width: hairline * PLAN_STROKE.outline,
+      });
 
     // Имя — под точкой, чтобы не закрывать место, куда указывают. Отступ
     // задан в пикселях экрана и переведён в клетки.
     context.addLabel(
       name,
-      { x: point.x, y: point.y + (hairline * 20) / CELL },
+      { x: point.x, y: point.y + (hairline * PLAN_CURSOR.nameOffset) / CELL },
       { color, size: LABEL_SIZES.note, isBold: true },
     );
   }
@@ -1545,7 +1657,7 @@ function drawOverlay(
 ): void {
   const { graphics, theme, hairline } = context;
   const { preview, hoverPoint } = scene;
-  const accent = { color: theme.accent, width: hairline * 2 };
+  const accent = { color: theme.accent, width: hairline * PLAN_STROKE.outline };
 
   if (preview?.kind === 'rect') {
     const left = Math.min(preview.from.x, preview.to.x);
@@ -1555,7 +1667,7 @@ function drawOverlay(
 
     graphics
       .rect(left * CELL, top * CELL, width * CELL, height * CELL)
-      .fill({ color: theme.accent, alpha: 0.15 })
+      .fill({ color: theme.accent, alpha: PLAN_ALPHA.preview })
       .stroke(accent);
 
     if (preview.label) {
@@ -1587,7 +1699,9 @@ function drawOverlay(
       graphics.circle(circle.cx * CELL, circle.cy * CELL, circle.r * CELL);
     }
 
-    graphics.fill({ color: theme.accent, alpha: 0.15 }).stroke(accent);
+    graphics
+      .fill({ color: theme.accent, alpha: PLAN_ALPHA.preview })
+      .stroke(accent);
 
     context.addLabel(
       preview.label,
@@ -1609,7 +1723,7 @@ function drawOverlay(
 
     graphics.fill({
       color: preview.isValid ? theme.accent : theme.error,
-      alpha: 0.25,
+      alpha: PLAN_ALPHA.moveGhost,
     });
 
     return;
@@ -1618,6 +1732,22 @@ function drawOverlay(
   if (hoverPoint) {
     drawHover(context, scene, occupancy, hoverPoint);
   }
+}
+
+/**
+ * Подсвечивает клетку под указателем: с неё начнётся жест.
+ *
+ * @param context Кадр со слоем подсказок.
+ * @param point Точка под указателем.
+ */
+function drawHoverCell(context: DrawContext, point: PlanPoint): void {
+  context.graphics
+    .rect(Math.floor(point.x) * CELL, Math.floor(point.y) * CELL, CELL, CELL)
+    .stroke({
+      color: context.theme.accent,
+      width: context.hairline * PLAN_STROKE.medium,
+      alpha: PLAN_ALPHA.hover,
+    });
 }
 
 /**
@@ -1648,12 +1778,13 @@ function drawHover(
       // Дверь в защитной стене становится воротами — подсвечивается клетка.
       if (
         scene.tool === 'door'
-        && scene.level === 0
+        && scene.level === PLAN_GROUND_LEVEL
         && isDefenseWallCell(scene.document, cell)
       ) {
-        graphics
-          .rect(cell.x * CELL, cell.y * CELL, CELL, CELL)
-          .stroke({ color: theme.accent, width: hairline * 2 });
+        graphics.rect(cell.x * CELL, cell.y * CELL, CELL, CELL).stroke({
+          color: theme.accent,
+          width: hairline * PLAN_STROKE.outline,
+        });
 
         return;
       }
@@ -1669,8 +1800,15 @@ function drawHover(
         const center = getTowerRingPoint(ring.room.shape, ring.angle);
 
         graphics
-          .circle(center.x * CELL, center.y * CELL, 0.4 * CELL)
-          .stroke({ color: theme.accent, width: hairline * 2 });
+          .circle(
+            center.x * CELL,
+            center.y * CELL,
+            PLAN_HOVER.ringRadius * CELL,
+          )
+          .stroke({
+            color: theme.accent,
+            width: hairline * PLAN_STROKE.outline,
+          });
 
         return;
       }
@@ -1678,10 +1816,19 @@ function drawHover(
       const edge = getNearestEdge(scene.level, point);
       const { center, angle } = getEdgePlacement(edge);
 
-      graphics.poly(getRotatedRect(center, angle, 0.8, 0.2)).stroke({
-        color: isWallEdge(occupancy, edge) ? theme.accent : theme.error,
-        width: hairline * 2,
-      });
+      graphics
+        .poly(
+          getRotatedRect(
+            center,
+            angle,
+            PLAN_HOVER.markerLength,
+            PLAN_HOVER.markerThickness,
+          ),
+        )
+        .stroke({
+          color: isWallEdge(occupancy, edge) ? theme.accent : theme.error,
+          width: hairline * PLAN_STROKE.outline,
+        });
 
       return;
     }
@@ -1692,7 +1839,7 @@ function drawHover(
           snapToHalf(point.y) * CELL,
           PLAN_SHAPES.columnRadius * CELL,
         )
-        .stroke({ color: theme.accent, width: hairline * 2 });
+        .stroke({ color: theme.accent, width: hairline * PLAN_STROKE.outline });
 
       return;
     case 'furniture': {
@@ -1721,7 +1868,7 @@ function drawHover(
           width * CELL,
           depth * CELL,
         )
-        .stroke({ color: theme.accent, width: hairline * 2 });
+        .stroke({ color: theme.accent, width: hairline * PLAN_STROKE.outline });
 
       return;
     }
@@ -1740,7 +1887,10 @@ function drawHover(
             (frame.y + frame.height / 2) * CELL,
             (Math.min(frame.width, frame.height) / 2) * CELL,
           )
-          .stroke({ color: theme.accent, width: hairline * 2 });
+          .stroke({
+            color: theme.accent,
+            width: hairline * PLAN_STROKE.outline,
+          });
 
         context.addLabel(
           fillTemplate(PLAN_LABELS.feet, {
@@ -1756,14 +1906,7 @@ function drawHover(
         return;
       }
 
-      graphics
-        .rect(
-          Math.floor(point.x) * CELL,
-          Math.floor(point.y) * CELL,
-          CELL,
-          CELL,
-        )
-        .stroke({ color: theme.accent, width: hairline * 1.5, alpha: 0.8 });
+      drawHoverCell(context, point);
 
       return;
     }
@@ -1772,14 +1915,7 @@ function drawHover(
     case 'corridor':
     case 'eraser':
     case 'wall':
-      graphics
-        .rect(
-          Math.floor(point.x) * CELL,
-          Math.floor(point.y) * CELL,
-          CELL,
-          CELL,
-        )
-        .stroke({ color: theme.accent, width: hairline * 1.5, alpha: 0.8 });
+      drawHoverCell(context, point);
   }
 }
 
@@ -1827,21 +1963,21 @@ function linePart(
  * Переводит часть предмета из его собственных координат (без поворота) в
  * координаты холста с учётом поворота по часовой стрелке.
  *
- * @param item Предмет.
+ * @param furniture Предмет.
  * @param part Часть в клетках от угла предмета.
  * @returns Прямоугольник на холсте, пикселей.
  */
 function placeFurniturePart(
-  item: PlanFurniture,
+  furniture: PlanFurniture,
   part: FurniturePart,
 ): FurniturePart {
-  const size = PLAN_FURNITURE_SIZES[item.kind];
+  const size = PLAN_FURNITURE_SIZES[furniture.kind];
 
   const corners = [
     { x: part.x, y: part.y },
     { x: part.x + part.width, y: part.y + part.height },
   ].map(({ x, y }) => {
-    switch (item.rotation) {
+    switch (furniture.rotation) {
       case 90:
         return { x: size.depth - y, y: x };
       case 180:
@@ -1856,8 +1992,8 @@ function placeFurniturePart(
   const [first = { x: 0, y: 0 }, second = { x: 0, y: 0 }] = corners;
 
   return {
-    x: (item.x + Math.min(first.x, second.x)) * CELL,
-    y: (item.y + Math.min(first.y, second.y)) * CELL,
+    x: (furniture.x + Math.min(first.x, second.x)) * CELL,
+    y: (furniture.y + Math.min(first.y, second.y)) * CELL,
     width: Math.abs(second.x - first.x) * CELL,
     height: Math.abs(second.y - first.y) * CELL,
     isRound: part.isRound,
@@ -1984,9 +2120,9 @@ function getPremiumFurnitureParts(
     case 'DINING_TABLE':
       return {
         body: { x: 0.3, y: 0.4, width: 3.4, height: 1.2 },
-        details: [0.6, 1.75, 2.9].flatMap((x) => [
-          linePart(x, 0.05, 0.5, 0.3),
-          linePart(x, 1.65, 0.5, 0.3),
+        details: [0.6, 1.75, 2.9].flatMap((offsetX) => [
+          linePart(offsetX, 0.05, 0.5, 0.3),
+          linePart(offsetX, 1.65, 0.5, 0.3),
         ]),
       };
     case 'BARREL':
@@ -2027,7 +2163,9 @@ function getPremiumFurnitureParts(
     case 'WEAPON_RACK':
       return {
         body: { x: 0.12, y: 0.35, width: 1.76, height: 0.3 },
-        details: [0.55, 1, 1.45].map((x) => linePart(x, 0.2, 0.01, 0.6)),
+        details: [0.55, 1, 1.45].map((offsetX) =>
+          linePart(offsetX, 0.2, 0.01, 0.6),
+        ),
       };
     case 'TRAINING_DUMMY':
       return {
@@ -2037,7 +2175,9 @@ function getPremiumFurnitureParts(
     case 'CAGE':
       return {
         body,
-        details: [0.55, 1, 1.45].map((x) => linePart(x, 0.12, 0.01, 1.76)),
+        details: [0.55, 1, 1.45].map((offsetX) =>
+          linePart(offsetX, 0.12, 0.01, 1.76),
+        ),
       };
     case 'RUG':
       return {
@@ -2105,19 +2245,19 @@ function tracePart(graphics: Graphics, part: FurniturePart): Graphics {
  * Рисует предмет мебели: корпус цветом листа с тонкой обводкой и детали.
  *
  * @param context Кадр.
- * @param item Предмет.
+ * @param furniture Предмет.
  */
-function drawFurniture(context: DrawContext, item: PlanFurniture): void {
+function drawFurniture(context: DrawContext, furniture: PlanFurniture): void {
   const { graphics, theme, hairline } = context;
-  const { body, details } = getFurnitureParts(item.kind);
-  const outline = { color: theme.text, width: hairline * 1.4 };
-  const placedBody = placeFurniturePart(item, body);
+  const { body, details } = getFurnitureParts(furniture.kind);
+  const outline = { color: theme.text, width: hairline * PLAN_STROKE.detail };
+  const placedBody = placeFurniturePart(furniture, body);
 
   tracePart(graphics, placedBody)
     .fill({ color: theme.background })
     .stroke(outline);
 
   for (const detail of details) {
-    tracePart(graphics, placeFurniturePart(item, detail)).stroke(outline);
+    tracePart(graphics, placeFurniturePart(furniture, detail)).stroke(outline);
   }
 }

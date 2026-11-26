@@ -10,6 +10,8 @@ export * from './plan-geometry';
 export * from './plan-presence';
 export * from './plan-schema';
 export * from './plan-selection';
+export * from './plan-sync-constants';
+export * from './plan-types';
 export * from './schema';
 export * from './setup';
 export * from './share-api';

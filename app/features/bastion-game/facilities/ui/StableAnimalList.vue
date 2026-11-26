@@ -3,7 +3,7 @@
 
   import { useCreatureDrawer } from '~initiative/composables';
 
-  import { STABLE_LABELS } from '../../model';
+  import { getBestiaryRoute, STABLE_LABELS } from '../../model';
 
   /**
    * Животные в стойле конюшни: название открывает статблок из бестиария в дровере,
@@ -48,7 +48,7 @@
 
         <ULink
           v-if="animal.bestiaryUrl"
-          :to="`/bestiary/${animal.bestiaryUrl}`"
+          :to="getBestiaryRoute(animal.bestiaryUrl)"
           class="truncate text-highlighted"
           @click.left.exact.prevent="openCreature(animal.bestiaryUrl)"
         >

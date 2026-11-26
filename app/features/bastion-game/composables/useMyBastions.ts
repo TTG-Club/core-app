@@ -4,6 +4,7 @@ import type {
 } from '../model';
 
 import {
+  BASTION_DATA_KEYS,
   BASTION_GAME_LABELS,
   createPlayerBastion,
   deletePlayerBastion,
@@ -37,7 +38,7 @@ export function useMyBastions({ immediate = true }: UseMyBastionsOptions = {}) {
     status,
     error: loadError,
     refresh,
-  } = useAsyncData('my-player-bastions', fetchMyBastions, {
+  } = useAsyncData(BASTION_DATA_KEYS.myBastions, fetchMyBastions, {
     server: false,
     lazy: true,
     immediate,
@@ -108,14 +109,19 @@ export function useMyBastions({ immediate = true }: UseMyBastionsOptions = {}) {
     ),
     refresh,
     isSaving,
+    /** Создаёт бастион. */
     create: (request: CreatePlayerBastionRequest) =>
       run(() => createPlayerBastion(request), BASTION_GAME_LABELS.created),
+    /** Сохраняет название и состав бастиона. */
     update: (id: string, request: UpdatePlayerBastionRequest) =>
       run(() => updatePlayerBastion(id, request), BASTION_GAME_LABELS.updated),
+    /** Удаляет бастион. */
     remove: (id: string) =>
       run(() => deletePlayerBastion(id), MY_BASTIONS_LABELS.removed),
+    /** Добавляет бастион в игру. */
     joinGame: (id: string, gameId: string) =>
       run(() => joinGameWithBastion(id, gameId), BASTION_GAME_LABELS.added),
+    /** Убирает бастион из игры. */
     leaveGame: (id: string) =>
       run(() => leaveGameWithBastion(id), BASTION_GAME_LABELS.leftGame),
   };

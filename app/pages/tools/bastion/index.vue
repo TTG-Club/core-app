@@ -10,6 +10,7 @@
   import {
     BASTION_GAME_LABELS,
     BASTION_SHARE_LABELS,
+    BASTION_SKELETON_COUNT,
     MY_BASTIONS_LABELS,
   } from '~bastion-game/model';
   import {
@@ -247,7 +248,7 @@
         class="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
       >
         <USkeleton
-          v-for="index in 3"
+          v-for="index in BASTION_SKELETON_COUNT"
           :key="index"
           class="h-44"
         />
