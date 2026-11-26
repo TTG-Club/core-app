@@ -1,5 +1,10 @@
 <script setup lang="ts">
-  import type { FilterGroup, FilterGroups, SourceEntry } from '../types';
+  import type {
+    FilterGroup,
+    FilterGroups,
+    SourceEntry,
+    SourcePreset,
+  } from '../types';
 
   import { cloneDeep } from 'es-toolkit';
 
@@ -140,19 +145,21 @@
     return `${FILTER_SOURCES_SUMMARY_PREFIX} ${selected} ${FILTER_SOURCES_SUMMARY_SEPARATOR} ${total}`;
   });
 
-  /** Быстрые наборы, для которых в панели есть все нужные группы. */
+  /** Быстрые наборы, которым в панели есть что отметить. */
   const presets = computed(() =>
     FILTER_SOURCES_PRESETS.filter((preset) =>
-      isSourcePresetAvailable(cloned.value, preset.keys),
+      isSourcePresetAvailable(cloned.value, preset, catalog.value),
     ).map((preset) => ({
-      ...preset,
-      color: getPresetColor(isSourcePresetActive(cloned.value, preset.keys)),
+      preset,
+      color: getPresetColor(
+        isSourcePresetActive(cloned.value, preset, catalog.value),
+      ),
     })),
   );
 
-  /** Применяет быстрый набор: его группы отмечены целиком, остальные сняты. */
-  function applyPreset(keys: ReadonlyArray<string>): void {
-    cloned.value = applySourcePreset(cloned.value, keys);
+  /** Применяет быстрый набор: его источники отмечены, остальные сняты. */
+  function applyPreset(preset: SourcePreset): void {
+    cloned.value = applySourcePreset(cloned.value, preset, catalog.value);
   }
 
   /** Отмечено ли всё показанное: тогда кнопка панели снимает отметки. */
@@ -232,13 +239,13 @@
         <!-- поиском их нет: кнопка сняла бы отметки с книг, которых не видно. -->
         <template v-if="!isSearching">
           <UButton
-            v-for="preset in presets"
+            v-for="{ preset, color } in presets"
             :key="preset.id"
             :label="preset.label"
-            :color="preset.color"
+            :color="color"
             variant="subtle"
             size="sm"
-            @click.left.exact.prevent="applyPreset(preset.keys)"
+            @click.left.exact.prevent="applyPreset(preset)"
           />
         </template>
 
