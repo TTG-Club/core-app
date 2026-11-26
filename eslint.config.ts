@@ -29,4 +29,14 @@ export default withNuxt(
   config.overrideRules({
     'vue/multi-word-component-names': undefined,
   }),
+  {
+    // В карте проекта таблица фич выровнена, и каждая её строка — тысячи
+    // символов. Это правило перебирает строку со скобками за время, растущее
+    // быстрее длины: на одной PROJECT_MAP.md уходили минуты, и сборка на
+    // сервере вставала по таймауту. Ссылок со скобками там нет.
+    files: ['PROJECT_MAP.md'],
+    rules: {
+      'markdown/no-reversed-media-syntax': 'off',
+    },
+  },
 );
